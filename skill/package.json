@@ -1,0 +1,16 @@
+{
+  "name": "memory-arch",
+  "version": "1.0.0",
+  "description": "Multi-layer memory architecture for AI agents",
+  "author": "kindomLee",
+  "license": "MIT",
+  "keywords": ["memory", "agent", "architecture", "openclaw"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kindomLee/openclaw-memory-arch"
+  },
+  "homepage": "https://github.com/kindomLee/openclaw-memory-arch",
+  "scripts": {
+    "install": "bash scripts/scaffold.sh"
+  }
+}
