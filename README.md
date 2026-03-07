@@ -2,13 +2,26 @@
 
 Production-tested workspace template for OpenClaw AI agents, extracted from a real agent running 3+ months in production.
 
+## What You Get
+
+A fresh OpenClaw agent is stateless — it wakes up, helps you, and forgets everything. This template turns it into something that **persists, learns, and improves over time**.
+
+After installing:
+
+- 🧠 **Your agent remembers** — Daily logs (`memory/YYYY-MM-DD.md`) + curated long-term memory (`MEMORY.md`) with priority levels and auto-expiry. It reads yesterday's and today's logs every session.
+- 🔧 **Your agent learns from mistakes** — A three-tier self-improvement system (`repair` / `optimize` / `innovate`) tracks errors, corrections, and knowledge gaps. Problems that recur 3+ times auto-promote to long-term memory so they never happen again.
+- 🤖 **Your agent delegates** — Battle-tested sub-agent patterns with inject-rules, result verification, and delivery confirmation. Your main agent stays focused while sub-agents handle heavy lifting.
+- 📋 **Your agent maintains itself** — Routine checks framework (Type A: fixed logic / Type B: needs LLM) so your agent doesn't waste tokens on things a shell script can do.
+- 🛡️ **Your agent verifies everything** — Four defense lines: create → execute → deliver → alert. "I did it" is never enough — it checks that the user actually received the result.
+- 👤 **Your agent has personality** — `SOUL.md` defines who it is, `IDENTITY.md` gives it a name and emoji, `USER.md` helps it understand you.
+
 ## Features
 
-- **Memory System**: Daily memory logs with long-term curation and retrieval
-- **Self-Improvement**: Systematic error tracking and learning from corrections
-- **Routine Checks**: Automated monitoring and maintenance workflows
-- **Sub-agent Patterns**: Delegation patterns for complex task orchestration
-- **Multi-instance Support**: Run multiple specialized agent instances
+- **Memory System**: Daily logs + long-term curation with P0/P1/P2 priority and auto-archival
+- **Self-Improvement**: Error tracking, correction learning, recurring pattern detection
+- **Routine Checks**: Type A/B monitoring framework, crontab templates
+- **Sub-agent Patterns**: inject-rules, REVIEW_THEN_DELIVER, STATUS_PENDING fallback
+- **Multi-instance Support**: Run multiple specialized agents with isolated workspaces
 
 ## Quick Start
 
