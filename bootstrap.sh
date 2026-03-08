@@ -80,11 +80,30 @@ done
 cd "$SCRIPT_DIR"
 echo -e "${GREEN}✓ Template files processed (existing files preserved)${NC}"
 
+# Copy skills (same skip-if-exists logic)
+if [ -d "$SCRIPT_DIR/skills" ]; then
+    echo -e "${YELLOW}Copying starter skills...${NC}"
+    cd "$SCRIPT_DIR/skills"
+    find . -type f | while read -r file; do
+        target="$WORKSPACE_PATH/skills/$file"
+        if [ -f "$target" ]; then
+            echo -e "  ${YELLOW}skip${NC} skills/$file (already exists)"
+        else
+            mkdir -p "$(dirname "$target")"
+            cp "$file" "$target"
+            echo -e "  ${GREEN}copy${NC} skills/$file"
+        fi
+    done
+    cd "$SCRIPT_DIR"
+    echo -e "${GREEN}✓ Starter skills installed${NC}"
+fi
+
 # Create additional directories
 echo -e "${YELLOW}Creating additional directories...${NC}"
 mkdir -p "$WORKSPACE_PATH/memory"
 mkdir -p "$WORKSPACE_PATH/.learnings"
 mkdir -p "$WORKSPACE_PATH/scripts"
+mkdir -p "$WORKSPACE_PATH/skills"
 mkdir -p "$WORKSPACE_PATH/reference"
 mkdir -p "$WORKSPACE_PATH/tmp"
 echo -e "${GREEN}✓ Directory structure created${NC}"

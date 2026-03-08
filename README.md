@@ -21,6 +21,7 @@ After installing:
 - **Self-Improvement**: Error tracking, correction learning, recurring pattern detection
 - **Routine Checks**: Type A/B monitoring framework, crontab templates
 - **Sub-agent Patterns**: inject-rules, REVIEW_THEN_DELIVER, STATUS_PENDING fallback
+- **Starter Skills**: Memory management, Obsidian markdown, Telegram HTML replies, temp file handling
 - **Multi-instance Support**: Run multiple specialized agents with isolated workspaces
 
 ## Quick Start
@@ -69,6 +70,11 @@ clawd/                          # Your workspace root
 │   ├── routine-checks.md       # Automated monitoring setup
 │   ├── sub-agent-patterns.md   # Task delegation patterns
 │   └── multi-instance.md       # Multiple agent instance setup
+├── skills/                     # Starter agent skills
+│   ├── memory/                 # Memory management skill
+│   ├── write-tmp/              # Temp file writing workaround
+│   ├── telegram-html-reply/    # Rich HTML replies for Telegram
+│   └── obsidian-markdown/      # Obsidian-flavored markdown
 ├── scripts/                    # Utility scripts
 ├── reference/                  # Documentation and references
 └── tmp/                        # Temporary files
