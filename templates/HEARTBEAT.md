@@ -1,31 +1,27 @@
 # HEARTBEAT.md
 
-## 架構
+## Architecture
 
-```text
-system crontab (定時執行)
-  → routine-checks（固定邏輯腳本）
-    → Type A：有異常直接通知
-    → Type B：收集資料 → spawn LLM 分析
+Heartbeats can be handled via OpenClaw cron or system crontab.
 
-openclaw cron（需 LLM 的任務）
-  → isolated session
-  → 結果 announce 或 sessions_send
+### Design Principles
+1. **Scriptable → script it** — Don't waste LLM tokens on grep/find/compare
+2. **Collect then decide** — Scripts gather data, LLM only when understanding needed
+3. **Type A/B split** — Type A: fixed logic monitoring / Type B: needs LLM analysis
+4. **Quiet hours** — 23:00-08:00 no disturbance unless urgent
+
+### Example Crontab Layout
+```
+# Fixed scripts (no LLM needed)
+05 * * * *   routine-checks          # hourly monitoring
+05 8 * * *   version-check.sh        # daily version check
+
+# Collect-then-decide (needs LLM)
+02 * * * *   memory-sync.sh          # extract conversations → LLM writes memory if needed
+02 20 * * *  daily-briefing.sh       # collect data → LLM summarizes
 ```
 
-## 檢查項目範例
+## Adding New Schedules
 
-| 檢查 | 類型 | 間隔 | 說明 |
-|------|------|------|------|
-| 服務健康 | Type A | 5 min | HTTP ping，異常通知 |
-| 磁碟空間 | Type A | 1 hr | 超過閾值通知 |
-| 郵件分析 | Type B | 1 hr | 收集未讀郵件 → LLM 判斷重要性 |
-| 記憶整理 | Type B | 1 day | 過期記憶歸檔 |
-
-## 設計原則
-
-- **能腳本化就不用 LLM**
-- **先收集再判斷**：腳本收集資料，LLM 只做需要理解力的事
-- **監控系統自己不能是不穩定因素**
-
-詳細指南：見 `guides/routine-checks.md`
+- No LLM needed → write a bash script, notify with `openclaw message send`
+- Needs LLM → script collects data first, then `openclaw cron add --at 10s` triggers isolated LLM session

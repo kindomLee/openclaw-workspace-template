@@ -98,6 +98,24 @@ if [ -d "$SCRIPT_DIR/skills" ]; then
     echo -e "${GREEN}✓ Starter skills installed${NC}"
 fi
 
+# Copy scripts
+if [ -d "$SCRIPT_DIR/scripts" ]; then
+    echo -e "${YELLOW}Copying scripts...${NC}"
+    cd "$SCRIPT_DIR/scripts"
+    find . -type f | while read -r file; do
+        target="$WORKSPACE_PATH/scripts/$file"
+        if [ -f "$target" ]; then
+            echo -e "  ${YELLOW}skip${NC} scripts/$file (already exists)"
+        else
+            mkdir -p "$(dirname "$target")"
+            cp "$file" "$target"
+            echo -e "  ${GREEN}copy${NC} scripts/$file"
+        fi
+    done
+    cd "$SCRIPT_DIR"
+    echo -e "${GREEN}✓ Scripts installed${NC}"
+fi
+
 # Create additional directories
 echo -e "${YELLOW}Creating additional directories...${NC}"
 mkdir -p "$WORKSPACE_PATH/memory"
