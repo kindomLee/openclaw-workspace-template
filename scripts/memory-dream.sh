@@ -7,7 +7,6 @@ set -euo pipefail
 WORKSPACE="${OPENCLAW_WORKSPACE:-$(cd "$(dirname "$0")/.." && pwd)}"
 MEMORY_DIR="$WORKSPACE/memory"
 MEMORY_MD="$WORKSPACE/MEMORY.md"
-OUTPUT="$MEMORY_DIR/dreams.md"
 NOTIFY=${1:-true}
 
 # Collect recent memory snippets (last 30 days, skip archives)
@@ -40,10 +39,10 @@ Rules:
 "
 
 for f in $SNIPPETS; do
-  basename=$(basename "$f")
+  fname=$(basename "$f")
   content=$(head -20 "$f" 2>/dev/null || true)
   PROMPT="$PROMPT
---- $basename ---
+--- $fname ---
 $content
 "
 done
@@ -56,47 +55,19 @@ $MEMORY_SECTIONS
 fi
 
 DATE=$(date +%Y-%m-%d)
-
-# Use OpenClaw isolated session (model-agnostic)
-RESULT=$(openclaw cron run-now \
-  --message "$PROMPT" \
-  --session isolated \
-  --timeout 60 2>/dev/null || true)
-
-# Fallback: if openclaw cron run-now not available, try openclaw message
-if [ -z "$RESULT" ]; then
-  # Write prompt to temp file for openclaw to process
-  PROMPT_FILE=$(mktemp)
-  echo "$PROMPT" > "$PROMPT_FILE"
-  
-  # Trigger via cron add with immediate execution
-  openclaw cron add \
-    --name "dream-${DATE}" \
-    --at "5s" \
-    --session isolated \
-    --message "$PROMPT" \
-    --announce \
-    --delete-after-run 2>/dev/null
-  
-  rm -f "$PROMPT_FILE"
-  echo "Dream triggered via OpenClaw cron (results will be announced)"
-  exit 0
-fi
-
-# Append to dreams.md
-{
-  echo ""
-  echo "### $DATE"
-  echo "$RESULT"
-} >> "$OUTPUT"
-
-echo "✅ Dream recorded to $OUTPUT"
-
-# Notify if requested
+ANNOUNCE_FLAG=""
 if [ "$NOTIFY" = "true" ]; then
-  openclaw message send "🌙 Cold Memory Association (Dream)
-
-$RESULT
-
-_Source: memory-dream.sh_" 2>/dev/null || true
+  ANNOUNCE_FLAG="--announce"
 fi
+
+# Trigger via OpenClaw isolated session (model-agnostic)
+# Uses whatever default model is configured
+openclaw cron add \
+  --name "dream-${DATE}" \
+  --at "5s" \
+  --session isolated \
+  --message "$PROMPT" \
+  $ANNOUNCE_FLAG \
+  --delete-after-run 2>/dev/null
+
+echo "✅ Dream triggered via OpenClaw cron"

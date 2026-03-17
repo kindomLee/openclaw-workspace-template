@@ -7,7 +7,6 @@ set -euo pipefail
 WORKSPACE="${OPENCLAW_WORKSPACE:-$(cd "$(dirname "$0")/.." && pwd)}"
 MEMORY_DIR="$WORKSPACE/memory"
 MEMORY_MD="$WORKSPACE/MEMORY.md"
-OUTPUT="$MEMORY_DIR/reflections.md"
 NOTIFY=${1:-true}
 
 TODAY=$(date +%Y-%m-%d)
@@ -43,7 +42,7 @@ Tasks:
 Rules:
 - Only list suggestions with concrete action value
 - For each: file, section, suggested action
-- If nothing needs attention, say '✅ Memory consistent, no adjustment needed'
+- If nothing needs attention, say 'Memory consistent, no adjustment needed'
 
 === Recent Memory ===
 $RECENT
@@ -51,13 +50,18 @@ $RECENT
 === Long-term Memory (MEMORY.md key sections) ===
 $MEMORY_CONTEXT"
 
-# Use OpenClaw isolated session (model-agnostic)
+ANNOUNCE_FLAG=""
+if [ "$NOTIFY" = "true" ]; then
+  ANNOUNCE_FLAG="--announce"
+fi
+
+# Trigger via OpenClaw isolated session (model-agnostic)
 openclaw cron add \
   --name "reflect-${TODAY}" \
   --at "5s" \
   --session isolated \
   --message "$PROMPT" \
-  --announce \
+  $ANNOUNCE_FLAG \
   --delete-after-run 2>/dev/null
 
 echo "✅ Reflection triggered via OpenClaw cron"
