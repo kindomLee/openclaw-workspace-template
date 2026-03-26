@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-03-26
+
+### Added
+- **Post-Install Checklist** (`guides/post-install-checklist.md`): Step-by-step verification guide to ensure memory system is actually working after bootstrap. Includes real-world case study from CramClaw where scripts existed but none of the automated parts functioned (wrong CLI flags, missing cron entries, root ownership issues)
+- **Health Check Script** (`scripts/health-check.sh`): Automated workspace health verification — checks directory structure, core files, script permissions, cron entries, memory status, file ownership, and skill symlinks. Run after bootstrap or anytime to catch "installed but not activated" problems
+- Quick Start now includes health check step and cron setup reminder
+
+### Notes
+- Case study: CramClaw had `memory-janitor` failing silently for weeks due to non-existent `--workspace` CLI flag; `memory-sync` never ran due to invalid `--state-dir` flag; reflect/dream/expire scripts had no cron entries. All looked "installed" but none worked. The post-install checklist prevents this class of failure.
+
 ## [2.1.0] - 2026-03-24
 
 ### Added
@@ -82,6 +92,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[2.2.0]: https://github.com/kindomLee/openclaw-workspace-template/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/kindomLee/openclaw-workspace-template/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/kindomLee/openclaw-workspace-template/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/kindomLee/openclaw-workspace-template/tree/v1.0.0

@@ -43,11 +43,22 @@ chmod +x bootstrap.sh
 ./bootstrap.sh
 ```
 
-4. Edit the template files to personalize:
+4. Run the health check:
+```bash
+bash clawd/scripts/health-check.sh
+```
+
+5. Edit the template files to personalize:
    - `IDENTITY.md` — Name, emoji, personality
    - `USER.md` — Your info so the agent knows you
    - `SOUL.md` — Agent personality and decision priors
    - `TOOLS.md` — Your frequently-used tools and connections
+
+6. Set up cron jobs (see [Post-Install Checklist](guides/post-install-checklist.md)):
+```bash
+crontab -e
+# Add memory lifecycle jobs — see checklist for exact entries
+```
 
 ## Architecture
 
@@ -73,7 +84,8 @@ workspace/
 │   ├── memory-dream.sh    # Weekly "dreaming" — cold memory association
 │   ├── memory-reflect.sh  # Daily rumination — contradiction detection
 │   ├── memory-expire.sh   # Monthly archive of old daily files
-│   └── memory-janitor.py  # Memory cleanup utility
+│   ├── memory-janitor.py  # Memory cleanup utility
+│   └── health-check.sh    # Post-install verification
 ├── skills/            # Agent skills
 │   ├── memory/        # Memory management
 │   ├── telegram-html-reply/  # Rich HTML replies for Telegram
@@ -146,6 +158,7 @@ Before responding, the agent classifies each message:
 - [Sub-agent Patterns](guides/sub-agent-patterns.md) — Delegation, verification, delivery
 - [Routine Checks](guides/routine-checks.md) — Type A/B monitoring framework
 - [Multi-instance Setup](guides/multi-instance.md) — Running multiple specialized agents
+- [Post-Install Checklist](guides/post-install-checklist.md) — Verify everything actually works after setup
 
 ## Customization
 
