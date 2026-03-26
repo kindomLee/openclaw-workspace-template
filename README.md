@@ -81,6 +81,7 @@ workspace/
 │   ├── LEARNINGS.md
 │   └── FEATURE_REQUESTS.md
 ├── scripts/
+│   ├── cron-memory-sync.sh # Hourly conversation extraction → daily memory
 │   ├── memory-dream.sh    # Weekly "dreaming" — cold memory association
 │   ├── memory-reflect.sh  # Daily rumination — contradiction detection
 │   ├── memory-expire.sh   # Monthly archive of old daily files
@@ -115,6 +116,7 @@ Inspired by research on [how biological sleep consolidates memory](https://x.com
 
 | Mechanism | Script | Schedule | What It Does |
 |-----------|--------|----------|-------------|
+| **Sync** | `cron-memory-sync.sh` | Hourly (:02) | Extract conversations → LLM writes daily memory |
 | **Dreaming** | `memory-dream.sh` | Weekly (Sun 3am) | Random cross-domain memory association for unexpected insights |
 | **Rumination** | `memory-reflect.sh` | Daily (9pm) | Compare recent vs long-term memory, detect contradictions |
 | **Forgetting** | `memory-expire.sh` | Monthly (1st) | Archive daily files older than 30 days |

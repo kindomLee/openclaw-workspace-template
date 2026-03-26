@@ -5,10 +5,12 @@ After bootstrapping a workspace (or deploying to a new instance), run through th
 > **Case study:** CramClaw had all memory scripts copied and cron entries added, but:
 > - `memory-janitor` used `--workspace` flag (doesn't exist) → silently failing for weeks
 > - `memory-sync` used `--state-dir` flag (invalid) → never synced
+> - `memory-sync` called `extract-recent-conversation.py` which **hardcoded `~/.openclaw/`** → always read the wrong instance's sessions → "no conversations" every time
 > - `memory-reflect/dream/expire` scripts existed but had no cron entries → never ran
+> - `memory-reflect/dream` had `--announce` but no `--channel`/`--to` → notifications went nowhere
 > - File ownership was `root` instead of the service user → couldn't write
 >
-> Result: The agent had a "memory system" that looked complete but **none of the automated parts actually worked**.
+> Result: The agent had a "memory system" that looked complete but **none of the automated parts actually worked**. For 2+ weeks, zero daily memories were written and zero notifications were delivered.
 
 ## The Checklist
 
@@ -70,10 +72,11 @@ bash /path/to/workspace/scripts/memory-expire.sh true  # true = dry run
 - Wrong CLI flags (`--workspace` vs env var `OPENCLAW_WORKSPACE`)
 - Missing binaries (`memory-tools` not in PATH)
 - Wrong `openclaw` profile flag (`--state-dir` doesn't exist; use `--profile`)
+- **Hardcoded paths in helper scripts** — If `memory-sync` calls an external script that hardcodes `~/.openclaw/`, it will always read the default instance's sessions, not yours. The template's `cron-memory-sync.sh` avoids this by extracting conversations inline with configurable `OPENCLAW_STATE_DIR`.
 
 ### 4. Environment Variables
 
-Scripts need to know the workspace path. Verify:
+Scripts need to know the workspace path and (for multi-instance) the state directory. Verify:
 
 ```bash
 # For cron jobs, set env vars inline:
@@ -81,7 +84,23 @@ OPENCLAW_WORKSPACE=/path/to/workspace /path/to/script.sh
 
 # Or in the crontab entry:
 0 21 * * * OPENCLAW_WORKSPACE=/path/to/workspace /path/to/scripts/memory-reflect.sh true
+
+# For multi-instance setups, also set profile and state dir:
+02 * * * * OPENCLAW_WORKSPACE=/home/mybot/clawd OPENCLAW_PROFILE=mybot OPENCLAW_STATE_DIR=/home/mybot/.openclaw-mybot /home/mybot/clawd/scripts/cron-memory-sync.sh
 ```
+
+### 4a. Notification Delivery
+
+If you want cron results sent to a specific channel, set in the crontab or script:
+
+```bash
+# Discord example:
+NOTIFY_CHANNEL=discord NOTIFY_TARGET=channel:1234567890 /path/to/scripts/cron-memory-sync.sh
+
+# For reflect/dream scripts, edit the ANNOUNCE_FLAGS in the script itself
+```
+
+**Without explicit `--channel` and `--to`**, `--announce` sends to the last active session — which may be a different channel, a different platform (LINE vs Discord), or nowhere if no session is active.
 
 ### 5. Memory Files Are Being Written
 

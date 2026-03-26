@@ -8,12 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.2.0] - 2026-03-26
 
 ### Added
-- **Post-Install Checklist** (`guides/post-install-checklist.md`): Step-by-step verification guide to ensure memory system is actually working after bootstrap. Includes real-world case study from CramClaw where scripts existed but none of the automated parts functioned (wrong CLI flags, missing cron entries, root ownership issues)
+- **Post-Install Checklist** (`guides/post-install-checklist.md`): Step-by-step verification guide to ensure memory system is actually working after bootstrap. Includes real-world case study from CramClaw where scripts existed but none of the automated parts functioned (wrong CLI flags, missing cron entries, root ownership, hardcoded paths, missing notification targets)
 - **Health Check Script** (`scripts/health-check.sh`): Automated workspace health verification — checks directory structure, core files, script permissions, cron entries, memory status, file ownership, and skill symlinks. Run after bootstrap or anytime to catch "installed but not activated" problems
+- **Memory Sync Script** (`scripts/cron-memory-sync.sh`): Self-contained hourly conversation extraction that reads session JSONL directly (no external dependencies). Supports multi-instance via `OPENCLAW_PROFILE`, `OPENCLAW_STATE_DIR`, and configurable notification delivery via `NOTIFY_CHANNEL`/`NOTIFY_TARGET`
 - Quick Start now includes health check step and cron setup reminder
 
+### Fixed
+- Post-install checklist now warns about hardcoded `~/.openclaw/` paths in helper scripts — the #1 cause of "memory-sync runs but never finds conversations" in multi-instance setups
+- Notification delivery section added — `--announce` without `--channel`/`--to` may go nowhere
+
 ### Notes
-- Case study: CramClaw had `memory-janitor` failing silently for weeks due to non-existent `--workspace` CLI flag; `memory-sync` never ran due to invalid `--state-dir` flag; reflect/dream/expire scripts had no cron entries. All looked "installed" but none worked. The post-install checklist prevents this class of failure.
+- Case study: CramClaw had `memory-janitor` failing silently for weeks due to non-existent `--workspace` CLI flag; `memory-sync` called an external script with hardcoded paths that always read the wrong instance; reflect/dream had `--announce` but no target channel. All looked "installed" but none worked for 2+ weeks.
 
 ## [2.1.0] - 2026-03-24
 
