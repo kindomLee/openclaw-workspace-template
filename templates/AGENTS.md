@@ -15,10 +15,37 @@
 - **Execute:** Only with user consent. **Only main session can edit SOUL.md**
 
 ## Memory Extraction (Main Session)
+Two-layer memory system: **journal** (temporal) + **knowledge** (semantic).
+
+### Layer 1: Journal (memory/)
+- **File:** `memory/YYYY-MM-DD.md` — events, decisions, status changes
+- **Retention:** 5-day rolling, then auto-archived to `archive-YYYY-MM/`
+- **Use for:** "What happened" — things that occurred
+
+### Layer 2: Knowledge (notes/)
+- **Structure:** `notes/areas/` (topics) + `notes/resources/` (tools/services)
+- **Strategy:** Merge before creating new — search first, append if exists
+- **Retrieval:** Add to `memorySearch.extraPaths` for full-text search
+- **Use for:** "What was learned" — knowledge, methods, references
+
+### Classification Tree
+```
+Is this "what happened" or "what was learned"?
+├─ "What happened" (event/decision/status) → memory/YYYY-MM-DD.md
+│   └─ Important enough for long-term index? → Also update MEMORY.md Events Timeline
+├─ "What was learned" (knowledge/method/principle)
+│   ├─ Related notes/ already exist? → Merge into existing (don't create new)
+│   ├─ New topic + >500 words? → notes/areas/ or resources/ (create new)
+│   └─ Fragment <500 words? → memory/YYYY-MM-DD.md, let cron sync organize
+├─ Preference/infrastructure/core Pattern? → MEMORY.md (P0)
+├─ Error/learning? → .learnings/LEARNINGS.md
+└─ Uncertain? → memory/YYYY-MM-DD.md (safe default)
+```
+
 When important conversations end, edit MEMORY.md directly:
 - **Trigger:** New decisions, config changes, new knowledge, problem solutions, entity updates
 - **Skip:** Casual chat, simple queries, routine ops
-- **Before writing:** grep to avoid duplicates
+- **Before writing:** grep + memory_search to avoid duplicates
 - **Sync:** Update Events Timeline for notable events
 - **P-level:** Personal prefs/infra → P0 | Tech solutions → P1+date | Experiments → P2+date
 

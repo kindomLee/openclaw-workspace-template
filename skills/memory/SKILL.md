@@ -29,26 +29,53 @@ Review all conversation from last memory write to now. Identify new decisions/se
 ### 2. Duplicate Check (mandatory before writing)
 
 ```bash
+# Check journal + long-term index
 grep -i "keyword" MEMORY.md memory/*.md
+
+# Check knowledge base (notes/ included in memory_search)
+memory_search "keyword"
 ```
 
 - Exact duplicate → skip
-- Partially related → merge into existing entry
+- Partially related → merge into existing entry (notes/ or memory/)
 - Conflict → keep newer, note replacement date
 
-### 3. Classify and Store
+### 3. Classify and Store (Two-Layer System)
+
+The memory system has two layers: **journal** (temporal) and **knowledge** (semantic).
 
 ```
-Infrastructure/preferences/core patterns? → MEMORY.md (P0)
-Technical solutions/problem fixes?        → MEMORY.md (P1 + date)
-Experimental/temporary?                   → MEMORY.md (P2 + date)
-Personal notes/projects?                  → notes/
-Tool/API reference?                       → reference/
-Errors/learnings?                         → .learnings/
-None of the above?                        → memory/YYYY-MM-DD.md
+═══ Layer 1: Journal (memory/) — Temporal ═══
+memory/YYYY-MM-DD.md              ← What happened (events, decisions, status changes)
+                                    Retention: 5 days, then auto-archive to archive-YYYY-MM/
+
+═══ Layer 2: Knowledge (notes/) — Semantic ═══
+MEMORY.md                        ← Long-term index (P0 prefs/infra, P1 tech, P2 experiments)
+notes/areas/{topic}/              ← Topic knowledge (merge-first, don't create fragments)
+notes/resources/{topic}/          ← Tools/services references
+reference/                        ← Deep references
+.learnings/                       ← Errors and learnings
 ```
 
-> P-level definitions and format in AGENTS.md
+### Classification Tree
+
+```
+Is this "what happened" or "what was learned"?
+├─ "What happened" (event/decision/status) → memory/YYYY-MM-DD.md
+│   └─ Important enough for long-term index? → Also update MEMORY.md Events Timeline
+├─ "What was learned" (knowledge/method/principle)
+│   ├─ Related notes/ already exist? → Merge into existing (don't create new)
+│   ├─ New topic + >500 words? → notes/areas/ or resources/ (create new)
+│   └─ Fragment <500 words? → memory/YYYY-MM-DD.md, let cron sync organize
+├─ Preference/infrastructure/core Pattern? → MEMORY.md (P0)
+├─ Error/learning? → .learnings/LEARNINGS.md
+└─ Uncertain? → memory/YYYY-MM-DD.md (safe default)
+```
+
+**Key Principles:**
+- **Merge First:** Always search notes/ for related content before creating new
+- **Don't put topics in memory/:** memory/ is for date-based journal only; topic knowledge goes to notes/
+- **Keep memory/ clean:** Only recent 5 days + system files
 
 ### 4. Report
 List: what was recorded (summary), where it was stored, what priority level.
@@ -69,6 +96,23 @@ cat memory/$(date +%Y-%m-%d).md
 # Search memory
 grep -rn "keyword" MEMORY.md memory/*.md
 
+# Search knowledge base (if extraPaths configured)
+memory_search "keyword"
+
 # Check MEMORY.md Events Timeline
 grep "^- \*\*" MEMORY.md | tail -10
 ```
+
+## Memory Search Configuration (Optional)
+
+To enable full-text search across notes/, add to OpenClaw config:
+
+```json
+{
+  "memorySearch": {
+    "extraPaths": ["notes/"]
+  }
+}
+```
+
+This integrates the knowledge layer with the memory search system for semantic retrieval.

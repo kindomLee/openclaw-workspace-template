@@ -119,6 +119,8 @@ fi
 # Create additional directories
 echo -e "${YELLOW}Creating additional directories...${NC}"
 mkdir -p "$WORKSPACE_PATH/memory"
+mkdir -p "$WORKSPACE_PATH/notes/areas"
+mkdir -p "$WORKSPACE_PATH/notes/resources"
 mkdir -p "$WORKSPACE_PATH/.learnings"
 mkdir -p "$WORKSPACE_PATH/scripts"
 mkdir -p "$WORKSPACE_PATH/skills"
@@ -145,6 +147,7 @@ echo -e "2. ${YELLOW}Customize IDENTITY.md for your agent's personality${NC}"
 echo -e "3. ${YELLOW}Configure OpenClaw to use workspace: ${WORKSPACE_PATH}${NC}"
 echo -e "4. ${YELLOW}Review and customize AGENTS.md for your workflows${NC}"
 echo -e "5. ${YELLOW}Add your specific tools and services to TOOLS.md${NC}"
+echo -e "6. ${YELLOW}(Optional) Set up Knowledge Base: see guides/context-tree.md${NC}"
 echo
 echo -e "${BLUE}Workspace location: ${WORKSPACE_PATH}${NC}"
 echo -e "${BLUE}Documentation: ${WORKSPACE_PATH}/guides/${NC}"

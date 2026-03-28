@@ -5,7 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.2.0] - 2026-03-26
+## [2.3.0] - 2026-03-28
+
+### Added
+- **Context Tree Guide** (`guides/context-tree.md`): Comprehensive documentation on the two-layer memory architecture — journal (memory/) for temporal events vs knowledge (notes/) for semantic topic organization. Includes cleanup strategy, merge-first principle, memorySearch.extraPaths configuration, and background references to ByteRover Context Tree and NLAH paper (arXiv:2603.25723)
+- **Knowledge Base** (`templates/notes/`): New optional directory structure for topic-organized knowledge (areas/, resources/) with .gitkeep files for git tracking
+- **Memory Skill Update** (`skills/memory/SKILL.md`): Added two-layer classification tree — journal (memory/YYYY-MM-DD.md) vs knowledge (notes/). Classification logic: "what happened" → journal, "what was learned" → merge into notes/ first
+
+### Changed
+- **AGENTS.md** (templates/): Rewrote Memory Extraction section with two-layer architecture — Layer 1: Journal (5-day rolling, then archive), Layer 2: Knowledge (merge-first, optional notes/). Added classification decision tree
+- **README.md**: Added "Knowledge Base" to What You Get section. Updated Architecture diagram with notes/ directory. Added knowledge layer to Three-Layer Architecture section with memorySearch.extraPaths setup
+
+### Notes
+- Fully backward compatible — journal-only mode still works, knowledge layer is optional enhancement
+- Two-layer approach inspired by Harness Engineering's Entropy Management concept
+- Lightweight file-based implementation — no external dependencies (ByteRover/NLAH are references, not requirements)
 
 ### Added
 - **Post-Install Checklist** (`guides/post-install-checklist.md`): Step-by-step verification guide to ensure memory system is actually working after bootstrap. Includes real-world case study from CramClaw where scripts existed but none of the automated parts functioned (wrong CLI flags, missing cron entries, root ownership, hardcoded paths, missing notification targets)

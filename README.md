@@ -24,6 +24,8 @@ After installing:
 
 - 🧬 **Your agent evolves its soul** — Behavioral corrections accumulate as proposals; after 3+ similar corrections, the agent proposes a `SOUL.md` update (with your approval).
 
+- 📚 **Your agent builds a knowledge base** — Topic-organized notes (`notes/areas/`, `notes/resources/`) complement daily logs (`memory/`). The knowledge layer merges related entries instead of creating fragments. Add `notes/` to `memorySearch.extraPaths` for full-text retrieval. See [Context Tree guide](guides/context-tree.md).
+
 ## Quick Start
 
 1. Install [OpenClaw](https://openclaw.ai) if you haven't:
@@ -72,10 +74,13 @@ workspace/
 ├── MEMORY.md          # Curated long-term memory (P0/P1/P2)
 ├── HEARTBEAT.md       # Scheduled tasks architecture
 ├── BOOTSTRAP.md       # Pre-generation task classification
-├── memory/            # Daily logs (YYYY-MM-DD.md)
+├── memory/            # Daily journal (YYYY-MM-DD.md)
 │   ├── dreams.md      # Weekly cross-domain insights
 │   ├── reflections.md # Daily memory rumination
 │   └── archive-*/     # Auto-archived old memories
+├── notes/             # Knowledge base — optional, merge-first (see guides/context-tree.md)
+│   ├── areas/         # Topics by domain
+│   └── resources/     # Tools, services, references
 ├── .learnings/        # Self-improvement tracking
 │   ├── ERRORS.md
 │   ├── LEARNINGS.md
@@ -107,8 +112,11 @@ Daily Notes (memory/YYYY-MM-DD.md)
     ↓ extraction + curation
 Long-term Memory (MEMORY.md)
     ↓ promoted patterns
+Knowledge Base (notes/)     # Optional — topics organized by theme
 Reference (reference/*.md)
 ```
+
+> **Optional:** Add `notes/` to `memorySearch.extraPaths` for full-text search across the knowledge base. See [Context Tree guide](guides/context-tree.md) for setup details.
 
 ### Sleep-Inspired Memory Lifecycle
 
