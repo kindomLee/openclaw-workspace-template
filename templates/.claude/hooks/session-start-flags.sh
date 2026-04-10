@@ -10,14 +10,26 @@
 #     "SessionStart": [{
 #       "hooks": [{
 #         "type": "command",
-#         "command": "bash .claude/hooks/session-start-flags.sh",
+#         "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start-flags.sh\"",
 #         "timeout": 5
 #       }]
 #     }]
 #   }
+#
+# $CLAUDE_PROJECT_DIR is injected by Claude Code and always points to the
+# workspace root, regardless of the current working directory. Using it
+# avoids a foot-gun where any cwd drift earlier in the session would make
+# `.claude/flags` resolve to the wrong place.
 set -euo pipefail
 
-FLAG_DIR=".claude/flags"
+# Resolve FLAG_DIR robustly: prefer the injected project dir, fall back to
+# the script's own location (two levels up from .claude/hooks/).
+if [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
+    FLAG_DIR="$CLAUDE_PROJECT_DIR/.claude/flags"
+else
+    SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    FLAG_DIR="$(dirname "$(dirname "$SELF_DIR")")/.claude/flags"
+fi
 shopt -s nullglob
 FLAGS=("$FLAG_DIR"/*.flag)
 [ ${#FLAGS[@]} -eq 0 ] && exit 0

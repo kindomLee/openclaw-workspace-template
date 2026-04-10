@@ -17,11 +17,15 @@ Wire it up in .claude/settings.json:
     "UserPromptSubmit": [{
       "hooks": [{
         "type": "command",
-        "command": "python3 .claude/hooks/memory-search-trigger.py",
+        "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/memory-search-trigger.py\"",
         "timeout": 5
       }]
     }]
   }
+
+$CLAUDE_PROJECT_DIR is set by Claude Code to the workspace root. Using it
+makes the hook robust against cwd drift (for example, a previous Bash call
+that `cd`'d into a subdirectory and never restored cwd).
 """
 import json
 import re

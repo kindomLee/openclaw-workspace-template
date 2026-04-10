@@ -21,7 +21,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 .claude/hooks/memory-search-trigger.py",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/memory-search-trigger.py\"",
             "timeout": 5
           }
         ]
@@ -32,7 +32,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/session-start-flags.sh",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start-flags.sh\"",
             "timeout": 5
           }
         ]
