@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 scripts/*)",
+      "Bash(bash scripts/*)",
+      "Read(*)",
+      "Write(memory/*)",
+      "Write(notes/*)",
+      "Write(MEMORY.md)",
+      "Write(MEMORY_COMPACT.md)",
+      "Edit(memory/*)",
+      "Edit(notes/*)",
+      "Edit(MEMORY.md)",
+      "Edit(MEMORY_COMPACT.md)"
+    ],
+    "deny": []
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/memory-search-trigger.py",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/session-start-flags.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

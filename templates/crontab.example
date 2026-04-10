@@ -1,0 +1,30 @@
+# OpenClaw workspace — crontab example
+#
+# Install with:
+#     bash scripts/install-cron.sh           # prints these lines for crontab -e
+#     bash scripts/install-cron.sh --install # appends to current crontab (asks first)
+#
+# Environment:
+#   OPENCLAW_WORKSPACE      absolute path to your workspace root (required)
+#   NOTIFY_CHANNEL          telegram | slack | stdout | none
+#   NOTIFY_TARGET           chat_id, webhook URL, etc.
+#   TELEGRAM_BOT_TOKEN      required when NOTIFY_CHANNEL=telegram
+#   BROKEN_LINKS_THRESHOLD  default 5
+#   NOTES_TODO_THRESHOLD    default 20
+
+OPENCLAW_WORKSPACE=/path/to/your/workspace
+NOTIFY_CHANNEL=stdout
+# NOTIFY_TARGET=
+# TELEGRAM_BOT_TOKEN=
+# BROKEN_LINKS_THRESHOLD=5
+# NOTES_TODO_THRESHOLD=20
+
+# --- flag checks (cron → flag → SessionStart hook) ---
+30 11 * * 1  $OPENCLAW_WORKSPACE/scripts/cron-broken-links-check.sh  >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
+32 11 * * 1  $OPENCLAW_WORKSPACE/scripts/cron-notes-todo-check.sh    >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
+
+# --- memory maintenance (existing scripts) ---
+0  */1 * * * $OPENCLAW_WORKSPACE/scripts/cron-memory-sync.sh         >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
+15 3  * * * $OPENCLAW_WORKSPACE/scripts/memory-reflect.sh            >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
+30 3  * * 0 $OPENCLAW_WORKSPACE/scripts/memory-dream.sh              >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
+45 3  1 * * $OPENCLAW_WORKSPACE/scripts/memory-expire.sh             >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
