@@ -116,6 +116,26 @@ if [ -d "$SCRIPT_DIR/scripts" ]; then
     echo -e "${GREEN}✓ Scripts installed${NC}"
 fi
 
+# Copy cron system
+if [ -d "$SCRIPT_DIR/cron" ]; then
+    echo -e "${YELLOW}Copying cron system...${NC}"
+    cd "$SCRIPT_DIR/cron"
+    find . -type f ! -name "config.env" ! -path "*/logs/*" | while read -r file; do
+        target="$WORKSPACE_PATH/cron/$file"
+        if [ -f "$target" ]; then
+            echo -e "  ${YELLOW}skip${NC} cron/$file (already exists)"
+        else
+            mkdir -p "$(dirname "$target")"
+            cp "$file" "$target"
+            echo -e "  ${GREEN}copy${NC} cron/$file"
+        fi
+    done
+    cd "$SCRIPT_DIR"
+    # Make scripts executable
+    find "$WORKSPACE_PATH/cron" -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
+    echo -e "${GREEN}✓ Cron system installed${NC}"
+fi
+
 # Create additional directories
 echo -e "${YELLOW}Creating additional directories...${NC}"
 mkdir -p "$WORKSPACE_PATH/memory"
@@ -124,6 +144,7 @@ mkdir -p "$WORKSPACE_PATH/notes/resources"
 mkdir -p "$WORKSPACE_PATH/.learnings"
 mkdir -p "$WORKSPACE_PATH/scripts"
 mkdir -p "$WORKSPACE_PATH/skills"
+mkdir -p "$WORKSPACE_PATH/cron/logs"
 mkdir -p "$WORKSPACE_PATH/reference"
 mkdir -p "$WORKSPACE_PATH/tmp"
 echo -e "${GREEN}✓ Directory structure created${NC}"

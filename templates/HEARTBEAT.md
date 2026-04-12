@@ -2,7 +2,12 @@
 
 ## Architecture
 
-Heartbeats can be handled via OpenClaw cron or system crontab.
+Two scheduling modes available:
+
+| Mode | Scheduler | LLM Invocation | Best For |
+|------|-----------|---------------|----------|
+| **Claude Code** | launchd (Mac) / crontab (Linux) | `claude -p` | Standalone / Claude Code setups |
+| **OpenClaw** | system crontab | `openclaw cron add` | OpenClaw-managed agents |
 
 ### Design Principles
 1. **Scriptable → script it** — Don't waste LLM tokens on grep/find/compare
@@ -10,18 +15,45 @@ Heartbeats can be handled via OpenClaw cron or system crontab.
 3. **Type A/B split** — Type A: fixed logic monitoring / Type B: needs LLM analysis
 4. **Quiet hours** — 23:00-08:00 no disturbance unless urgent
 
-### Example Crontab Layout
-```
-# Fixed scripts (no LLM needed)
-05 * * * *   routine-checks          # hourly monitoring
-05 8 * * *   version-check.sh        # daily version check
+### Claude Code Mode (cron/)
 
-# Collect-then-decide (needs LLM)
-02 * * * *   memory-sync.sh          # extract conversations → LLM writes memory if needed
-02 20 * * *  daily-briefing.sh       # collect data → LLM summarizes
 ```
+launchd / crontab
+  → cron/runner.sh <job-name>
+    → source config.env
+    → claude -p "$(cat prompts/<job>.md)"
+    → logs/
+```
+
+Default schedule:
+
+| Time | Job | Purpose |
+|------|-----|---------|
+| 20:07 daily | memory-janitor | Hall tag backfill |
+| 21:03 daily | memory-reflect | Contradiction detection |
+| 21:30 Sat | self-improvement | LEARNINGS promote |
+| 03:03 Sun | memory-dream | Cross-domain association |
+| 03:33 1st | memory-expire | Archive old memories |
+
+Install: `bash cron/install-mac.sh` or `bash cron/install-linux.sh`
+
+### OpenClaw Mode (scripts/)
+
+```
+system crontab
+  → scripts/memory-*.sh
+    → openclaw cron add --session isolated
+```
+
+Install: `bash scripts/install-cron.sh --install`
 
 ## Adding New Schedules
 
-- No LLM needed → write a bash script, notify with `openclaw message send`
-- Needs LLM → script collects data first, then `openclaw cron add --at 10s` triggers isolated LLM session
+### Claude Code mode
+1. Create `cron/prompts/<job>.md`
+2. Create `cron/launchd/org.oracle.<job>.plist`
+3. Re-install: `bash cron/install-mac.sh` or `bash cron/install-linux.sh`
+
+### OpenClaw mode
+- No LLM needed → bash script + `openclaw message send`
+- Needs LLM → script collects data, then `openclaw cron add --at 10s`

@@ -60,11 +60,20 @@ bash clawd/scripts/health-check.sh
    - `SOUL.md` — Agent personality and decision priors
    - `TOOLS.md` — Your frequently-used tools and connections
 
-6. Set up cron jobs (see [Post-Install Checklist](guides/post-install-checklist.md)):
+6. Set up cron jobs:
+
 ```bash
-crontab -e
-# Add memory lifecycle jobs — see checklist for exact entries
+# Claude Code mode — macOS
+bash cron/install-mac.sh
+
+# Claude Code mode — Linux
+bash cron/install-linux.sh
+
+# OpenClaw mode (traditional)
+bash scripts/install-cron.sh --install
 ```
+
+See [cron/README.md](cron/README.md) for details and [Post-Install Checklist](guides/post-install-checklist.md) for verification.
 
 ## Architecture
 
@@ -89,6 +98,12 @@ workspace/
 │   ├── ERRORS.md
 │   ├── LEARNINGS.md
 │   └── FEATURE_REQUESTS.md
+├── cron/                  # Claude Code scheduled jobs (claude -p)
+│   ├── runner.sh          # Universal job wrapper
+│   ├── install-mac.sh     # macOS launchd installer
+│   ├── install-linux.sh   # Linux crontab installer
+│   ├── prompts/           # Job prompts (Markdown)
+│   └── launchd/           # Schedule definitions (plist)
 ├── .claude/
 │   ├── flags/            # Pending-work flags (cron drops them here)
 │   └── hooks/            # SessionStart + UserPromptSubmit hooks
