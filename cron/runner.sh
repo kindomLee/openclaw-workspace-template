@@ -31,6 +31,22 @@ mkdir -p "$LOG_DIR"
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting cron job: $JOB" | tee "$LOG_FILE"
 
+# Wait for network (may need a few seconds after wake from sleep)
+MAX_WAIT=60
+WAITED=0
+while ! curl -sf --max-time 3 https://api.anthropic.com > /dev/null 2>&1; do
+  if [ "$WAITED" -ge "$MAX_WAIT" ]; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Network not ready after ${MAX_WAIT}s, aborting" | tee -a "$LOG_FILE"
+    osascript -e "display notification \"$JOB: network timeout\" with title \"Oracle Cron\" sound name \"Basso\"" 2>/dev/null || true
+    exit 1
+  fi
+  sleep 5
+  WAITED=$((WAITED + 5))
+done
+if [ "$WAITED" -gt 0 ]; then
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Network ready after ${WAITED}s" | tee -a "$LOG_FILE"
+fi
+
 # Desktop notification (macOS only, silently skip on Linux)
 osascript -e "display notification \"$JOB started\" with title \"Oracle Cron\"" 2>/dev/null || true
 
