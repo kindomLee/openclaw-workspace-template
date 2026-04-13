@@ -1,3 +1,4 @@
+<!-- allowed_tools: Bash,Read,Write,Edit,Grep,Glob -->
 你是記憶品質整理 cron job。檢查 memory/ 和 notes/ 的品質並進行維護。
 
 ## 步驟

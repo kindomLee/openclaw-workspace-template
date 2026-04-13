@@ -1,3 +1,4 @@
+<!-- allowed_tools: Bash,Read,Write,Edit,Grep,Glob -->
 你是 Self-Improvement cron job。定期檢查 LEARNINGS.md，分析 recurring patterns，必要時提升到 MEMORY.md。
 
 ## 步驟
@@ -18,7 +19,28 @@
 - 知識過時 → `knowledge_gap`
 
 如果發現新的 pattern 且 LEARNINGS.md 中沒有對應條目，新增一條。
-如果已有對應條目，`recurring_count += 1`。
+如果已有對應條目，`recurring_count += 1` 並**在 evidence 追加新出處**。
+
+### 2.1 寫 learning 必須用 claim/evidence 結構（2026-04-13 起）
+
+每條 learning 必須含：
+
+```markdown
+## [TYPE-YYYYMMDD-NNN] 標題
+
+- **claim**: 一句話斷言
+- **type**: manual_repeat | correction | best_practice | knowledge_gap | error | regression
+- **recurring_count**: 整數
+- **status**: active | resolved | wontfix
+- **evidence**:  ← 必填，列出具體檔案:行號 + 日期
+  - YYYY-MM-DD: path/to/file:LINE — 描述
+  - ...
+- **suggested_action**: 具體可執行的修法/避免方法
+- **blast_radius**: 影響範圍（選填）
+```
+
+**evidence 不能只寫「在某個 session 發生」**。必須指向可驗證的檔案/commit。
+沒有具體 evidence 的 learning 無法被未來 verify，會變成 stale 假警報。
 
 ### 3. 提升判斷
 

@@ -1,3 +1,4 @@
+<!-- allowed_tools: Bash,Read,Write,Glob -->
 你是記憶清理 cron job。歸檔過期的 memory 日誌和 notes。
 
 ## 步驟

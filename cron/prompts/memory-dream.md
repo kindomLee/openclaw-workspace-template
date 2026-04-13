@@ -1,3 +1,4 @@
+<!-- allowed_tools: Bash,Read,Write,Grep,Glob -->
 你是「做夢」引擎 cron job。從 memory journal 和 notes 知識庫中隨機抽取片段，找出跨領域的意外洞察。
 
 ## 步驟
@@ -31,6 +32,31 @@ find notes/01-Projects/Active -name "*.md" | sort -R | head -1
 - 繁體中文
 - 最多 3 個洞察
 
+### 2.1 Confidence scoring（靈感來自 OpenClaw REM dreaming minPatternStrength）
+
+每個洞察**必須**自評 confidence 分數 0.0 ~ 1.0，依以下標準：
+
+| 分數 | 條件 |
+|------|------|
+| 0.9+ | 兩個領域明確共享同一個機制/原理，連結可推廣 |
+| 0.75-0.89 | 結構相似性清楚，跨域類比成立 |
+| 0.5-0.74 | 有共同 pattern 但需補充脈絡才站得住 |
+| < 0.5 | 模糊或牽強 —— **直接丟棄，不寫入 dreams.md** |
+
+門檻：只保留 **confidence >= 0.75** 的洞察。低於門檻的寧可不報也不要污染 dreams.md。
+
+### 2.2 Reinforcement check（反覆強化）
+
+讀取 `memory/dreams.md` 最近 4 週的歷史洞察，檢查：
+
+- **重複主題**：本次找到的 pattern 之前是否出現過？
+  - 是 → 在新洞察標註 `[reinforced ×N]`，N 為總出現次數
+  - 是且 N >= 3 → 建議提升到 MEMORY.md Agent Cases（不自動做，只建議）
+- **反例**：是否與過去洞察矛盾？
+  - 是 → 在新洞察標註 `[contradicts YYYY-MM-DD]` 並附說明
+
+靈感：OpenClaw `Dreaming/promotion raises phase reinforcement for repeated revisits clearing gates`
+
 ### 3. 輸出
 
 將做夢結果追加到 `memory/dreams.md`，格式：
@@ -43,9 +69,16 @@ find notes/01-Projects/Active -name "*.md" | sort -R | head -1
 - notes: coffee/xxx.md, tech/yyy.md
 
 ### 洞察
-1. [咖啡 × 交易] 洞察描述...
-2. [記憶系統 × 基礎設施] 洞察描述...
+1. [咖啡 × 交易] (conf: 0.85) 洞察描述...
+2. [記憶系統 × 基礎設施] (conf: 0.9, reinforced ×2) 洞察描述... — 第二次出現，若再一次可考慮提升到 MEMORY.md
+3. [A × B] (conf: 0.78, contradicts 2026-03-17) 洞察描述... — 與 03-17 洞察矛盾，需釐清
 ```
+
+**格式規則**：
+- 標題後括號標 `(conf: 0.NN)` 必填
+- 若有 reinforcement，加 `reinforced ×N`
+- 若有矛盾，加 `contradicts YYYY-MM-DD`
+- confidence < 0.75 的洞察**不寫入**，只在 Telegram 摘要提一句「丟棄 N 條低 confidence」
 
 ### 4. 如果洞察涉及現有 notes，建議更新
 
