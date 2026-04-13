@@ -25,21 +25,14 @@ if [ -z "$WORKSPACE_PATH" ]; then
 fi
 
 # Convert to absolute path
-# macOS compat: realpath may not exist
-if command -v realpath &>/dev/null; then
-    WORKSPACE_PATH=$(realpath "$WORKSPACE_PATH")
-else
-    WORKSPACE_PATH=$(cd "$(dirname "$WORKSPACE_PATH")" && pwd)/$(basename "$WORKSPACE_PATH")
-fi
+# Note: GNU realpath (Linux) accepts non-existent paths, but BSD realpath
+# (macOS default) errors out. Use the portable cd+pwd fallback so we work
+# on a path that doesn't exist yet (we create it below).
+mkdir -p "$WORKSPACE_PATH"
+WORKSPACE_PATH=$(cd "$WORKSPACE_PATH" && pwd)
 
 echo -e "${BLUE}Setting up workspace at: ${WORKSPACE_PATH}${NC}"
 echo
-
-# Create workspace directory if it doesn't exist
-if [ ! -d "$WORKSPACE_PATH" ]; then
-    echo -e "${YELLOW}Creating workspace directory...${NC}"
-    mkdir -p "$WORKSPACE_PATH"
-fi
 
 # Check if workspace is empty
 if [ "$(ls -A "$WORKSPACE_PATH" 2>/dev/null)" ]; then
@@ -116,6 +109,26 @@ if [ -d "$SCRIPT_DIR/scripts" ]; then
     echo -e "${GREEN}✓ Scripts installed${NC}"
 fi
 
+# Copy cron system
+if [ -d "$SCRIPT_DIR/cron" ]; then
+    echo -e "${YELLOW}Copying cron system...${NC}"
+    cd "$SCRIPT_DIR/cron"
+    find . -type f ! -name "config.env" ! -path "*/logs/*" | while read -r file; do
+        target="$WORKSPACE_PATH/cron/$file"
+        if [ -f "$target" ]; then
+            echo -e "  ${YELLOW}skip${NC} cron/$file (already exists)"
+        else
+            mkdir -p "$(dirname "$target")"
+            cp "$file" "$target"
+            echo -e "  ${GREEN}copy${NC} cron/$file"
+        fi
+    done
+    cd "$SCRIPT_DIR"
+    # Make scripts executable
+    find "$WORKSPACE_PATH/cron" -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
+    echo -e "${GREEN}✓ Cron system installed${NC}"
+fi
+
 # Create additional directories
 echo -e "${YELLOW}Creating additional directories...${NC}"
 mkdir -p "$WORKSPACE_PATH/memory"
@@ -124,6 +137,7 @@ mkdir -p "$WORKSPACE_PATH/notes/resources"
 mkdir -p "$WORKSPACE_PATH/.learnings"
 mkdir -p "$WORKSPACE_PATH/scripts"
 mkdir -p "$WORKSPACE_PATH/skills"
+mkdir -p "$WORKSPACE_PATH/cron/logs"
 mkdir -p "$WORKSPACE_PATH/reference"
 mkdir -p "$WORKSPACE_PATH/tmp"
 echo -e "${GREEN}✓ Directory structure created${NC}"
