@@ -25,21 +25,14 @@ if [ -z "$WORKSPACE_PATH" ]; then
 fi
 
 # Convert to absolute path
-# macOS compat: realpath may not exist
-if command -v realpath &>/dev/null; then
-    WORKSPACE_PATH=$(realpath "$WORKSPACE_PATH")
-else
-    WORKSPACE_PATH=$(cd "$(dirname "$WORKSPACE_PATH")" && pwd)/$(basename "$WORKSPACE_PATH")
-fi
+# Note: GNU realpath (Linux) accepts non-existent paths, but BSD realpath
+# (macOS default) errors out. Use the portable cd+pwd fallback so we work
+# on a path that doesn't exist yet (we create it below).
+mkdir -p "$WORKSPACE_PATH"
+WORKSPACE_PATH=$(cd "$WORKSPACE_PATH" && pwd)
 
 echo -e "${BLUE}Setting up workspace at: ${WORKSPACE_PATH}${NC}"
 echo
-
-# Create workspace directory if it doesn't exist
-if [ ! -d "$WORKSPACE_PATH" ]; then
-    echo -e "${YELLOW}Creating workspace directory...${NC}"
-    mkdir -p "$WORKSPACE_PATH"
-fi
 
 # Check if workspace is empty
 if [ "$(ls -A "$WORKSPACE_PATH" 2>/dev/null)" ]; then
