@@ -30,6 +30,30 @@ After installing:
 
 - 🚩 **Your agent has a pending-work inbox** — A **cron → flag → SessionStart hook** pipeline turns deterministic background checks (broken wikilinks, TODO backlog, stale caches) into flag files under `.claude/flags/`. Cron does the detection; the next Claude session picks them up via a SessionStart hook and acts on them. Cron never wakes the LLM directly — "hard trigger, soft action". See [flag-system guide](guides/flag-system.md).
 
+## Features at a Glance
+
+| Capability | Where | What it does |
+|------------|-------|-------------|
+| **Memory journal** | `memory/YYYY-MM-DD.md` | Daily logs with `[hall_*]` taxonomy tags for retrieval |
+| **Long-term memory** | `MEMORY.md` | Curated facts, infrastructure, patterns (P0/P1/P2 priority) |
+| **AAAK compact** | `MEMORY_COMPACT.md` | Lossless ~200-token snapshot loaded on every session |
+| **Knowledge base** | `notes/areas/`, `notes/resources/` | Topic-organized notes that complement journal entries |
+| **Hybrid search** | `scripts/memory-search-hybrid.py` | keyword × temporal recency × hall-type boost |
+| **Hall-type tags** | `[hall_facts]` `[hall_events]` `[hall_discoveries]` `[hall_preferences]` `[hall_advice]` | Categorize journal entries for boosted retrieval |
+| **Self-improvement** | `.learnings/`, `LEARNINGS.md` | Track corrections / errors / gaps; auto-promote when recurring ≥ 3 |
+| **Memory dreaming** | `cron/prompts/memory-dream.md` | Weekly cross-domain association of unrelated memories |
+| **Memory rumination** | `cron/prompts/memory-reflect.md` | Daily contradiction detection with action-tracking + stale-check |
+| **Memory expiry** | `cron/prompts/memory-expire.md` | Monthly auto-archive of memories older than 30 days |
+| **Memory janitor** | `cron/prompts/memory-janitor.md` | Hall-tag backfill + duplicate detection + notes quality check |
+| **Cron → flag → hook** | `.claude/flags/`, `.claude/hooks/session-start-flags.sh` | Background checks drop flags; next session picks them up |
+| **Personality** | `SOUL.md`, `IDENTITY.md`, `USER.md` | Decision priors, name/emoji, user profile |
+| **Sub-agent patterns** | `guides/sub-agent-patterns.md` | Battle-tested delegation with delivery verification |
+| **Four defense lines** | `AGENTS.md` | create → execute → deliver → alert verification chain |
+| **Hard-trigger memory search** | `.claude/hooks/memory-search-trigger.py` | UserPromptSubmit hook forces search on keyword match |
+| **Cron system (Mac)** | `cron/install-mac.sh` | launchd plists with placeholder substitution |
+| **Cron system (Linux)** | `cron/install-linux.sh` | Auto-converts plists → user crontab |
+| **Network-wait wrapper** | `cron/runner.sh` | Waits for network readiness on wake-from-sleep before `claude -p` |
+
 ## Quick Start
 
 1. Install [OpenClaw](https://openclaw.ai) if you haven't:
