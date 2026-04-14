@@ -1,18 +1,37 @@
 ---
-name: memory
+name: curate-memory
 description: >
-  Save important information from conversations to the memory system. Triggers when user says
-  "remember this" "save this" "don't forget" "record this" or /memory command. Also proactively
-  triggers on new decisions, config changes, problem solutions, and preference updates.
-  Stores to memory/, MEMORY.md, notes/, reference/, .learnings/.
+  Full curator workflow for memory archival: scan the conversation, dedup against
+  existing records, classify via the Context Tree, then decide whether each entry
+  belongs in memory/ journal, MEMORY.md long-term index, notes/, reference/, or
+  .learnings/. Merges fragments into existing notes when possible.
+  Triggers on "curate memory", "organize memory", "archive this", "where should
+  this go", "/curate-memory", and proactively after non-trivial technical
+  decisions, infrastructure changes, or problem solutions.
+  Complements the global save-memory skill: save-memory is a fast append-one-line
+  shortcut for the journal, curate-memory is the full classify-and-merge workflow.
 user-invocable: true
 ---
 
-# Memory Skill
+# Curate Memory Skill
+
+> **Relationship to `save-memory`** (the global skill with a similar trigger surface):
+> - `save-memory` — fast path. Appends a single line to `memory/YYYY-MM-DD.md` and exits.
+>   Use when the user says "remember X" and X is already a well-formed journal entry.
+> - `curate-memory` (this skill) — full curator flow. Reviews the conversation,
+>   dedups against MEMORY.md and notes/, classifies via the Context Tree, and
+>   writes to the right layer (journal vs long-term index vs topic notes vs
+>   learnings). Higher latency, makes real classification decisions.
+>
+> This skill lives under `.claude/skills/curate-memory/`. The directory name must
+> differ from the global `save-memory` skill to avoid a frontmatter `name:`
+> collision. When a conversation produces a single one-liner, prefer `save-memory`.
+> When it produces a chunk of new knowledge that needs to land in the right place,
+> prefer this skill.
 
 ## Trigger Scenarios
 
-**Explicit:** "remember this" "save this" "don't forget" "record this" "/memory"
+**Explicit:** "curate memory" "organize memory" "archive this" "where should this go" "/curate-memory"
 
 **Implicit (proactive):**
 - Technical decisions or config changes

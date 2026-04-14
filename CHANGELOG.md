@@ -5,6 +5,77 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Backported from another round of production use on `cc-memory-project`.
+Two themes this round: cron jobs stop *looking* like they hang when they
+are actually just finishing while the laptop is asleep, and the memory
+curator skill gets out from under a global-skill name collision.
+
+### Added
+
+- **`cron/bin/mono_seconds.py`**: prints `CLOCK_UPTIME_RAW` seconds via
+  `ctypes`. On macOS this clock does NOT advance while the host is
+  asleep (the opposite of Darwin's `CLOCK_MONOTONIC`, which does). Linux
+  falls back to `CLOCK_MONOTONIC`. The runner uses this to measure
+  actual execution time rather than wall-clock time that gets inflated
+  by host sleep.
+- **Per-job `allowed_tools` parsing in `cron/runner.sh`**: prompt files
+  may declare their tool scope in a first-line HTML comment
+  (`<!-- allowed_tools: Bash,Read -->`). Jobs without a declaration fall
+  back to the safe default. Shrinks the blast radius of a misbehaving
+  prompt without adding config surface. Inspired by OpenClaw's per-job
+  tool allowlists.
+
+### Changed
+
+- **`cron/runner.sh` elapsed metric**: was reporting `date +%s` delta as
+  `elapsed`, which on a laptop that slept mid-job inflated the number
+  by the sleep duration. Jobs that ran in 40 seconds were logged as
+  taking 39 hours because they happened to flush their "finished" line
+  after a weekend of host sleep. The runner now prints `active: Xs`
+  from `mono_seconds.py` by default, and only shows `(active: Xs, wall:
+  Ys (host sleep included))` when wall noticeably exceeds active.
+  No more false-positive hang investigations.
+- **`cron/runner.sh` network readiness gate**: raised the timeout from
+  60s to 120s, and changed the timeout behavior from `exit 1 + Basso
+  failure sound` to a soft **skip** (`exit 0`) logged as
+  `Skipped: network not ready after 120s (offline/sleeping)`. A laptop
+  being offline or waking from sleep is expected operating state, not
+  an incident, and a weekly `memory-sync` run shouldn't light up 24
+  false-alarm notifications over a single weekend.
+- **`cron/runner.sh` prompt delivery**: the prompt is now piped into
+  `claude -p` via `<<<"$PROMPT"` instead of passed as a positional
+  argument. On Linux, `claude-cli` 2.1.85+ treats `-p` as a pure
+  `--print` flag and silently ignores positional prompt args, so the
+  previous form sent an empty prompt and the job died with
+  `no stdin data received`. Stdin works on both macOS and Linux.
+- **`cron/runner.sh` error handling**: the `claude -p` call is now
+  wrapped in an `if/else` so a non-zero exit is captured into
+  `EXIT_CODE` before the "finished" log line runs. Previously `set -e`
+  killed the script on a failed claude invocation before the elapsed
+  log line could be written.
+
+### Renamed
+
+- **`skills/memory/` → `skills/curate-memory/`**: the skill's
+  frontmatter `name:` collided with the global `save-memory` skill
+  that ships with Claude Code. When both are present in a session,
+  the global one shadows the workspace one and the workspace curator
+  stops getting invoked. The rename frees the `name:` slot. The new
+  description makes the distinction explicit: `save-memory` is a
+  fast single-line append, `curate-memory` is the full classify-and-
+  merge workflow. Existing workspaces that already copied the skill
+  keep their local copy — bootstrap's skip-if-exists behavior means
+  no in-place migration is needed.
+
+### Docs
+
+- **`cron/README.md`**: new "Runtime Details" section documenting the
+  `active` vs `wall` elapsed metric, the network readiness gate, the
+  stdin prompt delivery, and the per-job `allowed_tools` parser.
+  Directory tree updated to show `cron/bin/mono_seconds.py`.
+
 ## [2.4.0] - 2026-04-10
 
 Backported from 2+ weeks of production use on a Claude Code workspace
