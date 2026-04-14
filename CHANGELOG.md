@@ -8,9 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 Backported from another round of production use on `cc-memory-project`.
-Two themes this round: cron jobs stop *looking* like they hang when they
-are actually just finishing while the laptop is asleep, and the memory
-curator skill gets out from under a global-skill name collision.
+Themes this round: cron jobs stop *looking* like they hang when they
+are actually just finishing while the laptop is asleep, the memory
+curator skill gets out from under a global-skill name collision, and
+the memory-search hook stops being a reminder and starts auto-injecting
+ranked search results into the next turn.
 
 ### Added
 
@@ -55,6 +57,43 @@ curator skill gets out from under a global-skill name collision.
   `EXIT_CODE` before the "finished" log line runs. Previously `set -e`
   killed the script on a failed claude invocation before the elapsed
   log line could be written.
+- **`templates/.claude/hooks/memory-search-trigger.py`** — upgraded from a
+  reminder-only hook (89 lines) to an auto-search hook (~520 lines). The
+  hook still detects the same set of hard-trigger keywords, but now also
+  shells out to `scripts/memory-search-hybrid.py` itself and injects the
+  top-N reranked results directly into `additionalContext`. Claude opens
+  the next turn with the search output in front of it instead of having
+  to remember to run the script.
+
+  Three reranking layers on top of the raw hybrid score:
+    1. **Query classification** — temporal hints in the prompt
+       (`HISTORICAL_HINTS` / `RECENT_HINTS`, English + Chinese) pick a
+       different `MODE_PARAMS` row (historical = 365d/top 8, recent =
+       7d/top 5, default = 90d/top 5).
+    2. **Domain routing** — `DOMAIN_MAP` maps each fired keyword to one
+       or more expected file-path prefixes. Results matching a prefix get
+       a small score bonus, results missing all of them get a small
+       penalty. Empty by default — the hook still injects results, just
+       without the path-aware scoring.
+    3. **Category dedup** — `category_of()` classifies each result file
+       into a coarse bucket (memory-index, memory-system, journal,
+       journal-archive, or top-level dir) and keeps only the highest-
+       scoring entry per bucket. Stops one chatty file (e.g. a long
+       `reflections.md`) from crowding out other hits.
+
+  60-second TTL cache (`/tmp/mem-search-<hash>.json`) so repeated prompts
+  don't re-spawn the search subprocess. Self-test built into the file —
+  run `python3 templates/.claude/hooks/memory-search-trigger.py --self-test`
+  to validate the framework's pure functions without making a real
+  search call.
+
+  All customization points (KEYWORDS, WORD_BOUNDARY_KEYWORDS,
+  HISTORICAL_HINTS, RECENT_HINTS, DOMAIN_MAP, MODE_PARAMS, scoring
+  knobs) live under a clearly-marked `# CUSTOMIZE THIS SECTION FOR YOUR
+  WORKSPACE` block at the top. The framework code below is generic and
+  doesn't need editing for typical workspaces. KEYWORDS ships with
+  bilingual (English + Chinese) example phrases, DOMAIN_MAP ships
+  empty.
 
 ### Renamed
 
