@@ -1,6 +1,14 @@
-# Cron System
+# Cron System (Claude Code mode)
 
-Scheduled jobs driven by `claude -p` (Claude Code) or `openclaw cron add` (OpenClaw).
+Scheduled jobs driven by `claude -p`. Each job is a Markdown prompt
+(`prompts/<job>.md`) executed by `runner.sh` under launchd (macOS) or
+user crontab (Linux).
+
+> **If you're running the OpenClaw agent instead of Claude Code**, use
+> the alternative pipeline under `scripts/memory-*.sh` + `scripts/
+> install-cron.sh` (OpenClaw-mode, crontab-driven, calls
+> `openclaw cron add`). See the comparison table at the bottom of this
+> file.
 
 Supports **macOS** (launchd) and **Linux** (crontab).
 
@@ -19,13 +27,21 @@ The Linux installer auto-converts them to crontab entries.
 
 ## Default Jobs
 
-| Time | Job | Purpose |
-|------|-----|---------|
-| 20:07 | memory-janitor | Hall tag backfill + quality cleanup |
-| 21:03 | memory-reflect | Memory rumination / contradiction detection |
-| 21:30 Sat | self-improvement | LEARNINGS analysis + promote to MEMORY.md |
-| 03:03 Sun | memory-dream | Cold memory cross-domain association |
-| 03:33 1st | memory-expire | Archive memories older than 30 days |
+> **Source of truth**: the master schedule lives in `templates/HEARTBEAT.md`.
+> This table is a convenience copy — if you update either, update both
+> or they will drift.
+
+| Schedule | Job | Purpose |
+|----------|-----|---------|
+| `:02` hourly | curate-memory | Early-return curation (journal → MEMORY.md / notes/ / LEARNINGS.md) |
+| 20:07 daily | memory-janitor | Hall-tag backfill + duplicate detection |
+| 21:07 daily | smart-wikilinks | Conservative wikilink / Related-section suggestions for today's notes |
+| 21:00 Mon (weekly) | weekly-memory-hygiene | Bulk hygiene: hall tags, wikilinks, dedupe, broken-link triage |
+| 21:03 Wed (weekly) | memory-reflect | Recent-vs-long-term memory contradiction detection |
+| 21:30 Sat (weekly) | self-improvement | Promote `.learnings/*` entries with `recurring_count ≥ 3` |
+| 03:03 Sun (weekly) | memory-dream | Cross-domain cold-memory association |
+| 10:00 1st (monthly) | monthly-review | Monthly highlights + stale-content review |
+| 03:33 1st (monthly) | memory-expire | Archive `memory/*.md` older than 30 days |
 
 ## Installation
 
@@ -70,12 +86,29 @@ cp cron/config.env.example cron/config.env
 # Edit config.env with your values
 ```
 
-Required:
-- `TG_BOT_TOKEN` / `TG_CHAT_ID` — Telegram notifications
+`runner.sh` sources `cron/config.env` if it exists. Missing file is not
+an error — jobs will run, they just won't send Telegram reports and
+won't override the default job timeout.
 
-Optional:
-- `MINIMAX_API_KEY` — MiniMax LLM API
-- Other service-specific keys
+### Recommended (for full functionality)
+
+| Variable | Purpose |
+|----------|---------|
+| `TG_BOT_TOKEN` | Telegram bot token — required for any job that posts status reports |
+| `TG_CHAT_ID` | Telegram chat id receiving reports |
+| `JOB_TIMEOUT` | Per-job timeout in seconds. Default `1800` (30 min). Prevents `claude -p` hanging for hours; set higher for jobs that genuinely need it. |
+
+### Optional
+
+| Variable | Purpose |
+|----------|---------|
+| `MINIMAX_API_KEY` | MiniMax LLM API, used by some prompts if available |
+| `NOTIFY_CHANNEL` / `SLACK_WEBHOOK_URL` | Alternative non-Telegram notification routing — see `scripts/lib/notify.sh` |
+
+Jobs themselves can override `JOB_TIMEOUT` by exporting a different
+value in `config.env`. The timeout is enforced via coreutils `timeout`
+(or `gtimeout`); install with `brew install coreutils` on macOS if
+neither is in `PATH`.
 
 ## Runtime Details
 
@@ -161,23 +194,26 @@ cat cron/logs/memory-reflect-*.log
 
 ```
 cron/
-├── runner.sh              ← Universal job wrapper
-├── install-mac.sh         ← macOS launchd installer
-├── install-linux.sh       ← Linux crontab installer
-├── config.env             ← API keys (.gitignore)
+├── runner.sh              ← Universal job wrapper (network gate, timeout, logging)
+├── install-mac.sh         ← macOS launchd installer (supports --dry-run / --uninstall)
+├── install-linux.sh       ← Linux crontab installer (reads plists via plistlib)
+├── config.env             ← Secrets — gitignored
 ├── config.env.example     ← Config template
-├── prompts/               ← Job prompts (Markdown)
-│   ├── memory-reflect.md
-│   ├── memory-dream.md
-│   ├── memory-expire.md
-│   ├── memory-janitor.md
-│   └── self-improvement.md
-├── launchd/               ← macOS plist schedule definitions
-│   ├── org.oracle.memory-reflect.plist
-│   └── ...
-├── logs/                  ← Execution logs (auto-cleaned after 30 days)
-└── bin/                   ← Helper scripts used by runner.sh
-    └── mono_seconds.py    ← CLOCK_UPTIME_RAW reader (active-time measurement)
+├── prompts/               ← Per-job Markdown prompts (9 shipped)
+│   ├── curate-memory.md             ← hourly :02
+│   ├── memory-janitor.md            ← daily 20:07
+│   ├── smart-wikilinks.md           ← daily 21:07
+│   ├── memory-reflect.md            ← Wed 21:03
+│   ├── weekly-memory-hygiene.md     ← Mon 21:00
+│   ├── self-improvement.md          ← Sat 21:30
+│   ├── memory-dream.md              ← Sun 03:03
+│   ├── monthly-review.md            ← 1st 10:00
+│   └── memory-expire.md             ← 1st 03:33
+├── launchd/               ← macOS plist schedule definitions (one per prompt)
+│   └── org.oracle.<job-name>.plist
+├── logs/                  ← Per-job execution logs (auto-cleaned after 30 days)
+└── bin/
+    └── mono_seconds.py    ← CLOCK_UPTIME_RAW reader for active-time measurement
 ```
 
 ## OpenClaw vs Claude Code
