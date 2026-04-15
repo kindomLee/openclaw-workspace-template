@@ -1,6 +1,8 @@
 # OpenClaw Workspace Template
 
-Production-tested workspace template for OpenClaw AI agents, extracted from a real agent running 4+ months in production.
+**Language**: English | [繁體中文](README.zh-TW.md)
+
+Production-tested workspace template for Claude Code (and OpenClaw) AI agents, extracted from a real agent running 4+ months in production.
 
 A fresh OpenClaw agent is stateless — it wakes up, helps you, and forgets everything. This template turns it into something that **persists, learns, and improves** over time.
 
@@ -56,8 +58,10 @@ After installing:
 
 ## Quick Start
 
-1. Install [OpenClaw](https://openclaw.ai) if you haven't:
+1. Install your runtime of choice:
 ```bash
+# Claude Code (default) — see https://docs.claude.com/claude-code for installer
+# OpenClaw (alternative)
 curl -fsSL https://openclaw.ai/install.sh | bash
 ```
 
@@ -67,15 +71,16 @@ git clone https://github.com/kindomLee/openclaw-workspace-template.git
 cd openclaw-workspace-template
 ```
 
-3. Run the bootstrap script:
+3. Run the bootstrap script (installs into the current directory by default):
 ```bash
-chmod +x bootstrap.sh
 ./bootstrap.sh
+# or: ./bootstrap.sh --path ~/my-workspace --yes
 ```
 
 4. Run the health check:
 ```bash
-bash clawd/scripts/health-check.sh
+cd <your-workspace>
+bash scripts/health-check.sh
 ```
 
 5. Edit the template files to personalize:
@@ -83,17 +88,18 @@ bash clawd/scripts/health-check.sh
    - `USER.md` — Your info so the agent knows you
    - `SOUL.md` — Agent personality and decision priors
    - `TOOLS.md` — Your frequently-used tools and connections
+   - `cron/config.env` — Copy from `cron/config.env.example` and fill `TG_BOT_TOKEN` / `TG_CHAT_ID` for Telegram alerts
 
 6. Set up cron jobs:
 
 ```bash
-# Claude Code mode — macOS
+# Claude Code mode (default) — macOS
 bash cron/install-mac.sh
 
-# Claude Code mode — Linux
+# Claude Code mode (default) — Linux
 bash cron/install-linux.sh
 
-# OpenClaw mode (traditional)
+# OpenClaw mode (alternative)
 bash scripts/install-cron.sh --install
 ```
 
