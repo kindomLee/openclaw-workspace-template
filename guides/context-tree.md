@@ -32,14 +32,18 @@ Cross-referencing becomes impossible. The agent can't answer "what do I know abo
 
 ```
 workspace/
-├── memory/              # Layer 1: Journal
-│   ├── YYYY-MM-DD.md    # Daily journal (events, decisions, status)
-│   └── archive-YYYY-MM/ # Auto-archived old journals
-├── notes/               # Layer 2: Knowledge
-│   ├── areas/           # Topics by domain
-│   └── resources/       # Tools, services, references
-├── MEMORY.md            # Long-term index (P0/P1/P2)
-└── reference/           # Deep references (optional, can merge into notes/)
+├── memory/                    # Layer 1: Journal
+│   ├── YYYY-MM-DD.md          # Daily journal (events, decisions, status)
+│   └── archive-YYYY-MM/       # Auto-archived old journals
+├── notes/                     # Layer 2: Knowledge (PARA-lite)
+│   ├── 00-Inbox/              # Fresh drafts, triage here first
+│   ├── 01-Projects/Active/    # In-flight projects with a deadline
+│   ├── 01-Projects/Archive/   # Completed projects
+│   ├── 02-Areas/              # Ongoing responsibilities / topics
+│   ├── 03-Resources/          # Reference material, tools, services
+│   └── 04-Archive/            # Cold storage
+├── MEMORY.md                  # Long-term index (P0/P1/P2)
+└── reference/                 # Deep references (optional)
 ```
 
 ## Layer 1: Journal (memory/)
@@ -59,16 +63,23 @@ workspace/
 
 ## Layer 2: Knowledge (notes/)
 
-**Suggested structure:**
+**Suggested structure (PARA-lite):**
 ```
 notes/
-├── areas/            # Topics by domain (e.g., coffee/, tech/, infrastructure/)
-│   └── {topic}/
-│       └── *.md
-└── resources/        # Tools, services, references
-    └── {tool-or-service}/
-        └── *.md
+├── 00-Inbox/                # Drafts, triage candidates — nothing permanent
+├── 01-Projects/Active/      # In-flight work with a deadline
+│   └── <project-slug>/*.md
+├── 01-Projects/Archive/     # Shipped / cancelled projects
+├── 02-Areas/                # Ongoing responsibilities, no end date
+│   └── <area>/*.md          #   e.g. coffee/, tech/openclaw/, infrastructure/
+├── 03-Resources/            # Reference material, tools, services
+│   └── <topic>/*.md
+└── 04-Archive/              # Cold storage — moved out of daily use
 ```
+
+The cron prompts (`curate-memory`, `weekly-memory-hygiene`,
+`monthly-review`, `smart-wikilinks`) all assume this layout — if you
+rename or flatten it, adjust those prompts too.
 
 > **Naming convention:** Use kebab-case directory and file names (e.g., `home-automation/`, `wireguard-setup.md`). Organize by topic, not by date.
 
@@ -77,19 +88,26 @@ notes/
 - If found, append/merge instead of creating duplicate
 - This prevents fragment explosion
 
-**Adding to memory_search:**
-In your OpenClaw config, set `memorySearch.extraPaths`:
-```json
-{
-  "memorySearch": {
-    "extraPaths": ["notes/"]
+**Making notes/ searchable:**
+
+- **Claude Code mode (default)** — no config needed.
+  `scripts/memory-search-hybrid.py` already walks `memory/` **and**
+  `notes/` in one pass, so the hybrid-search hook (`.claude/hooks/
+  memory-search-trigger.py`) automatically picks up anything you put
+  under `notes/`. Add more directories by editing the `for base_dir
+  in [memory_dir, notes_dir]` loop in `memory-search-hybrid.py`.
+
+- **OpenClaw mode** — set `memorySearch.extraPaths` in your OpenClaw
+  config:
+  ```json
+  {
+    "memorySearch": {
+      "extraPaths": ["notes/"]
+    }
   }
-}
-```
-
-> Path is workspace-relative. You can also add `reference/` if you keep deep reference docs there.
-
-This enables full-text search across your knowledge base.
+  ```
+  Path is workspace-relative. You can also add `reference/` if you keep
+  deep reference docs there.
 
 ## Cleanup Strategy
 
@@ -131,22 +149,19 @@ The "Not Like A Human" paper discusses long-horizon agent memory. Our approach a
 
 ## Quick Setup
 
-1. Create the notes directories:
+1. `bootstrap.sh` already creates the full PARA tree. If you're
+   adding it by hand:
 ```bash
-mkdir -p notes/areas notes/resources
-touch notes/.gitkeep
+mkdir -p notes/{00-Inbox,01-Projects/Active,01-Projects/Archive,02-Areas,03-Resources,04-Archive}
 ```
 
-2. Add to memory_search (optional but recommended):
-```json
-{
-  "memorySearch": {
-    "extraPaths": ["notes/"]
-  }
-}
-```
+2. (Claude Code) No further setup — `memory-search-hybrid.py` already
+   scans `notes/`. For OpenClaw, add `memorySearch.extraPaths` as
+   shown above.
 
-3. The cron jobs already handle journal cleanup. For knowledge consolidation, add a weekly merge job if desired.
+3. The cron jobs already handle journal cleanup. For knowledge
+   consolidation, `cron/prompts/weekly-memory-hygiene.md` runs every
+   Mon 21:00 and covers most of it.
 
 ## Backward Compatibility
 

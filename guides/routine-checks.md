@@ -1,237 +1,223 @@
 # Routine Checks Guide — 例行檢查指南
 
-## 演進思路：從全 LLM 到固定邏輯
+> Mixed-mode maintenance loop: let shell scripts do the deterministic part, let the LLM do the judgment part, and glue them together with Claude Code hooks + flag files.
 
-### 發展歷程
-1. **初期**: 完全依賴 LLM 進行所有檢查和決策
-2. **中期**: 發現重複性高的任務浪費 token 和時間
-3. **現在**: 混合架構 — 固定邏輯處理常規任務，LLM 處理需要判斷的部分
+## Core Principle — "Scriptable → script it"
 
-### 為什麼要進化？
-- **成本考量**: LLM token 成本高，重複性任務不值得
-- **效率問題**: 固定邏輯執行速度快，結果穩定
-- **可靠性**: 減少 LLM 的「創意發揮」，避免不必要的變化
+Routine checks evolved through three phases:
 
-## Type A vs Type B 檢查
+1. **All-LLM** — easy to write, but every check burns tokens
+2. **All-shell** — cheap, but can't handle semantic work
+3. **Hybrid (current)** — fixed logic for the deterministic part, LLM only where understanding is required
 
-### Type A: 監控型（Monitoring）
-**特徵**: 有明確的正常/異常標準，可以用固定邏輯判斷
+The rule of thumb: **if it can be expressed as a threshold comparison or a pattern match, don't call the LLM.**
 
-**範例**:
-- 服務健康檢查（HTTP status code）
-- 磁碟空間檢查（使用率超過閾值）
-- 記憶檔案大小檢查（防止過大）
-- API 配額檢查（剩餘量低於閾值）
+## Type A vs Type B
 
-**實作方式**: 純 shell script + 條件判斷
+### Type A — Monitoring
 
-### Type B: 分析型（Analytical）
-**特徵**: 需要內容理解和上下文判斷
+Clear normal/abnormal boundary, can be decided by a shell/python script.
 
-**範例**:
-- 新聞摘要和重要性評估
-- 郵件內容分析和優先級分類
-- 錯誤日誌模式分析
-- 使用者意圖理解
+**Examples:**
+- Service health check (HTTP status code)
+- Disk usage threshold
+- Memory file size (prevent runaway growth)
+- API quota remaining
+- Broken wikilinks count
+- Stale TODO backlog count
 
-**實作方式**: script 收集資料 → LLM 分析 → 基於結果採取行動
+**Implementation:** pure shell/python + threshold → drop a flag file, fire a `osascript` notification, or send Telegram.
 
-## 設計原則：能固定就固定
+### Type B — Analytical
 
-### 固定邏輯適用情況
-- 數值比較（>、<、=）
-- 狀態檢查（存在、不存在）
-- 正則表達式匹配
-- 文件/API 回應格式檢查
+Requires content understanding or cross-context judgment.
 
-### LLM 介入時機
-- 需要語義理解
-- 需要上下文判斷
-- 需要創意或變化
-- 複雜的決策樹
+**Examples:**
+- Summarizing news / emails and deciding which matter
+- Pattern analysis across error logs
+- User intent classification
+- Memory contradiction detection (rumination)
+- Weekly "dreaming" — random cross-domain memory association
 
-## Crontab 模板範例
+**Implementation:** shell collects raw data → LLM analyzes it → LLM decides or writes the result back.
 
-### 基礎結構
-```bash
-# OpenClaw Agent Routine Checks
-# 編輯: crontab -e
+## Three-Layer Decision Tree
 
-# 每5分鐘：系統健康檢查
-*/5 * * * * /path/to/workspace/scripts/health-check.sh
-
-# 每小時：memory 檔案大小檢查
-0 * * * * /path/to/workspace/scripts/memory-size-check.sh
-
-# 每天 09:00：晨間報告
-0 9 * * * /path/to/workspace/scripts/morning-report.sh
-
-# 每天 22:00：daily-sync（需要 LLM）
-0 22 * * * openclaw cron add --name "daily-sync" --at "now" --system-event "trigger daily sync" --session main
-
-# 每週一 10:00：週報
-0 10 * * 1 /path/to/workspace/scripts/weekly-summary.sh
-
-# 每月1號：清理舊檔案
-0 2 1 * * /path/to/workspace/scripts/cleanup-old-files.sh
+```text
+Task classification
+ ├── 1. Pure numeric / state check
+ │    └── → fixed script + threshold → flag file / notification
+ │
+ ├── 2. Collect-then-decide
+ │    └── → shell collects, then invokes LLM once for the decision
+ │
+ └── 3. Deep context understanding
+      └── → LLM-driven from the start
 ```
 
-### 混合模式範例
-```bash
-# health-check.sh - Type A 監控型
-#!/bin/bash
-set -e
+---
 
+## Claude Code Mode (default)
+
+The template ships with a **cron → flag → SessionStart hook** pipeline that implements the three layers cleanly. It separates *detection* (deterministic, cheap, runs on cron) from *action* (expensive, requires LLM, runs only in the next Claude Code session).
+
+### Layer 1 — Pure script (no LLM at all)
+
+Use `launchd` (Mac) or user `crontab` (Linux) to run a shell/python script. The script either:
+
+- fires a Telegram notification directly when a threshold is crossed, or
+- drops a flag file into `.claude/flags/<name>.flag` (+ a sibling `<name>-report.txt` with the details) and exits
+
+**Example — broken wikilinks check:**
+
+```bash
+# scripts/cron-broken-links-check.sh  (runs every Mon 11:30)
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+REPORT="broken-links-report.txt"
+python3 scripts/check-broken-wikilinks.py > "$REPORT"
+COUNT=$(wc -l < "$REPORT" | tr -d ' ')
+
+if [ "$COUNT" -ge 5 ]; then
+  cat > .claude/flags/broken-links.flag <<EOF
+Broken wikilinks ≥ 5 (found $COUNT).
+Run: read $REPORT, triage with scripts/add-wikilink-single.py, then rm .claude/flags/broken-links.flag
+EOF
+fi
+```
+
+The `session-start-flags.sh` hook (in `.claude/hooks/`) reads every `*.flag` on SessionStart and injects them as a system reminder, so the next time you open Claude Code you immediately see:
+
+> ⚠️ Pending flags: broken-links.flag — Broken wikilinks ≥ 5 (found 12). …
+
+You (or Claude) triage it, then `rm` the flag.
+
+**Why this beats cron-calling-LLM-directly:**
+- Cron runs deterministically, in the background, on schedule — no LLM needed to detect "there are 12 broken links"
+- The expensive LLM session happens *only when you open Claude Code anyway*, so you pay zero extra token cost
+- If you're offline or asleep, flags queue up silently — no failed runs, no noisy retries
+
+### Layer 2 — Collect then decide (LLM called once)
+
+Use `cron/runner.sh <job-name>` which:
+
+1. waits for network readiness (skips cleanly if offline —筆電場景不算 failure)
+2. loads `cron/config.env` (Telegram tokens, API keys)
+3. reads `cron/prompts/<job>.md` (the prompt body, with optional `<!-- allowed_tools: … -->` per-job allowlist on line 1)
+4. pipes the prompt into `claude -p` with the per-job tool allowlist
+5. logs to `cron/logs/<job>-YYYYMMDD-HHMMSS.log`
+6. fires macOS notifications on start/finish
+7. measures both wall-clock and `CLOCK_UPTIME_RAW` so Mac sleep doesn't look like a hang
+
+**Example — memory-janitor (daily):**
+
+```xml
+<!-- cron/launchd/org.oracle.memory-janitor.plist -->
+<dict>
+  <key>Label</key><string>org.oracle.memory-janitor</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>__PROJECT_DIR__/cron/runner.sh</string>
+    <string>memory-janitor</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key><integer>20</integer>
+    <key>Minute</key><integer>7</integer>
+  </dict>
+</dict>
+```
+
+The matching `cron/prompts/memory-janitor.md` tells the LLM exactly what to do (backfill hall tags, detect duplicates, verify notes frontmatter) and — importantly — to **send a Telegram report at the end, even if nothing changed** (four-defense-line rule 4: never fail silently).
+
+### Layer 3 — Full LLM (rare)
+
+Used when a job genuinely needs multi-step reasoning over context — e.g. `memory-reflect` (weekly rumination) or `memory-dream` (weekly cross-domain association). Same wiring as Layer 2, the difference is just that the script upstream barely collects anything — the prompt tells the LLM to go read files itself.
+
+### Default schedule (shipped in `cron/launchd/`)
+
+| Time | Job | Layer | Purpose |
+|------|-----|-------|---------|
+| `:02` hourly | curate-memory | 2 | Early-return wrapper; when new journal entries exist, promote to MEMORY.md / notes/ / LEARNINGS.md |
+| 20:07 daily | memory-janitor | 2 | Hall-tag backfill + duplicate detection |
+| 21:07 daily | smart-wikilinks | 2 | Conservative wikilink/Related section suggestions for today's notes |
+| 21:03 Wed (weekly) | memory-reflect | 3 | Contradiction detection across recent vs long-term memory |
+| 21:00 Mon (weekly) | weekly-memory-hygiene | 2 | Weekly bulk hygiene: hall tags, wikilinks, dedup, broken-link triage |
+| 03:03 Sun | memory-dream | 3 | Cross-domain cold-memory association |
+| 10:00 1st of month | monthly-review | 3 | Monthly highlights + stale-content review |
+| 03:33 1st of month | memory-expire | 1 | Archive memory/*.md older than 30 days |
+| 21:30 Sat | self-improvement | 2 | Promote `.learnings/*` entries with `recurring_count ≥ 3` |
+| Mon 11:30 | cron-broken-links-check | 1 | Flag when broken wikilinks ≥ 5 |
+| Mon 11:32 | cron-notes-todo-check | 1 | Flag when TODO backlog ≥ 20 |
+
+Install: `bash cron/install-mac.sh` (macOS) or `bash cron/install-linux.sh` (Linux). See `cron/README.md` for details.
+
+### Writing a new routine check (Claude Code mode)
+
+1. **Detection is deterministic** → write a shell script in `scripts/cron-*.sh` that drops a flag file. No prompt needed.
+2. **Detection needs LLM** → write `cron/prompts/<job>.md` + `cron/launchd/org.oracle.<job>.plist`, then re-run `cron/install-mac.sh`.
+3. Every new prompt should have a `<!-- allowed_tools: Bash,Read,Grep,... -->` first line — keeps the blast radius small.
+4. Every prompt must **always** report back (Telegram / flag / log), even on "nothing to do" — silent success violates the fourth defense line.
+
+---
+
+## OpenClaw Mode (alternative)
+
+If you're running this template inside an OpenClaw agent instead of Claude Code, the mapping is:
+
+| Claude Code concept | OpenClaw equivalent |
+|---|---|
+| `cron/runner.sh` + `claude -p` | system crontab + `openclaw cron add --session isolated` |
+| `.claude/flags/*.flag` + SessionStart hook | `openclaw message send` to main session |
+| `cron/prompts/<job>.md` | inline prompt in `--system-event` or `sessions_spawn` payload |
+| `cron/config.env` | OpenClaw workspace config |
+
+**Example — Type A check (OpenClaw mode):**
+
+```bash
+#!/bin/bash
+# health-check.sh — runs from system crontab
+set -e
 WORKSPACE="/path/to/workspace"
 ALERT_THRESHOLD=90
 
-# 檢查磁碟空間
 DISK_USAGE=$(df / | awk 'NR==2 {print $5}' | sed 's/%//')
 if [ "$DISK_USAGE" -gt "$ALERT_THRESHOLD" ]; then
-    openclaw cron add --name "disk-alert" --at "now" --system-event "⚠️ Disk usage: ${DISK_USAGE}%" --session main
+  openclaw cron add --name "disk-alert" --at "now" \
+    --system-event "⚠️ Disk usage: ${DISK_USAGE}%" --session main
 fi
 
-# 檢查 OpenClaw gateway 狀態
 if ! pgrep -f "openclaw gateway" > /dev/null; then
-    openclaw cron add --name "gateway-down" --at "now" --system-event "🔴 OpenClaw gateway is down" --session main
-fi
-
-# 檢查記憶檔案大小
-MEMORY_DIR="$WORKSPACE/memory"
-if [ -d "$MEMORY_DIR" ]; then
-    LARGE_FILES=$(find "$MEMORY_DIR" -name "*.md" -size +1M)
-    if [ -n "$LARGE_FILES" ]; then
-        openclaw cron add --name "large-memory-files" --at "now" --system-event "📄 Large memory files found" --session main
-    fi
+  openclaw cron add --name "gateway-down" --at "now" \
+    --system-event "🔴 OpenClaw gateway is down" --session main
 fi
 ```
 
-## 三層決策圖
+**Example — Type B check (OpenClaw mode):**
 
-```text
-任務分類
-    ├── 1. 純數值/狀態檢查
-    │   └── → 固定腳本 + 閾值觸發
-    │       
-    ├── 2. 需要收集後判斷
-    │   └── → 固定腳本收集 + LLM 決策
-    │       
-    └── 3. 複雜上下文理解
-        └── → 完全交給 LLM
-```
-
-### 層級 1: 固定腳本
-- **工具**: bash, python, curl
-- **觸發**: 數值超過閾值
-- **動作**: 直接發送 system event
-
-### 層級 2: 混合模式
-- **收集**: 固定腳本收集資料
-- **決策**: LLM 分析內容
-- **動作**: 基於 LLM 結果執行
-
-### 層級 3: 純 LLM
-- **場景**: 需要大量上下文
-- **方式**: OpenClaw cron + sessions_spawn
-- **優點**: 充分利用 Agent 能力
-
-## System Crontab vs OpenClaw Cron
-
-### System Crontab 適用場景
-- **Type A 監控型檢查**
-- 不需要 Agent 上下文
-- 需要高可靠性（獨立於 OpenClaw）
-- 系統級維護任務
-
-**優點**:
-- 獨立運行，不受 OpenClaw 狀態影響
-- 執行效率高
-- 適合週期性固定任務
-
-**缺點**:
-- 無法訪問 Agent 記憶和上下文
-- 結果需要額外機制傳遞給 Agent
-
-### OpenClaw Cron 適用場景
-- **Type B 分析型檢查**
-- 需要 Agent 記憶和上下文
-- 需要複雜決策
-- 需要與使用者互動
-
-**優點**:
-- 完整的 Agent 功能
-- 可訪問記憶系統
-- 支援複雜工作流程
-
-**缺點**:
-- 依賴 OpenClaw 運行狀態
-- 相對耗費資源
-
-## 語言選擇建議
-
-### Bash
-**適用**: 簡單的文件操作、API 調用、狀態檢查
-
-**範例**:
 ```bash
-# 檢查服務狀態
-if systemctl is-active --quiet nginx; then
-    echo "nginx: OK"
-else
-    echo "nginx: FAILED"
-fi
+# system crontab
+0 22 * * * openclaw cron add --name "daily-sync" --at "now" \
+  --system-event "trigger daily sync" --session main
 ```
 
-### Python
-**適用**: 複雜的數據處理、JSON 解析、多步驟邏輯
+The tradeoff: OpenClaw mode gives you direct access to the main agent's memory and context, at the cost of depending on the OpenClaw gateway running. Claude Code mode is decoupled (cron doesn't care if Claude Code is open), at the cost of a flag-file round trip.
 
-**範例**:
-```python
-import json
-import requests
+## Language Choice
 
-# API 配額檢查
-response = requests.get('https://api.example.com/quota')
-quota = response.json()
+| Language | Use when |
+|---|---|
+| **Bash** | File checks, API probes, simple state comparisons |
+| **Python** | JSON/YAML parsing, multi-step logic, anything calling the Anthropic SDK |
+| **Rust/Go** | Performance-critical log analysis, anything running more than once a minute |
 
-if quota['remaining'] < 100:
-    print(f"⚠️ API quota low: {quota['remaining']} remaining")
-```
+## Implementation Tips
 
-### Rust
-**適用**: 高效能需求、複雜邏輯、需要類型安全
+1. **Start with Type A** — get the boring scriptable checks in place first, then layer Type B on top
+2. **Incremental migration** — if you have an all-LLM routine, split the deterministic part out into a shell pre-step
+3. **Uniform output** — all scripts should produce `flag + report.txt` so the SessionStart hook can treat them uniformly
+4. **Log and watch the watchers** — a routine check that silently stops firing is worse than no check. Keep `cron/logs/` around and `tail` them once a week.
 
-**範例**:
-```rust
-// 高效率的日誌分析
-use std::fs;
-use regex::Regex;
-
-fn analyze_logs() -> Result<Vec<String>, std::io::Error> {
-    let content = fs::read_to_string("app.log")?;
-    let error_pattern = Regex::new(r"ERROR.*").unwrap();
-    
-    Ok(error_pattern.find_iter(&content)
-        .map(|m| m.as_str().to_string())
-        .collect())
-}
-```
-
-## 實作建議
-
-### 1. 從簡單開始
-先實作 Type A 監控型檢查，累積經驗後再加入 Type B
-
-### 2. 漸進式遷移
-將現有的全 LLM 檢查逐步拆分，固定邏輯部分先抽出來
-
-### 3. 統一接口
-所有腳本使用相同的輸出格式，方便後續處理
-
-### 4. 錯誤處理
-加入適當的錯誤處理和重試機制
-
-### 5. 記錄和監控
-記錄檢查結果，監控檢查本身的健康狀態
-
-記住：**優化是個持續過程，先讓它運行起來，再逐步改進。**
+Remember: **get it running, then refine.** A crude shell check beats a beautiful LLM check that never gets deployed.

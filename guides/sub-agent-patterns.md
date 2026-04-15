@@ -1,5 +1,18 @@
 # Sub-agent Patterns Guide — 子代理模式指南
 
+> ⚠️ **This guide is OpenClaw-specific.** It documents OpenClaw's
+> multi-session architecture (`sessions_spawn` / `sessions_send` /
+> `announce` / `STATUS_PENDING` marker files / MiniMax-as-sub-agent).
+>
+> **Claude Code users**: use the built-in `Agent` tool with a
+> `subagent_type` argument instead. Claude Code sub-agents are
+> synchronous — the `Agent` call blocks until the sub-agent returns a
+> single result message, so you don't need `sessions_send`,
+> `STATUS_PENDING` marker files, or a `REVIEW_THEN_DELIVER` protocol.
+> A future revision of this guide will split the Claude Code and
+> OpenClaw tracks; until then, treat this doc as OpenClaw-only and
+> refer to Anthropic's Claude Code docs for the native sub-agent API.
+
 ## 為什麼需要 Sub-agent？
 
 Main agent 負責與使用者互動、維護上下文、做重要決策。但某些任務適合委派：

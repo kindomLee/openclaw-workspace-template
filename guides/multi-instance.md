@@ -1,342 +1,221 @@
-# Multi-instance Guide — 多實例部署指南
+# Multi-workspace Guide (Claude Code mode)
 
-## 為什麼需要多 Instance？
+*For the OpenClaw multi-instance / gateway-port / profile architecture,
+see the legacy section at the bottom of this file. The Claude Code model
+is fundamentally different — no daemon, no gateway, no port conflicts —
+so the Claude Code track below is the primary guide.*
 
-單一 Agent 實例有其限制：
+## Why multiple workspaces?
 
-### 不同人格需求
-- **工作 Agent**: 專業、效率導向
-- **個人助理**: 輕鬆、生活化
-- **專案 Agent**: 專注特定領域（如開發、研究）
+Different jobs want different minds:
 
-### 不同用途分離
-- **生產環境**: 穩定、保守的設定
-- **實驗環境**: 測試新功能、新模型
-- **監控 Agent**: 純粹的系統監控，不處理聊天
+- **Work agent** — focused, technical, reads project code
+- **Personal agent** — casual, tracks habits / food / coffee / health
+- **Research agent** — long-horizon investigation, heavy note-taking
+- **Experiment agent** — try risky configs without polluting production
 
-### 不同 Channel 需求
-- **Telegram**: 即時回應，簡潔風格
-- **Discord**: 社群互動，表情符號
-- **Email**: 正式語調，完整資訊
+In Claude Code the unit of separation is a **workspace directory** —
+one directory with its own `AGENTS.md`, `SOUL.md`, `USER.md`,
+`MEMORY.md`, `memory/`, `.learnings/`, `.claude/`, and `cron/`. Claude
+Code is one-shot per invocation (each `claude` call reads the workspace
+and exits when the session ends), so there are no long-running daemons
+to collide.
 
-## 架構設計
+## What's isolated vs shared
 
-### 基本架構圖
-```text
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Instance-1    │    │   Instance-2    │    │   Instance-3    │
-│   (工作助理)    │    │   (個人助理)    │    │   (監控機器人)  │
-├─────────────────┤    ├─────────────────┤    ├─────────────────┤
-│ Workspace-1/    │    │ Workspace-2/    │    │ Workspace-3/    │
-│ ├─ AGENTS.md    │    │ ├─ AGENTS.md    │    │ ├─ AGENTS.md    │
-│ ├─ SOUL.md      │    │ ├─ SOUL.md      │    │ ├─ SOUL.md      │
-│ ├─ memory/      │    │ ├─ memory/      │    │ ├─ memory/      │
-│ └─ .learnings/  │    │ └─ .learnings/  │    │ └─ .learnings/  │
-├─────────────────┤    ├─────────────────┤    ├─────────────────┤
-│ Gateway:8080    │    │ Gateway:8081    │    │ Gateway:8082    │
-│ State: /state1  │    │ State: /state2  │    │ State: /state3  │
-│ Model: opus     │    │ Model: sonnet   │    │ Model: minimax  │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-        │                       │                       │
-        └───────────────────────┼───────────────────────┘
-                                │
-                    ┌─────────────────┐
-                    │  Shared Resources │
-                    │ ├─ scripts/      │
-                    │ ├─ tools/        │
-                    │ └─ reference/    │
-                    └─────────────────┘
-```
+| Thing | Per workspace | Global | Notes |
+|---|---|---|---|
+| `SOUL.md` / `IDENTITY.md` / `USER.md` | ✅ | — | The persona is the workspace |
+| `AGENTS.md` / `BOOTSTRAP.md` / `HEARTBEAT.md` | ✅ | — | Operating manual is per-persona |
+| `MEMORY.md` + `memory/` journal | ✅ | — | Never cross-link memories between workspaces |
+| `.learnings/` | ✅ | — | Each persona learns from its own mistakes |
+| `notes/` | ✅ | — | Topic knowledge stays with the persona that collected it |
+| `.claude/settings.json` (workspace) | ✅ | — | Per-workspace hook config |
+| `.claude/settings.local.json` | ✅ | — | Developer's local tweaks, gitignored |
+| `~/.claude/CLAUDE.md` | — | ✅ | Personal cross-workspace prefs (loaded by Claude Code on every session) |
+| `~/.claude/settings.json` | — | ✅ | Global allow-list, global hooks |
+| `<workspace>/.claude/skills/` | ✅ | — | Template's default skills ship here (auto-loaded per workspace) |
+| `~/.claude/skills/` | — | ✅ | Skills *promoted* to global are visible in every workspace |
+| `~/.claude/agents/*.md` | — | ✅ | Sub-agent definitions are global too |
+| `scripts/lib/*.sh`, `cron/runner.sh` | ✅ (copied) | — | Each workspace has its own copy from bootstrap |
 
-### 隔離 vs 共用決策
+### Workspace-local vs global skills
 
-| 資源類型 | 隔離 | 共用 | 理由 |
-|----------|------|------|------|
-| **記憶系統** | ✅ | ❌ | 避免人格混淆 |
-| **SOUL.md** | ✅ | ❌ | 不同人格定義 |
-| **AGENTS.md** | ✅ | ❌ | 不同工作流程 |
-| **工具腳本** | ❌ | ✅ | 減少維護成本 |
-| **參考文檔** | ❌ | ✅ | 通用知識 |
-| **Gateway Port** | ✅ | ❌ | 避免衝突 |
-| **State 目錄** | ✅ | ❌ | 會話隔離 |
-| **Cron 任務** | ✅ | ❌ | 避免重複執行 |
+Claude Code loads `SKILL.md` from two places on every session:
 
-## Config 檔差異範例
+1. **`<workspace>/.claude/skills/<name>/SKILL.md`** — workspace-local.
+   The template ships its default skills (`curate-memory`,
+   `telegram-html-reply`, `write-tmp`) to this path via `bootstrap.sh`,
+   so a fresh workspace has them working immediately.
+2. **`~/.claude/skills/<name>/SKILL.md`** — global. Loaded in every
+   session regardless of cwd.
 
-### Instance 1: 工作助理 (work-agent.yaml)
-```yaml
-# OpenClaw Configuration - Work Assistant
-host: "0.0.0.0"
-port: 8080
-workspace: "/home/user/workspaces/work-agent"
-state_dir: "/home/user/workspaces/work-agent/.state"
+**Rule of thumb**: ship skills workspace-local (what the template
+does). When one proves useful across several of your workspaces,
+*promote* it to the global path:
 
-models:
-  default: "anthropic/claude-opus-4-6"
-  
-channels:
-  - type: telegram
-    token: "${TELEGRAM_WORK_BOT_TOKEN}"
-    allowed_users: ["work_user_id"]
-    
-  - type: email
-    smtp_host: "smtp.gmail.com"
-    smtp_port: 587
-    username: "${WORK_EMAIL}"
-    password: "${WORK_EMAIL_PASSWORD}"
-
-heartbeat:
-  enabled: true
-  interval_hours: 4
-  active_hours: "09:00-18:00"
-  timezone: "Asia/Taipei"
-
-logging:
-  level: "info"
-  file: "/var/log/openclaw/work-agent.log"
-```
-
-### Instance 2: 個人助理 (personal-agent.yaml)
-```yaml
-# OpenClaw Configuration - Personal Assistant
-host: "0.0.0.0"
-port: 8081
-workspace: "/home/user/workspaces/personal-agent"
-state_dir: "/home/user/workspaces/personal-agent/.state"
-
-models:
-  default: "anthropic/claude-sonnet-4-20250514"
-  
-channels:
-  - type: telegram
-    token: "${TELEGRAM_PERSONAL_BOT_TOKEN}"
-    allowed_users: ["personal_user_id"]
-    
-  - type: discord
-    token: "${DISCORD_BOT_TOKEN}"
-    guild_ids: ["personal_guild_id"]
-
-heartbeat:
-  enabled: true
-  interval_hours: 2
-  active_hours: "08:00-23:00"
-  timezone: "Asia/Taipei"
-
-logging:
-  level: "debug"
-  file: "/var/log/openclaw/personal-agent.log"
-```
-
-### Instance 3: 監控機器人 (monitor-agent.yaml)
-```yaml
-# OpenClaw Configuration - Monitor Bot
-host: "127.0.0.1"
-port: 8082
-workspace: "/home/user/workspaces/monitor-agent"
-state_dir: "/home/user/workspaces/monitor-agent/.state"
-
-models:
-  default: "mm"  # MiniMax for cost efficiency
-  
-channels:
-  - type: telegram
-    token: "${TELEGRAM_MONITOR_BOT_TOKEN}"
-    allowed_users: ["admin_user_id"]
-
-heartbeat:
-  enabled: true
-  interval_hours: 1
-  active_hours: "00:00-23:59"  # 24/7
-  timezone: "Asia/Taipei"
-
-features:
-  web_search: false  # 監控不需要網路搜索
-  browser: false
-  
-logging:
-  level: "warn"
-  file: "/var/log/openclaw/monitor-agent.log"
-```
-
-## Systemd Service 模板
-
-### 基本服務檔案
-```ini
-# /etc/systemd/system/openclaw-work.service
-[Unit]
-Description=OpenClaw Work Assistant
-After=network.target
-Requires=network.target
-
-[Service]
-Type=simple
-User=openclaw
-Group=openclaw
-WorkingDirectory=/home/user/workspaces/work-agent
-ExecStart=/usr/local/bin/openclaw gateway start --config /etc/openclaw/work-agent.yaml
-ExecReload=/bin/kill -HUP $MAINPID
-Restart=always
-RestartSec=5
-Environment=NODE_ENV=production
-
-# 環境變數檔
-EnvironmentFile=/etc/openclaw/work-agent.env
-
-# 安全設定
-NoNewPrivileges=true
-ProtectSystem=strict
-ProtectHome=true
-ReadWritePaths=/home/user/workspaces/work-agent
-ReadWritePaths=/var/log/openclaw
-
-[Install]
-WantedBy=multi-user.target
-```
-
-### 環境變數檔案
 ```bash
-# /etc/openclaw/work-agent.env
-TELEGRAM_WORK_BOT_TOKEN=1234567890:ABCDefghijklmnop
-WORK_EMAIL=<your-email>
-WORK_EMAIL_PASSWORD=<your-password>
+# Promote a workspace-local skill to global
+mv my-workspace/.claude/skills/coffee-log ~/.claude/skills/
 
-# API Keys
-OPENAI_API_KEY=<your-key>
-ANTHROPIC_API_KEY=<your-key>
-
-# 共用資源路徑
-SHARED_SCRIPTS_PATH=/opt/openclaw/shared/scripts
-SHARED_TOOLS_PATH=/opt/openclaw/shared/tools
+# Or keep the source in the workspace but expose it globally
+ln -s /abs/path/to/my-workspace/.claude/skills/coffee-log \
+      ~/.claude/skills/coffee-log
 ```
 
-### 服務管理腳本
+Shared skills at `~/.claude/skills/` stay in sync for every persona;
+workspace-local skills are isolated, which is what you want for
+personas that should behave differently (e.g. the "work" persona has
+no access to the "personal" journal-writing skill).
+
+## Cron label collision (the main multi-workspace footgun)
+
+This is the gotcha to watch out for.
+
+`cron/install-mac.sh` copies every `cron/launchd/org.oracle.*.plist`
+into `~/Library/LaunchAgents/org.oracle.*.plist`. If you run it twice
+— once for workspace A, once for workspace B — **the second run
+overwrites the first**, because both workspaces ship plists with the
+same label (`org.oracle.memory-janitor`, `org.oracle.curate-memory`,
+…). You end up with one set of cron jobs pointing at whichever
+workspace was installed last.
+
+**Fix**: give each workspace a unique launchd label prefix.
+
 ```bash
-#!/bin/bash
-# manage-agents.sh
+# In workspace A, rename every plist Label:
+cd workspace-a/cron/launchd
+for f in org.oracle.*.plist; do
+  mv "$f" "${f/org.oracle./org.work.}"
+done
+# And inside each file, update the <string>org.oracle.X</string> →
+# <string>org.work.X</string>. A quick sed will do it:
+sed -i.bak 's|org\.oracle\.|org.work.|g' org.work.*.plist && rm *.bak
 
-SERVICES=("openclaw-work" "openclaw-personal" "openclaw-monitor")
-
-case "$1" in
-    start)
-        for service in "${SERVICES[@]}"; do
-            echo "Starting $service..."
-            sudo systemctl start "$service"
-        done
-        ;;
-    stop)
-        for service in "${SERVICES[@]}"; do
-            echo "Stopping $service..."
-            sudo systemctl stop "$service"
-        done
-        ;;
-    restart)
-        for service in "${SERVICES[@]}"; do
-            echo "Restarting $service..."
-            sudo systemctl restart "$service"
-        done
-        ;;
-    status)
-        for service in "${SERVICES[@]}"; do
-            echo "=== $service ==="
-            sudo systemctl status "$service" --no-pager -l
-            echo
-        done
-        ;;
-    logs)
-        if [ -n "$2" ]; then
-            sudo journalctl -f -u "openclaw-$2"
-        else
-            echo "Usage: $0 logs <work|personal|monitor>"
-        fi
-        ;;
-    *)
-        echo "Usage: $0 {start|stop|restart|status|logs}"
-        exit 1
-        ;;
-esac
+# Then re-install
+bash cron/install-mac.sh
 ```
 
-## 注意事項
+Now workspace A's jobs are `org.work.memory-janitor` etc. and
+workspace B's stay `org.oracle.memory-janitor`. Verify with
+`launchctl list | grep -E 'org\.(oracle|work)\.'`.
 
-### 1. Port 衝突避免
-確保每個實例使用不同的 port：
-- Work Agent: 8080
-- Personal Agent: 8081
-- Monitor Agent: 8082
+The same applies to `org.personal.*`, `org.research.*`, etc. Pick a
+prefix that makes sense for the persona.
 
-### 2. Cron 任務隔離
-每個實例的 cron 任務要避免衝突：
+On Linux the analogous issue is the crontab's marker block:
+`install-linux.sh` uses `# >>> Oracle Cron BEGIN >>>` as a delimiter,
+so running it twice will **replace** the previous block, not append.
+Either install from a single workspace, or patch the marker
+(`MARKER_BEGIN`/`MARKER_END`) per workspace.
 
-**錯誤做法** - 所有實例都在同一時間執行：
+## Opening sessions across workspaces
+
+From one terminal you typically run one workspace at a time:
+
 ```bash
-# 三個實例都在 09:00 執行，會互相干擾
-0 9 * * * /shared/scripts/daily-summary.sh
+cd ~/work/workspace-a
+claude
+# ... work on A ...
+# ^D to exit
+cd ~/personal/workspace-b
+claude
 ```
 
-**正確做法** - 錯開時間執行：
-```bash
-# Work Agent: 09:00
-# Personal Agent: 09:05  
-# Monitor Agent: 09:10
-```
+If you want both open simultaneously, open them in separate terminals.
+Each session reads its own workspace's `CLAUDE.md` / `AGENTS.md` /
+`SOUL.md` independently — there's no cross-session state in Claude Code
+itself, so the workspaces never leak into each other.
 
-### 3. State 目錄隔離
-每個實例要有獨立的 state 目錄：
-```yaml
-# 錯誤：共用 state 目錄
-state_dir: "/var/lib/openclaw/state"
+> Tip: add `cd "$(pwd)"` contexts to your shell prompt so you always
+> know which workspace a terminal is pinned to.
 
-# 正確：獨立 state 目錄
-state_dir: "/var/lib/openclaw/work-agent/state"
-```
+## Memory search boundaries
 
-### 4. 記憶系統隔離
-避免不同實例的記憶互相污染：
-```bash
-# 工作 Agent 的記憶
-/workspaces/work-agent/memory/2024-01-01.md
+`scripts/memory-search-hybrid.py` is workspace-scoped — it resolves
+`memory/` and `notes/` relative to the script's parent directory. Two
+workspaces searching for "Polymarket" will each return their own
+history only. If you *want* cross-workspace search (e.g. "where did I
+write about X?"), keep a thin shim in `~/.claude/skills/` that loops
+over known workspace paths and calls each one's hybrid search.
 
-# 個人 Agent 的記憶（完全分離）
-/workspaces/personal-agent/memory/2024-01-01.md
-```
+## Cron configuration per workspace
 
-### 5. 共用資源管理
-通用的腳本和工具可以共用：
-```bash
-# 共用腳本目錄
-/opt/openclaw/shared/
-├── scripts/
-│   ├── backup.sh
-│   ├── cleanup.sh
-│   └── health-check.sh
-└── tools/
-    ├── weather.py
-    └── calendar-parser.py
-```
+Each workspace's `cron/config.env` lives under the workspace and is
+loaded by *that workspace's* `cron/runner.sh`. If you use different
+Telegram chat ids or MiniMax keys per persona, that's the place.
 
-在各實例的 TOOLS.md 中引用：
-```bash
-# 共用天氣腳本
-python3 /opt/openclaw/shared/tools/weather.py
-```
+Global values that apply to all workspaces (e.g. a single Telegram
+token) can stay in `~/.zshrc` / `~/.bash_profile` as exported env —
+`runner.sh` inherits them before sourcing `config.env`, so per-workspace
+`config.env` overrides global env where both are set.
 
-### 6. 負載均衡
-如果有大量請求，可以考慮：
-- 用 nginx 做負載均衡
-- 根據 channel 類型路由到不同實例
-- 設定不同的 rate limit
+## Naming conventions that save pain later
 
-## 部署檢查清單
+- **Directory**: `~/work/<persona>` or `~/.workspaces/<persona>` — a
+  stable parent dir makes `health-check.sh` and cross-workspace tools
+  easier.
+- **Launchd prefix**: one prefix per workspace. Never reuse
+  `org.oracle.*` across workspaces.
+- **`IDENTITY.md` emoji**: one emoji per persona so you can tell which
+  agent just messaged you on Telegram.
+- **Telegram**: one bot per persona if possible. Same bot with
+  different `reply_to` headers also works.
 
-- [ ] 每個實例有獨立的 workspace 目錄
-- [ ] 每個實例有獨立的 config 檔案
-- [ ] 每個實例使用不同的 port
-- [ ] 每個實例有獨立的 state 目錄
-- [ ] 環境變數正確設定且隔離
-- [ ] Systemd service 檔案已建立
-- [ ] Cron 任務時間已錯開
-- [ ] 防火牆規則已設定
-- [ ] 日誌輪替已設定
-- [ ] 備份策略已實施
+## Checklist when adding workspace N+1
 
-記住：**多實例不是為了複雜而複雜，而是為了更好地服務不同的需求。從簡單開始，逐步擴展。**
+1. `git clone / cp -r` or re-run `bootstrap.sh --path <new>` to lay
+   down the template.
+2. Rename `cron/launchd/*.plist` labels to a new prefix (see above).
+3. Create `cron/config.env` from the example; fill TG credentials.
+4. Edit `IDENTITY.md` / `USER.md` / `SOUL.md` to set the persona.
+5. `bash cron/install-mac.sh` (or `install-linux.sh`) from the new
+   workspace.
+6. `bash scripts/health-check.sh` — should hit 0 errors.
+7. `launchctl list | grep "$NEW_PREFIX"` — confirm the right number of
+   jobs loaded.
+8. Verify you didn't clobber an existing workspace's jobs:
+   `launchctl list | grep -E 'org\.'` and count each prefix.
+
+---
+
+## Legacy: OpenClaw multi-instance
+
+> **OpenClaw-specific — skip if you're on Claude Code.** The
+> Claude Code model above is what most users want. This section exists
+> only because the template still supports an OpenClaw-mode cron
+> pipeline (see `scripts/memory-*.sh`, `templates/crontab.example`,
+> `scripts/install-cron.sh`) and the OpenClaw deployment model is
+> fundamentally different.
+
+OpenClaw runs a long-lived gateway per instance, each instance binding
+to a distinct TCP port (`8080`, `8081`, ...). Different instances also
+want different `--profile` / state dir combinations. The points to
+watch:
+
+- **Gateway ports must not collide** — one port per instance; track
+  them in each workspace's `TOOLS.md`.
+- **State directory per profile** — `~/.openclaw-<profile>/` keeps
+  state files isolated; never let two instances share a state dir.
+- **`--profile` flag on every `openclaw` invocation** — cron entries
+  must set `OPENCLAW_PROFILE` or pass `--profile <name>` explicitly;
+  forgetting it is the classic silent-failure mode.
+- **Shared skills via symlink** — OpenClaw skills under
+  `/usr/lib/node_modules/openclaw/skills/` can be symlinked into the
+  workspace's `skills/` dir, but the symlinks will be root-owned.
+  Prefer `cp -r` over `ln -s` if the instance runs as a non-root user.
+- **File ownership** — if the instance runs as a service user, make
+  sure `chown -R` covers workspace + state dir + log dir.
+- **Cron entries** — `scripts/install-cron.sh` wraps everything in
+  `# >>> Oracle Cron BEGIN >>>` / `<<<` markers; running it from a
+  second workspace replaces the first workspace's block. Use a
+  per-instance prefix environment variable or install by hand for the
+  second workspace.
+- **Channel routing** — set `NOTIFY_CHANNEL` + `NOTIFY_TARGET` per
+  instance; `--announce` alone falls through to the last active
+  session and may deliver to the wrong channel entirely.
+
+Everything else — `SOUL.md` isolation, per-persona `AGENTS.md`,
+isolated `memory/` journals — is the same as the Claude Code story
+above. The architectural difference is just: Claude Code has no daemon
+to collide on, OpenClaw does.
