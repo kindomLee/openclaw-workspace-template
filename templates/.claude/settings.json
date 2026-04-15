@@ -3,7 +3,21 @@
     "allow": [
       "Bash(python3 scripts/*)",
       "Bash(bash scripts/*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(cat:*)",
+      "Bash(ls:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(wc:*)",
+      "Bash(date:*)",
+      "Bash(find:*)",
       "Read(*)",
+      "Grep(*)",
+      "Glob(*)",
       "Write(memory/*)",
       "Write(notes/*)",
       "Write(MEMORY.md)",
@@ -22,7 +36,7 @@
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/memory-search-trigger.py\"",
-            "timeout": 5
+            "timeout": 10
           }
         ]
       }
@@ -33,7 +47,7 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start-flags.sh\"",
-            "timeout": 5
+            "timeout": 10
           }
         ]
       }

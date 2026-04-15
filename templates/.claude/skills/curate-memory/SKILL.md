@@ -48,11 +48,12 @@ Review all conversation from last memory write to now. Identify new decisions/se
 ### 2. Duplicate Check (mandatory before writing)
 
 ```bash
-# Check journal + long-term index
-grep -i "keyword" MEMORY.md memory/*.md
+# Fast grep on journal + long-term index
+grep -ri "keyword" MEMORY.md memory/*.md
 
-# Check knowledge base (notes/ included in memory_search)
-memory_search "keyword"
+# Hybrid scored search across memory/ + notes/ in one pass
+# (keyword overlap × temporal recency × hall-type boost)
+python3 scripts/memory-search-hybrid.py "keyword" --days 90 --top 5
 ```
 
 - Exact duplicate → skip
@@ -112,26 +113,19 @@ Nothing to record → `✅ No unrecorded important information`
 # Check today's memory
 cat memory/$(date +%Y-%m-%d).md
 
-# Search memory
+# Fast grep
 grep -rn "keyword" MEMORY.md memory/*.md
 
-# Search knowledge base (if extraPaths configured)
-memory_search "keyword"
+# Hybrid search (memory/ + notes/, scored)
+python3 scripts/memory-search-hybrid.py "keyword" --top 10
 
-# Check MEMORY.md Events Timeline
+# Check MEMORY.md Events Timeline (last 10 bullets)
 grep "^- \*\*" MEMORY.md | tail -10
 ```
 
-## Memory Search Configuration (Optional)
+## Memory Search Notes
 
-To enable full-text search across notes/, add to OpenClaw config:
-
-```json
-{
-  "memorySearch": {
-    "extraPaths": ["notes/"]
-  }
-}
-```
-
-This integrates the knowledge layer with the memory search system for semantic retrieval.
+`scripts/memory-search-hybrid.py` already walks both `memory/` and
+`notes/` in one pass, so no extra config is needed. If you're on
+OpenClaw mode instead, see `guides/context-tree.md § Making notes/
+searchable` for `memorySearch.extraPaths` setup.
