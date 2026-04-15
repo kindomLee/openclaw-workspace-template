@@ -209,6 +209,46 @@ if [ "$DRY_RUN" -eq 0 ]; then
   find "$WORKSPACE_PATH/cron" -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
 fi
 
+# ---- First-run profile setup flag -------------------------------------
+#
+# The terminal "Next steps" banner is easy to miss or forget once the
+# install window is closed. Drop a welcome flag so the SessionStart hook
+# surfaces it the first time the user runs `claude`, ensuring IDENTITY /
+# USER / SOUL / TOOLS actually get personalized instead of staying at
+# template defaults. Claude removes the flag after guiding the user
+# through setup (per the .claude/flags/ convention).
+#
+# Skip if a flag already exists (rerunning bootstrap shouldn't resurrect
+# a flag the user has already resolved).
+WELCOME_FLAG="$WORKSPACE_PATH/.claude/flags/welcome-profile-setup.flag"
+if [ "$DRY_RUN" -eq 0 ] && [ ! -f "$WELCOME_FLAG" ]; then
+  mkdir -p "$(dirname "$WELCOME_FLAG")"
+  cat > "$WELCOME_FLAG" <<'FLAG'
+First-run profile setup required
+Walk the user through personalizing the core profile files — they are still at template defaults and the memory system depends on them.
+
+HOW TO RUN THIS (important):
+Use the AskUserQuestion tool to ask ONE field at a time instead of dumping a wall of questions. Keep each question narrow and skippable (offer a "skip / decide later" option). After collecting each answer, write it to the right file immediately with Edit, then move on to the next field.
+
+Language: ask all questions in 繁體中文 (Traditional Chinese) by default. The file contents you write can stay in whatever language the user answers in.
+
+Suggested order and fields:
+  1. USER.md       → name, pronouns, timezone, primary channel (Telegram / Discord / email)
+  2. IDENTITY.md   → agent name, self-positioning, default tone
+  3. SOUL.md       → preferred language, response style, hard rules / no-go zones
+  4. TOOLS.md      → which external services are wired up (cron, Telegram, GitHub, etc.) — connection details can be deferred
+
+Rules:
+  - Ask, write, confirm, then move on. Do NOT batch all questions at once.
+  - If the user says "skip" / "later" / "not sure", leave the field as a clear TODO comment (e.g. `<!-- TODO: fill in -->`) and continue.
+  - At the end, summarize what was filled and what was deferred.
+
+When every file has been personalized (or the user has explicitly deferred every remaining field), remove this flag:
+  rm .claude/flags/welcome-profile-setup.flag
+FLAG
+  echo -e "${GREEN}Welcome flag written: .claude/flags/welcome-profile-setup.flag${NC}"
+fi
+
 # ---- .claude/settings.json merge warning ------------------------------
 #
 # If the user's workspace already has a local .claude/settings.json (e.g.
