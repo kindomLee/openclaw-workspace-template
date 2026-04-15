@@ -1,21 +1,29 @@
 # OpenClaw workspace — crontab example
 #
-# Install with:
+# This is the OpenClaw-mode cron schedule. Claude Code users should use
+# `cron/install-mac.sh` or `cron/install-linux.sh` instead — that
+# pipeline runs `claude -p` with per-job prompts and per-job tool
+# allowlists, which is a strictly better fit for Claude Code workspaces.
+#
+# Install (OpenClaw mode):
 #     bash scripts/install-cron.sh           # prints these lines for crontab -e
 #     bash scripts/install-cron.sh --install # appends to current crontab (asks first)
 #
-# Environment:
+# Environment (canonical names; `scripts/lib/notify.sh` also accepts the
+# legacy TELEGRAM_BOT_TOKEN / NOTIFY_TARGET pair for backwards compat):
 #   OPENCLAW_WORKSPACE      absolute path to your workspace root (required)
-#   NOTIFY_CHANNEL          telegram | slack | stdout | none
-#   NOTIFY_TARGET           chat_id, webhook URL, etc.
-#   TELEGRAM_BOT_TOKEN      required when NOTIFY_CHANNEL=telegram
+#   TG_BOT_TOKEN            Telegram bot token
+#   TG_CHAT_ID              Telegram chat id
+#   NOTIFY_CHANNEL          explicit override: telegram | slack | stdout | none
+#   SLACK_WEBHOOK_URL       Slack webhook (alternative to Telegram)
 #   BROKEN_LINKS_THRESHOLD  default 5
 #   NOTES_TODO_THRESHOLD    default 20
 
 OPENCLAW_WORKSPACE=/path/to/your/workspace
-NOTIFY_CHANNEL=stdout
-# NOTIFY_TARGET=
-# TELEGRAM_BOT_TOKEN=
+# TG_BOT_TOKEN=
+# TG_CHAT_ID=
+# NOTIFY_CHANNEL=stdout
+# SLACK_WEBHOOK_URL=
 # BROKEN_LINKS_THRESHOLD=5
 # NOTES_TODO_THRESHOLD=20
 
@@ -23,7 +31,7 @@ NOTIFY_CHANNEL=stdout
 30 11 * * 1  $OPENCLAW_WORKSPACE/scripts/cron-broken-links-check.sh  >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
 32 11 * * 1  $OPENCLAW_WORKSPACE/scripts/cron-notes-todo-check.sh    >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
 
-# --- memory maintenance (existing scripts) ---
+# --- memory maintenance (OpenClaw-mode shell wrappers) ---
 0  */1 * * * $OPENCLAW_WORKSPACE/scripts/cron-memory-sync.sh         >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
 15 3  * * * $OPENCLAW_WORKSPACE/scripts/memory-reflect.sh            >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
 30 3  * * 0 $OPENCLAW_WORKSPACE/scripts/memory-dream.sh              >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1

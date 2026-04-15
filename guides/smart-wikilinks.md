@@ -47,7 +47,23 @@ the shape so you can adapt it to your embedding provider of choice.
    - Take the top K (4-5).
    - Replace the target file's `## Related` section with new `[[links]]`.
 
-3. **Schedule stage** (crontab, you add):
+3. **Schedule stage** — pick whichever matches your cron runner:
+
+   **Claude Code mode** (add a plist under `cron/launchd/`, then
+   re-run `bash cron/install-mac.sh`):
+   ```xml
+   <key>StartCalendarInterval</key>
+   <dict>
+     <key>Hour</key><integer>4</integer>
+     <key>Minute</key><integer>30</integer>
+   </dict>
+   ```
+   The runner already handles network-wait, timeout, and logging — the
+   plist just points at `runner.sh smart-wikilinks-embed` and you put
+   the build + suggest logic in a prompt under `cron/prompts/`, or in a
+   shell wrapper that calls your Python scripts.
+
+   **OpenClaw mode** (edit `templates/crontab.example`):
    ```
    # daily: embed any new/changed notes, then suggest related links for
    # notes touched in the last 24h

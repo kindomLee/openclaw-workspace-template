@@ -84,13 +84,30 @@ mono_now() { /usr/bin/python3 "$SCRIPT_DIR/bin/mono_seconds.py" 2>/dev/null || d
 PROMPT=$(cat "$PROMPT_FILE")
 START_WALL=$(date +%s)
 START_MONO=$(mono_now)
+
+# Job-level timeout: prevents `claude -p` from hanging indefinitely
+# (historical worst case: 32 hours on a stuck reflect job).
+# Default 1800s (30 min). Override globally via JOB_TIMEOUT in config.env.
+# Prefers coreutils `timeout`; falls back to `gtimeout` (Homebrew coreutils).
+# If neither is installed, we warn and run without a timeout — install with
+# `brew install coreutils` on macOS.
+JOB_TIMEOUT="${JOB_TIMEOUT:-1800}"
+if command -v timeout >/dev/null 2>&1; then
+  TIMEOUT_CMD=(timeout --foreground --signal=TERM --kill-after=30 "$JOB_TIMEOUT")
+elif command -v gtimeout >/dev/null 2>&1; then
+  TIMEOUT_CMD=(gtimeout --foreground --signal=TERM --kill-after=30 "$JOB_TIMEOUT")
+else
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARN: neither timeout nor gtimeout available, running without job-level timeout" | tee -a "$LOG_FILE"
+  TIMEOUT_CMD=()
+fi
+
 # Use if/else to keep EXIT_CODE; otherwise `set -e` would abort the script
 # on a non-zero claude exit before the "finished" log line could be written.
 # The prompt is piped via stdin (<<<): on Linux, claude-cli 2.1.85+ treats
 # `-p` as a pure --print flag and IGNORES positional prompt arguments, so
 # passing the prompt as an arg would silently send an empty prompt. Stdin
 # works on both macOS and Linux, keeping the wrapper cross-platform.
-if claude -p \
+if "${TIMEOUT_CMD[@]}" claude -p \
   --allowedTools "$ALLOWED_TOOLS" \
   -d "$PROJECT_DIR" \
   <<<"$PROMPT" \
@@ -98,6 +115,13 @@ if claude -p \
   EXIT_CODE=0
 else
   EXIT_CODE=$?
+fi
+
+# Timeout detection: 124 = SIGTERM fired, 137 = SIGKILL after --kill-after
+TIMED_OUT=0
+if [ "$EXIT_CODE" -eq 124 ] || [ "$EXIT_CODE" -eq 137 ]; then
+  TIMED_OUT=1
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] TIMEOUT: job exceeded ${JOB_TIMEOUT}s and was killed (exit $EXIT_CODE)" | tee -a "$LOG_FILE"
 fi
 ACTIVE=$(( $(mono_now) - START_MONO ))
 WALL=$(( $(date +%s) - START_WALL ))
@@ -114,8 +138,21 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] Job $JOB finished with exit code $EXIT_CODE
 # Desktop notification (macOS only)
 if [ "$EXIT_CODE" -eq 0 ]; then
   osascript -e "display notification \"$JOB done (${ACTIVE}s)\" with title \"Oracle Cron\" sound name \"Glass\"" 2>/dev/null || true
+elif [ "$TIMED_OUT" -eq 1 ]; then
+  osascript -e "display notification \"$JOB TIMEOUT (${JOB_TIMEOUT}s)\" with title \"Oracle Cron\" sound name \"Basso\"" 2>/dev/null || true
 else
   osascript -e "display notification \"$JOB failed (exit $EXIT_CODE)\" with title \"Oracle Cron\" sound name \"Basso\"" 2>/dev/null || true
+fi
+
+# Timeout → Telegram alert (four defense lines: never fail silently)
+# When killed by timeout, `claude -p` doesn't get to send its own TG report,
+# so the runner sends a fallback alert. Requires TG_BOT_TOKEN / TG_CHAT_ID
+# in config.env.
+if [ "$TIMED_OUT" -eq 1 ] && [ -n "${TG_BOT_TOKEN:-}" ] && [ -n "${TG_CHAT_ID:-}" ]; then
+  curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
+    -d chat_id="$TG_CHAT_ID" \
+    -d text="⏰ Cron timeout: ${JOB} exceeded ${JOB_TIMEOUT}s and was killed (log: $(basename "$LOG_FILE"))" \
+    >/dev/null 2>&1 || true
 fi
 
 # Clean up logs older than 30 days

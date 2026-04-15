@@ -62,8 +62,21 @@ import time
 KEYWORDS: list[str] = [
     # === Proper nouns / project names ===
     # Replace these placeholders with your actual project / service / infra
-    # names. Examples:
+    # names. Example (uncomment and adapt):
+    #
     #   "MyProject", "production-db", "staging-cluster", "vendor-foo",
+    #   "the-one-ingest-pipeline", "acme-api",
+    #
+    # Tip: include *every* nickname you use for the same thing. If you
+    # sometimes call a service "the ingest pipeline" and sometimes
+    # "ingest", list both. The hook does substring match, so shorter
+    # entries subsume longer ones.
+    #
+    # Note on Chinese: matching is pure substring (no word-boundary),
+    # which means "去拿" will fire inside "他去拿包裹" too. That's usually
+    # fine because the reranker + MIN_SCORE filter cleans up noise, but
+    # if you see false positives on a specific short keyword, make it
+    # longer (e.g. "去拿一下" instead of "去拿").
 
     # === Cross-host / retrieval intent (English) ===
     "is there",
@@ -144,7 +157,12 @@ DOMAIN_MAP: dict[str, list[str]] = {}
 MIN_SCORE          = 0.5     # don't inject results below this score
 DOMAIN_BONUS       = 0.10    # added when result matches an expected prefix
 DOMAIN_PENALTY     = 0.15    # subtracted when prefixes are set but result misses them all
-CACHE_TTL_SEC      = 60      # don't re-run a search whose results are this fresh
+# Cache TTL: a single Claude turn commonly runs 60-120+ seconds, so a
+# 60-second TTL is effectively zero — the user's next prompt always
+# misses cache. 300s (5 min) covers a few consecutive turns where the
+# same keyword fires, and is still short enough that stale memory
+# entries don't persist beyond a single conversational thread.
+CACHE_TTL_SEC      = 300
 SEARCH_TIMEOUT_SEC = 6       # subprocess timeout for memory-search-hybrid.py
 
 # ============================================================================

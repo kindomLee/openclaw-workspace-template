@@ -32,11 +32,27 @@ for fname in sorted(os.listdir(plist_dir)):
     if not fname.endswith('.plist'):
         continue
     fpath = os.path.join(plist_dir, fname)
-    with open(fpath, 'rb') as fp:
-        d = plistlib.load(fp)
+    try:
+        with open(fpath, 'rb') as fp:
+            d = plistlib.load(fp)
+    except (plistlib.InvalidFileException, ValueError, OSError) as e:
+        # Log to stderr so the bash caller can see the warning without
+        # tripping the generator. We skip the malformed plist rather than
+        # aborting the whole install — losing one job is better than
+        # losing the entire schedule.
+        print(f"# WARNING: failed to parse {fname}: {e} (skipped)", file=sys.stderr)
+        continue
 
-    job_name = d['ProgramArguments'][-1]
+    try:
+        job_name = d['ProgramArguments'][-1]
+    except (KeyError, IndexError) as e:
+        print(f"# WARNING: {fname} missing ProgramArguments: {e} (skipped)", file=sys.stderr)
+        continue
+
     cal = d.get('StartCalendarInterval', {})
+    if not cal:
+        print(f"# WARNING: {fname} has no StartCalendarInterval (skipped)", file=sys.stderr)
+        continue
 
     entries = cal if isinstance(cal, list) else [cal]
     # Deduplicate: group by (minute, hour, day) and merge weekdays

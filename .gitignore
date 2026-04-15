@@ -1,3 +1,7 @@
 # Cron
 cron/config.env
 cron/logs/
+
+# Python
+__pycache__/
+*.pyc

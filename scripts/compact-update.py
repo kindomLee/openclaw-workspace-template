@@ -39,10 +39,24 @@ COMPACT_END = "<!-- compact:end -->"
 RECENT_HEADERS = ("Recent", "Events Timeline", "Timeline", "L1_RECENT")
 
 
+def _strip_fenced_code_blocks(text: str) -> str:
+    """Replace every ``` ... ``` (and ~~~ ... ~~~) block with equal-length
+    whitespace so regex searches later don't accidentally match markers
+    that the user quoted inside example code. We preserve the length so
+    line numbers and offsets stay stable in case the caller needs them."""
+    fence_re = re.compile(r"(```|~~~)[^\n]*\n.*?\1", re.DOTALL)
+    return fence_re.sub(lambda m: " " * len(m.group(0)), text)
+
+
 def extract_block(text: str, start: str, end: str) -> str | None:
+    scrubbed = _strip_fenced_code_blocks(text)
     pattern = re.escape(start) + r"(.*?)" + re.escape(end)
-    m = re.search(pattern, text, re.DOTALL)
-    return m.group(1).strip() if m else None
+    m = re.search(pattern, scrubbed, re.DOTALL)
+    if not m:
+        return None
+    # Use the offsets from the scrubbed text but slice the original so we
+    # return the user's real content (trimmed).
+    return text[m.start(1):m.end(1)].strip()
 
 
 def extract_recent(memory_text: str, count: int) -> list[str]:

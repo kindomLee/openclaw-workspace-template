@@ -52,13 +52,15 @@ process_file() {
         elif [[ "$line" =~ ^\[hall_ ]]; then
             # Already tagged, preserve as-is
             echo "$line"
-        elif [[ "$line" =~ ^[[:space:]]*[-*][[:space:]]+([^[]+) ]]; then
-            local content="${BASH_REMATCH[1]}"
+        elif [[ "$line" =~ ^([[:space:]]*)([-*])[[:space:]]+(.+)$ ]]; then
+            # Capture the whole bullet body (including any [[wikilinks]]);
+            # the earlier `[^[]+` pattern stopped at the first `[`, so any
+            # entry containing an inline wikilink silently lost its hall tag.
+            local content="${BASH_REMATCH[3]}"
             local tag
             tag=$(hall_tag "$content")
-            local indent bullet
-            indent=$(echo "$line" | sed 's/^\([[:space:]]*\).*/\1/')
-            bullet=$(echo "$line" | sed 's/^[[:space:]]*\([-*]\).*/\1/')
+            local indent="${BASH_REMATCH[1]}"
+            local bullet="${BASH_REMATCH[2]}"
             if [ "$dry" = "false" ]; then
                 echo "${indent}[$tag] ${bullet} ${content}"
             else

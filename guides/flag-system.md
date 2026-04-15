@@ -96,16 +96,19 @@ you want to add new checks or change the schedule.
 ## Notifications
 
 Flag writes are silent by default. To get pinged when a flag fires, set
-environment variables (in crontab or `~/.openclaw/env`):
+environment variables — canonical home is `cron/config.env` (loaded by
+`cron/runner.sh`; source it manually in non-runner cron scripts too):
 
 ```
-NOTIFY_CHANNEL=telegram
-NOTIFY_TARGET=-1001234567890
-TELEGRAM_BOT_TOKEN=...
+TG_BOT_TOKEN=...
+TG_CHAT_ID=-1001234567890
 ```
 
-Supported channels: `telegram`, `slack`, `stdout`, `none`. See
-`scripts/lib/notify.sh` for the implementation.
+`scripts/lib/notify.sh` also accepts the legacy `TELEGRAM_BOT_TOKEN` +
+`NOTIFY_TARGET` pair for backwards compatibility. Supported channels:
+`telegram`, `slack`, `stdout`, `none` — set `NOTIFY_CHANNEL` explicitly
+if you want to override the auto-detection (which picks `telegram`
+whenever `TG_BOT_TOKEN` + `TG_CHAT_ID` are both set).
 
 ## Why not just call the LLM from cron?
 
