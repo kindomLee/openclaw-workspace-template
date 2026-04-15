@@ -29,11 +29,15 @@ Default schedule:
 
 | Time | Job | Purpose |
 |------|-----|---------|
-| 20:07 daily | memory-janitor | Hall tag backfill |
-| 21:03 daily | memory-reflect | Contradiction detection |
-| 21:30 Sat | self-improvement | LEARNINGS promote |
-| 03:03 Sun | memory-dream | Cross-domain association |
-| 03:33 1st | memory-expire | Archive old memories |
+| `:02` hourly | curate-memory | Early-return curate (journal → MEMORY.md/notes/LEARNINGS.md) |
+| 20:07 daily | memory-janitor | Hall tag backfill + dup detection |
+| 21:07 daily | smart-wikilinks | Daily wikilink/Related suggestions |
+| 21:03 Wed (weekly) | memory-reflect | Contradiction detection |
+| 21:00 Mon (weekly) | weekly-memory-hygiene | Bulk hygiene + broken-link triage |
+| 21:30 Sat (weekly) | self-improvement | LEARNINGS promote |
+| 03:03 Sun (weekly) | memory-dream | Cross-domain association |
+| 10:00 1st (monthly) | monthly-review | Monthly highlights + stale-content review |
+| 03:33 1st (monthly) | memory-expire | Archive old memories |
 
 Install: `bash cron/install-mac.sh` or `bash cron/install-linux.sh`
 

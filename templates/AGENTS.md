@@ -47,8 +47,21 @@ run it. The `memory-search-trigger.py` hook also injects a reminder:
 Rationale: "should I search memory?" is a judgment call that gets skipped
 under load. The hard-trigger list turns it into pattern matching.
 
-## SOUL.md Evolution
-- **Detect:** When user corrects behavior ("don't ask" "too verbose" "just do it"), write proposal to `memory/soul-proposals.md`
+## Correction Routing (SOUL Evolution ↔ Self-Improvement)
+
+Both subsystems use the **same "≥ 3 similar occurrences → promote"** rule but land in different files. When the user corrects you, route by *what* was corrected:
+
+| Correction is about... | Goes to | Promoted to (≥ 3) | Example |
+|---|---|---|---|
+| **Agent interaction style / decision bias / tone** | `memory/soul-proposals.md` | `SOUL.md` (Decision Priors) | "don't ask, just do it" / "too verbose" / "stop summarizing" |
+| **External facts / tools / APIs / infra knowledge** | `.learnings/LEARNINGS.md` type=`correction` | `MEMORY.md` (Patterns / Learnings) | "that API endpoint is deprecated" / "we use X not Y" |
+| **Recurring bug / env regression** | `.learnings/ERRORS.md` type=`error`/`regression` | `MEMORY.md` (Agent Cases) | "cron job silently aborts on sleep wake" |
+| **Can't decide** | Both (dup-safe) | Whichever hits ≥ 3 first | — |
+
+**Rule of thumb:** if the fix is "change how the agent behaves," it's SOUL. If the fix is "change what the agent knows," it's LEARNINGS. The routing is intentional — SOUL.md stays short and behavioral; MEMORY.md absorbs factual patterns.
+
+### SOUL.md Evolution
+- **Detect:** User corrects behavior ("don't ask" / "too verbose" / "just do it") → `memory/soul-proposals.md`
 - **Accumulate:** ≥ 3 similar proposals → propose SOUL.md update
 - **Execute:** Only with user consent. **Only main session can edit SOUL.md**
 
@@ -123,8 +136,10 @@ Full architecture and how to add new flag types: `guides/flag-system.md`.
 4. **Fail → Alert** — Never fail silently
 
 ## Self-Improvement
-- Corrected → `.learnings/LEARNINGS.md`, recurring ≥ 3 → promote to MEMORY.md
-- Detailed categories → `reference/self-improvement.md`
+- Factual correction / knowledge gap / recurring error → `.learnings/LEARNINGS.md` or `.learnings/ERRORS.md`
+- recurring_count ≥ 3 → promote to MEMORY.md (Patterns / Learnings / Agent Cases)
+- **Behavioral** corrections route to `memory/soul-proposals.md` instead — see **Correction Routing** table above
+- Detailed categories → `guides/self-improvement.md`
 
 ## Reply Principles
 - **No debug output in replies.** User doesn't need grep exit codes or tool errors.
@@ -147,6 +162,17 @@ Full architecture and how to add new flag types: `guides/flag-system.md`.
 | Unverified facts | Contains names/numbers/features without source? | Search or label "unverified" |
 
 ## ⚠️ Config Change Protocol
+
+Applies to any config file that the harness or agent itself reads.
+
+### Claude Code workspaces (default)
+1. **Backup first** — `cp .claude/settings.json .claude/settings.json.bak`
+2. **Validate JSON** before saving — `python3 -c "import json; json.load(open('.claude/settings.json'))"`
+3. **User-specific tweaks → `.claude/settings.local.json`** (gitignored), never pollute shared `settings.json`
+4. **Don't break your own hooks** — Editing `UserPromptSubmit` / `SessionStart` while a session is open can silently kill memory search / flag injection. Test the hook command in a shell first.
+5. **Reload after change** — Settings are read at session start; restart `claude` for hook changes to take effect.
+
+### OpenClaw workspaces
 1. **Backup first** — `cp openclaw.json openclaw.json.bak`
 2. **Validate** — `openclaw config validate` before restart
 3. **Unknown keys → check docs** — Don't guess config syntax
@@ -185,5 +211,5 @@ Main session is the Context Curator — inject relevant context into sub-agent t
 **Lost:** Intermediate reasoning, file contents read earlier, tool call history, verbal preferences
 
 - **Written to disk = persistent**, verbal = temporary.
-- `compaction-safety-net` hook auto-saves recent conversation before compaction
-- In long conversations: proactively trim — don't re-reference completed intermediate results
+- The hourly `curate-memory` cron promotes raw journal entries up to MEMORY.md / notes/ — run it (or `/curate-memory`) before `/compact` if you know a key decision is still only in the current turn.
+- In long conversations: proactively trim — don't re-reference completed intermediate results.
