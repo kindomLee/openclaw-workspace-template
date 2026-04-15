@@ -1,169 +1,255 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+# bootstrap.sh — Claude Code / OpenClaw Workspace Template Bootstrap
+#
+# Usage:
+#   ./bootstrap.sh                          # Interactive install into .
+#   ./bootstrap.sh --path ~/my-workspace    # Non-interactive path
+#   ./bootstrap.sh --path . --yes           # Fully non-interactive
+#   ./bootstrap.sh --dry-run                # Preview only, no writes
+#   ./bootstrap.sh --help                   # Show help
+set -euo pipefail
 
-# Colors for output
+# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# Default workspace path
-DEFAULT_WORKSPACE="./clawd"
+# Defaults
+DEFAULT_WORKSPACE="."
+WORKSPACE_PATH=""
+ASSUME_YES=0
+DRY_RUN=0
 
-echo -e "${BLUE}OpenClaw Workspace Template Bootstrap${NC}"
-echo -e "${BLUE}=====================================${NC}"
+usage() {
+  cat <<EOF
+Claude Code / OpenClaw Workspace Template Bootstrap
+
+Usage: bootstrap.sh [OPTIONS]
+
+Options:
+  --path DIR     Target workspace directory (default: prompt, then ".")
+  --yes, -y      Skip confirmation prompts (for CI / automation)
+  --dry-run      Show what would happen without writing any files
+  --help, -h     Show this help and exit
+
+Examples:
+  ./bootstrap.sh
+  ./bootstrap.sh --path ~/my-workspace
+  ./bootstrap.sh --path . --yes
+  ./bootstrap.sh --dry-run --path /tmp/preview --yes
+EOF
+}
+
+# Parse args
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --path)
+      [ $# -ge 2 ] || { echo "--path requires an argument" >&2; exit 2; }
+      WORKSPACE_PATH="$2"; shift 2 ;;
+    --yes|-y)     ASSUME_YES=1; shift ;;
+    --dry-run)    DRY_RUN=1; shift ;;
+    --help|-h)    usage; exit 0 ;;
+    *)            echo "Unknown option: $1" >&2; usage; exit 2 ;;
+  esac
+done
+
+echo -e "${BLUE}Claude Code / OpenClaw Workspace Template Bootstrap${NC}"
+echo -e "${BLUE}====================================================${NC}"
 echo
 
-# Ask for workspace path
-echo -e "${YELLOW}Enter workspace directory path (default: ${DEFAULT_WORKSPACE}):${NC}"
-read -r WORKSPACE_PATH
-
-# Use default if empty
-if [ -z "$WORKSPACE_PATH" ]; then
-    WORKSPACE_PATH="$DEFAULT_WORKSPACE"
+# ---- Dependency check --------------------------------------------------
+# Required: hard fail if missing. Recommended: warn but continue.
+MISSING=()
+RECOMMENDED_MISSING=()
+for cmd in python3 curl; do
+  command -v "$cmd" >/dev/null 2>&1 || MISSING+=("$cmd")
+done
+if ! command -v claude >/dev/null 2>&1; then
+  MISSING+=("claude (Claude Code CLI — see https://docs.claude.com/claude-code)")
+fi
+if ! command -v timeout >/dev/null 2>&1 && ! command -v gtimeout >/dev/null 2>&1; then
+  MISSING+=("timeout (macOS: brew install coreutils)")
+fi
+# jq is used by the SessionStart flag hook. If missing, the hook silently
+# falls back to python3, so treat jq as recommended rather than required.
+if ! command -v jq >/dev/null 2>&1; then
+  RECOMMENDED_MISSING+=("jq (macOS: brew install jq — hook falls back to python3 if absent)")
+fi
+if [ ${#MISSING[@]} -gt 0 ]; then
+  echo -e "${RED}Missing required tools:${NC}"
+  printf '  - %s\n' "${MISSING[@]}"
+  echo
+  echo -e "${YELLOW}Install the missing tools and re-run.${NC}"
+  exit 1
+fi
+if [ ${#RECOMMENDED_MISSING[@]} -gt 0 ]; then
+  echo -e "${YELLOW}Recommended tools missing (install for best experience):${NC}"
+  printf '  - %s\n' "${RECOMMENDED_MISSING[@]}"
+  echo
 fi
 
-# Convert to absolute path
-# Note: GNU realpath (Linux) accepts non-existent paths, but BSD realpath
-# (macOS default) errors out. Use the portable cd+pwd fallback so we work
-# on a path that doesn't exist yet (we create it below).
-mkdir -p "$WORKSPACE_PATH"
-WORKSPACE_PATH=$(cd "$WORKSPACE_PATH" && pwd)
+# ---- Resolve workspace path -------------------------------------------
+if [ -z "$WORKSPACE_PATH" ]; then
+  if [ "$ASSUME_YES" -eq 1 ]; then
+    WORKSPACE_PATH="$DEFAULT_WORKSPACE"
+  else
+    echo -e "${YELLOW}Workspace directory (default: ${DEFAULT_WORKSPACE}):${NC}"
+    echo -e "  - For Claude Code:  \".\" (current dir) or a path like \"~/my-workspace\""
+    echo -e "  - For OpenClaw:     \"./clawd\" (traditional)"
+    read -r WORKSPACE_PATH
+    WORKSPACE_PATH="${WORKSPACE_PATH:-$DEFAULT_WORKSPACE}"
+  fi
+fi
 
-echo -e "${BLUE}Setting up workspace at: ${WORKSPACE_PATH}${NC}"
+# Expand leading ~
+WORKSPACE_PATH="${WORKSPACE_PATH/#\~/$HOME}"
+
+# Resolve to absolute path (BSD/GNU-portable: cd + pwd works on existing dirs)
+if [ "$DRY_RUN" -eq 0 ]; then
+  mkdir -p "$WORKSPACE_PATH"
+fi
+if [ -d "$WORKSPACE_PATH" ]; then
+  WORKSPACE_PATH=$(cd "$WORKSPACE_PATH" && pwd)
+fi
+
+echo -e "${BLUE}Target workspace: ${WORKSPACE_PATH}${NC}"
+[ "$DRY_RUN" -eq 1 ] && echo -e "${YELLOW}[DRY RUN — no files will be written]${NC}"
 echo
 
-# Check if workspace is empty
-if [ "$(ls -A "$WORKSPACE_PATH" 2>/dev/null)" ]; then
-    echo -e "${RED}Warning: Workspace directory is not empty!${NC}"
+# ---- Non-empty directory confirmation ---------------------------------
+if [ -d "$WORKSPACE_PATH" ] && [ "$(ls -A "$WORKSPACE_PATH" 2>/dev/null)" ]; then
+  echo -e "${YELLOW}Warning: workspace directory is not empty.${NC}"
+  echo -e "${YELLOW}Existing files will be preserved (skip-if-exists).${NC}"
+  if [ "$ASSUME_YES" -eq 0 ]; then
     echo -e "${YELLOW}Continue? (y/N):${NC}"
     read -r CONTINUE
-    if [[ ! "$CONTINUE" =~ ^[Yy]$ ]]; then
-        echo -e "${RED}Aborted.${NC}"
-        exit 1
+    if [[ ! "${CONTINUE:-}" =~ ^[Yy]$ ]]; then
+      echo -e "${RED}Aborted.${NC}"
+      exit 1
     fi
+  fi
 fi
 
-# Copy template files
-echo -e "${YELLOW}Copying template files...${NC}"
+# ---- Copy helpers ------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [ ! -d "$SCRIPT_DIR/templates" ]; then
-    echo -e "${RED}Error: templates/ directory not found in $SCRIPT_DIR${NC}"
-    exit 1
+  echo -e "${RED}Error: templates/ not found in $SCRIPT_DIR${NC}" >&2
+  exit 1
 fi
 
-# Smart copy: skip files that already exist, only add missing ones
-SKIPPED=0
-COPIED=0
-cd "$SCRIPT_DIR/templates"
-find . -type f | while read -r file; do
-    target="$WORKSPACE_PATH/$file"
-    if [ -f "$target" ]; then
-        echo -e "  ${YELLOW}skip${NC} $file (already exists)"
-        SKIPPED=$((SKIPPED + 1))
-    else
-        mkdir -p "$(dirname "$target")"
-        cp "$file" "$target"
-        echo -e "  ${GREEN}copy${NC} $file"
-        COPIED=$((COPIED + 1))
-    fi
-done
-cd "$SCRIPT_DIR"
-echo -e "${GREEN}✓ Template files processed (existing files preserved)${NC}"
-
-# Copy skills (same skip-if-exists logic)
-if [ -d "$SCRIPT_DIR/skills" ]; then
-    echo -e "${YELLOW}Copying starter skills...${NC}"
-    cd "$SCRIPT_DIR/skills"
-    find . -type f | while read -r file; do
-        target="$WORKSPACE_PATH/skills/$file"
-        if [ -f "$target" ]; then
-            echo -e "  ${YELLOW}skip${NC} skills/$file (already exists)"
-        else
-            mkdir -p "$(dirname "$target")"
-            cp "$file" "$target"
-            echo -e "  ${GREEN}copy${NC} skills/$file"
-        fi
-    done
-    cd "$SCRIPT_DIR"
-    echo -e "${GREEN}✓ Starter skills installed${NC}"
-fi
-
-# Copy scripts
-if [ -d "$SCRIPT_DIR/scripts" ]; then
-    echo -e "${YELLOW}Copying scripts...${NC}"
-    cd "$SCRIPT_DIR/scripts"
-    find . -type f | while read -r file; do
-        target="$WORKSPACE_PATH/scripts/$file"
-        if [ -f "$target" ]; then
-            echo -e "  ${YELLOW}skip${NC} scripts/$file (already exists)"
-        else
-            mkdir -p "$(dirname "$target")"
-            cp "$file" "$target"
-            echo -e "  ${GREEN}copy${NC} scripts/$file"
-        fi
-    done
-    cd "$SCRIPT_DIR"
-    echo -e "${GREEN}✓ Scripts installed${NC}"
-fi
-
-# Copy cron system
-if [ -d "$SCRIPT_DIR/cron" ]; then
-    echo -e "${YELLOW}Copying cron system...${NC}"
-    cd "$SCRIPT_DIR/cron"
+# copy_tree SRC [DST_SUBDIR]
+#   Walk SRC, copy each file into WORKSPACE_PATH (or WORKSPACE_PATH/DST_SUBDIR
+#   when DST_SUBDIR is given). Skip files that already exist. Skip cron
+#   runtime artifacts (config.env with secrets, logs/).
+copy_tree() {
+  local src="$1"
+  local dst_subdir="${2:-}"
+  [ -d "$src" ] || return 0
+  local label
+  label=$(basename "$src")
+  echo -e "${YELLOW}Copying ${label}/...${NC}"
+  (
+    cd "$src"
     find . -type f ! -name "config.env" ! -path "*/logs/*" | while read -r file; do
-        target="$WORKSPACE_PATH/cron/$file"
-        if [ -f "$target" ]; then
-            echo -e "  ${YELLOW}skip${NC} cron/$file (already exists)"
-        else
-            mkdir -p "$(dirname "$target")"
-            cp "$file" "$target"
-            echo -e "  ${GREEN}copy${NC} cron/$file"
+      local rel="${file#./}"
+      local target
+      if [ -n "$dst_subdir" ]; then
+        target="$WORKSPACE_PATH/$dst_subdir/$rel"
+      else
+        target="$WORKSPACE_PATH/$rel"
+      fi
+      if [ -f "$target" ]; then
+        echo -e "  ${YELLOW}skip${NC} ${dst_subdir:+$dst_subdir/}$rel (exists)"
+      else
+        if [ "$DRY_RUN" -eq 0 ]; then
+          mkdir -p "$(dirname "$target")"
+          cp "$file" "$target"
         fi
+        echo -e "  ${GREEN}copy${NC} ${dst_subdir:+$dst_subdir/}$rel"
+      fi
     done
-    cd "$SCRIPT_DIR"
-    # Make scripts executable
-    find "$WORKSPACE_PATH/cron" -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
-    echo -e "${GREEN}✓ Cron system installed${NC}"
+  )
+}
+
+copy_tree "$SCRIPT_DIR/templates"
+# Skills now live under templates/.claude/skills/ and are copied as part
+# of `templates/` above. Claude Code auto-loads SKILL.md files from
+# <workspace>/.claude/skills/<name>/SKILL.md without any extra wiring.
+copy_tree "$SCRIPT_DIR/scripts" "scripts"
+copy_tree "$SCRIPT_DIR/cron"    "cron"
+
+# ---- Additional directories -------------------------------------------
+echo -e "${YELLOW}Creating directory structure...${NC}"
+if [ "$DRY_RUN" -eq 0 ]; then
+  mkdir -p \
+    "$WORKSPACE_PATH/memory" \
+    "$WORKSPACE_PATH/notes/00-Inbox" \
+    "$WORKSPACE_PATH/notes/01-Projects/Active" \
+    "$WORKSPACE_PATH/notes/01-Projects/Archive" \
+    "$WORKSPACE_PATH/notes/02-Areas" \
+    "$WORKSPACE_PATH/notes/03-Resources" \
+    "$WORKSPACE_PATH/notes/04-Archive" \
+    "$WORKSPACE_PATH/.learnings" \
+    "$WORKSPACE_PATH/scripts" \
+    "$WORKSPACE_PATH/.claude/skills" \
+    "$WORKSPACE_PATH/cron/logs" \
+    "$WORKSPACE_PATH/reference" \
+    "$WORKSPACE_PATH/tmp"
 fi
 
-# Create additional directories
-echo -e "${YELLOW}Creating additional directories...${NC}"
-mkdir -p "$WORKSPACE_PATH/memory"
-mkdir -p "$WORKSPACE_PATH/notes/areas"
-mkdir -p "$WORKSPACE_PATH/notes/resources"
-mkdir -p "$WORKSPACE_PATH/.learnings"
-mkdir -p "$WORKSPACE_PATH/scripts"
-mkdir -p "$WORKSPACE_PATH/skills"
-mkdir -p "$WORKSPACE_PATH/cron/logs"
-mkdir -p "$WORKSPACE_PATH/reference"
-mkdir -p "$WORKSPACE_PATH/tmp"
-echo -e "${GREEN}✓ Directory structure created${NC}"
-
-# Set permissions
-echo -e "${YELLOW}Setting permissions...${NC}"
-chmod 755 "$WORKSPACE_PATH"
-chmod 644 "$WORKSPACE_PATH"/*.md
-if [ -d "$WORKSPACE_PATH/scripts" ]; then
-    find "$WORKSPACE_PATH/scripts" -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
+# ---- Permissions ------------------------------------------------------
+if [ "$DRY_RUN" -eq 0 ]; then
+  chmod 755 "$WORKSPACE_PATH"
+  # shellcheck disable=SC2035
+  find "$WORKSPACE_PATH" -maxdepth 1 -name "*.md" -exec chmod 644 {} \; 2>/dev/null || true
+  find "$WORKSPACE_PATH/scripts" -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
+  find "$WORKSPACE_PATH/cron" -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
 fi
-echo -e "${GREEN}✓ Permissions set${NC}"
 
-# Success message
+# ---- .claude/settings.json merge warning ------------------------------
+#
+# If the user's workspace already has a local .claude/settings.json (e.g.
+# they're bootstrapping into an existing Claude Code project), skip-if-exists
+# will keep the user's copy — which means the template's hooks are NOT
+# wired up. Flag it loudly so the user knows to merge manually.
+USER_SETTINGS="$WORKSPACE_PATH/.claude/settings.json"
+TEMPLATE_SETTINGS="$SCRIPT_DIR/templates/.claude/settings.json"
+if [ -f "$USER_SETTINGS" ] && [ -f "$TEMPLATE_SETTINGS" ]; then
+  if ! diff -q "$USER_SETTINGS" "$TEMPLATE_SETTINGS" >/dev/null 2>&1; then
+    echo
+    echo -e "${YELLOW}⚠️  .claude/settings.json already exists and differs from the template.${NC}"
+    echo -e "${YELLOW}    Template hooks are NOT wired up. Manually merge if you want them:${NC}"
+    echo -e "    diff $TEMPLATE_SETTINGS $USER_SETTINGS"
+  fi
+fi
+
+# ---- Finish -----------------------------------------------------------
 echo
-echo -e "${GREEN}✨ Workspace setup complete!${NC}"
+if [ "$DRY_RUN" -eq 1 ]; then
+  echo -e "${YELLOW}Dry run complete. Re-run without --dry-run to actually install.${NC}"
+  exit 0
+fi
+
+echo -e "${GREEN}Workspace setup complete.${NC}"
 echo
 echo -e "${BLUE}Next steps:${NC}"
-echo -e "1. ${YELLOW}Fill in USER.md with your information${NC}"
-echo -e "2. ${YELLOW}Customize IDENTITY.md for your agent's personality${NC}"
-echo -e "3. ${YELLOW}Configure OpenClaw to use workspace: ${WORKSPACE_PATH}${NC}"
-echo -e "4. ${YELLOW}Review and customize AGENTS.md for your workflows${NC}"
-echo -e "5. ${YELLOW}Add your specific tools and services to TOOLS.md${NC}"
-echo -e "6. ${YELLOW}(Optional) Set up Knowledge Base: see guides/context-tree.md${NC}"
 echo
-echo -e "${BLUE}Workspace location: ${WORKSPACE_PATH}${NC}"
-echo -e "${BLUE}Documentation: ${WORKSPACE_PATH}/guides/${NC}"
+echo -e "${BLUE}[Claude Code — default]${NC}"
+echo -e "  1. ${YELLOW}cd $WORKSPACE_PATH${NC}"
+echo -e "  2. ${YELLOW}cp cron/config.env.example cron/config.env${NC} and fill TG_BOT_TOKEN / TG_CHAT_ID (optional, for Telegram alerts)"
+echo -e "  3. Install cron: ${YELLOW}bash cron/install-mac.sh${NC}  (macOS)  or  ${YELLOW}bash cron/install-linux.sh${NC}  (Linux)"
+echo -e "  4. Edit ${YELLOW}IDENTITY.md / USER.md / SOUL.md / TOOLS.md${NC} to personalize"
+echo -e "  5. Run ${YELLOW}claude${NC} — the first session reads AGENTS.md and bootstraps"
 echo
-echo -e "${GREEN}Happy agent building! 🤖${NC}"
+echo -e "${BLUE}[OpenClaw — alternative]${NC}"
+echo -e "  1. ${YELLOW}openclaw workspace set $WORKSPACE_PATH${NC}"
+echo -e "  2. Install cron: ${YELLOW}bash scripts/install-cron.sh --install${NC}"
+echo -e "  3. Edit ${YELLOW}IDENTITY.md / USER.md / SOUL.md / TOOLS.md${NC}"
+echo
+echo -e "${BLUE}Health check:${NC} ${YELLOW}bash scripts/health-check.sh${NC}"
+echo -e "${BLUE}Docs:${NC}         ${YELLOW}$WORKSPACE_PATH/guides/${NC}"
+echo
+echo -e "${GREEN}Happy agent building.${NC}"

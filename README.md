@@ -14,7 +14,7 @@ After installing:
 
 - 🤖 **Your agent delegates** — Battle-tested sub-agent patterns with result verification and delivery confirmation. Main agent stays focused while sub-agents handle heavy lifting.
 
-- 🌙 **Your agent dreams** — Weekly "cold memory association" finds cross-domain insights by randomly pairing unrelated memories. Daily "rumination" detects contradictions between recent and long-term memory. Monthly auto-archival keeps memory fresh.
+- 🌙 **Your agent dreams** — Weekly "cold memory association" finds cross-domain insights by randomly pairing unrelated memories. Weekly "rumination" (Wed 21:03) detects contradictions between recent and long-term memory. Monthly auto-archival keeps memory fresh.
 
 - 📋 **Your agent maintains itself** — Routine checks framework (Type A: fixed logic / Type B: needs LLM) so your agent doesn't waste tokens on things a shell script can do.
 
@@ -42,7 +42,7 @@ After installing:
 | **Hall-type tags** | `[hall_facts]` `[hall_events]` `[hall_discoveries]` `[hall_preferences]` `[hall_advice]` | Categorize journal entries for boosted retrieval |
 | **Self-improvement** | `.learnings/`, `LEARNINGS.md` | Track corrections / errors / gaps; auto-promote when recurring ≥ 3 |
 | **Memory dreaming** | `cron/prompts/memory-dream.md` | Weekly cross-domain association of unrelated memories |
-| **Memory rumination** | `cron/prompts/memory-reflect.md` | Daily contradiction detection with action-tracking + stale-check |
+| **Memory rumination** | `cron/prompts/memory-reflect.md` | Weekly contradiction detection with action-tracking + stale-check |
 | **Memory expiry** | `cron/prompts/memory-expire.md` | Monthly auto-archive of memories older than 30 days |
 | **Memory janitor** | `cron/prompts/memory-janitor.md` | Hall-tag backfill + duplicate detection + notes quality check |
 | **Cron → flag → hook** | `.claude/flags/`, `.claude/hooks/session-start-flags.sh` | Background checks drop flags; next session picks them up |
@@ -113,7 +113,7 @@ workspace/
 ├── BOOTSTRAP.md       # Pre-generation task classification
 ├── memory/            # Daily journal (YYYY-MM-DD.md)
 │   ├── dreams.md      # Weekly cross-domain insights
-│   ├── reflections.md # Daily memory rumination
+│   ├── reflections.md # Weekly memory rumination (Wed 9pm)
 │   └── archive-*/     # Auto-archived old memories
 ├── notes/             # Knowledge base — optional, merge-first (see guides/context-tree.md)
 │   ├── areas/         # Topics by domain
@@ -130,26 +130,26 @@ workspace/
 │   └── launchd/           # Schedule definitions (plist)
 ├── .claude/
 │   ├── flags/            # Pending-work flags (cron drops them here)
-│   └── hooks/            # SessionStart + UserPromptSubmit hooks
+│   ├── hooks/            # SessionStart + UserPromptSubmit hooks
+│   └── skills/           # Workspace-local skills (auto-loaded by Claude Code)
+│       ├── curate-memory/
+│       ├── telegram-html-reply/
+│       └── write-tmp/
 ├── scripts/
 │   ├── lib/              # Shared helpers (workspace / notify / flag)
-│   ├── cron-memory-sync.sh         # Hourly conversation extraction
 │   ├── cron-broken-links-check.sh  # Flag when broken wikilinks > N
 │   ├── cron-notes-todo-check.sh    # Flag when TODO backlog > N
 │   ├── memory-dream.sh    # Weekly "dreaming" — cold memory association
-│   ├── memory-reflect.sh  # Daily rumination — contradiction detection
+│   ├── memory-reflect.sh  # Weekly rumination — contradiction detection
 │   ├── memory-expire.sh   # Monthly archive of old daily files
-│   ├── memory-janitor.py  # Memory cleanup utility
+│   ├── memory-compress.py # Long-term memory compression (MEMORY.md + archive)
 │   ├── memory-search-hybrid.py   # Hybrid keyword × temporal × hall scoring
 │   ├── hall-tagger.sh             # Backfill hall_* tags on journal bullets
 │   ├── compact-update.py          # Generate MEMORY_COMPACT.md from markers
 │   ├── check-broken-wikilinks.py  # Standalone broken-link scanner
+│   ├── check-schedule-drift.py    # Verify doc schedule tables match plists
 │   ├── install-cron.sh            # Print / install the crontab snippet
 │   └── health-check.sh            # Post-install verification
-├── skills/            # Agent skills
-│   ├── memory/        # Memory management
-│   ├── telegram-html-reply/  # Rich HTML replies for Telegram
-│   └── write-tmp/     # Temp file handling
 └── guides/            # Reference documentation
     ├── self-improvement.md
     ├── sub-agent-patterns.md
@@ -178,11 +178,12 @@ Inspired by research on [how biological sleep consolidates memory](https://x.com
 
 | Mechanism | Script | Schedule | What It Does |
 |-----------|--------|----------|-------------|
-| **Sync** | `cron-memory-sync.sh` | Hourly (:02) | Extract conversations → LLM writes daily memory |
+| **Curate** | `cron/prompts/curate-memory.md` | Hourly (:02) | Early-return wrapper; when new journal entries exist, promote to MEMORY.md / notes/ / LEARNINGS.md |
 | **Dreaming** | `memory-dream.sh` | Weekly (Sun 3am) | Random cross-domain memory association for unexpected insights |
-| **Rumination** | `memory-reflect.sh` | Daily (9pm) | Compare recent vs long-term memory, detect contradictions |
+| **Rumination** | `memory-reflect.sh` | Weekly (Wed 9pm) | Compare recent vs long-term memory, detect contradictions |
 | **Forgetting** | `memory-expire.sh` | Monthly (1st) | Archive daily files older than 30 days |
-| **Janitor** | `memory-janitor.py` | Daily | Clean up and organize memory files |
+| **Janitor** | `cron/prompts/memory-janitor.md` | Daily (20:07) | LLM-driven hall-tag backfill + duplicate detection + notes quality check |
+| **Compress** | `scripts/memory-compress.py` | Manual or monthly | Compression-based long-term memory maintenance (fold old timeline, compress P2) |
 
 ### Priority System
 
