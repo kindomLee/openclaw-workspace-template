@@ -102,7 +102,11 @@ def main():
                 kw_overlap = len(query_kw & kw) / len(query_kw) if query_kw else 0.0
                 t_boost = temporal_boost(mtime, cutoff, now, args.days)
                 h_boost = hall_boost(content)
-                base = min(1.0, len(content) / 5000) * (0.3 if kw_overlap > 0 else 0.05)
+                # Size factor: sqrt scaling caps at ~1.0 around 5KB but
+                # doesn't let a 50KB topic note dominate a focused 2KB
+                # journal entry. Earlier linear scaling was too generous.
+                size_factor = min(1.0, (len(content) / 5000) ** 0.5)
+                base = size_factor * (0.3 if kw_overlap > 0 else 0.05)
                 fused = base * (1 + 0.3 * kw_overlap) * t_boost * h_boost
                 results.append({
                     "file": str(fp.relative_to(base_dir)),
