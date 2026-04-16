@@ -1,0 +1,81 @@
+# settings.capabilities.toml — Capability-grouped permission spec.
+#
+# THIS FILE IS THE SOURCE OF TRUTH for .claude/settings.json's
+# permissions.allow list. The JSON file is generated from this TOML
+# by tools/build-settings.py at the template repo root.
+#
+# Inspired by the OpenAI Agents SDK "Capabilities" idea: instead of a
+# flat array of raw permission strings, we group entries into meaningful
+# buckets (inspect_repo, run_scripts, write_memory, ...) so reviewers
+# can tell at a glance what the agent is actually allowed to do.
+#
+# To add / remove / reshape a permission:
+#   1. Edit the appropriate [capabilities.<name>] table below.
+#   2. From the template repo root, run:
+#        python3 tools/build-settings.py
+#   3. Commit BOTH this file and the regenerated settings.json.
+#
+# Hooks (UserPromptSubmit / SessionStart / ...) live in settings.json
+# directly and are preserved verbatim across regeneration — they are
+# not managed here.
+
+version = 1
+
+[capabilities.run_scripts]
+description = "Execute project-owned scripts under scripts/"
+allow = [
+  "Bash(python3 scripts/*)",
+  "Bash(bash scripts/*)",
+]
+
+[capabilities.inspect_git]
+description = "Read-only git inspection (status/diff/log/show/branch)"
+allow = [
+  "Bash(git status:*)",
+  "Bash(git diff:*)",
+  "Bash(git log:*)",
+  "Bash(git show:*)",
+  "Bash(git branch:*)",
+]
+
+[capabilities.inspect_shell]
+description = "Read-only shell inspection of files and metadata"
+allow = [
+  "Bash(cat:*)",
+  "Bash(ls:*)",
+  "Bash(head:*)",
+  "Bash(tail:*)",
+  "Bash(wc:*)",
+  "Bash(date:*)",
+  "Bash(find:*)",
+]
+
+[capabilities.read_files]
+description = "Structured file reading and search across the workspace"
+allow = [
+  "Read(*)",
+  "Grep(*)",
+  "Glob(*)",
+]
+
+[capabilities.write_memory]
+description = "Append/edit memory palace artifacts (journal + long-term memory)"
+allow = [
+  "Write(memory/*)",
+  "Write(MEMORY.md)",
+  "Write(MEMORY_COMPACT.md)",
+  "Edit(memory/*)",
+  "Edit(MEMORY.md)",
+  "Edit(MEMORY_COMPACT.md)",
+]
+
+[capabilities.write_notes]
+description = "Edit PARA knowledge base under notes/"
+allow = [
+  "Write(notes/*)",
+  "Edit(notes/*)",
+]
+
+# Explicit deny list — currently empty but kept here so additions stay
+# declarative alongside the allow buckets.
+deny = []

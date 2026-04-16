@@ -153,7 +153,7 @@ copy_tree() {
   echo -e "${YELLOW}Copying ${label}/...${NC}"
   (
     cd "$src"
-    find . -type f ! -name "config.env" ! -path "*/logs/*" | while read -r file; do
+    find . -type f ! -name "config.env" ! -name "workspace.spec" ! -path "*/logs/*" | while read -r file; do
       local rel="${file#./}"
       local target
       if [ -n "$dst_subdir" ]; then
@@ -174,31 +174,83 @@ copy_tree() {
   )
 }
 
-copy_tree "$SCRIPT_DIR/templates"
-# Skills now live under templates/.claude/skills/ and are copied as part
-# of `templates/` above. Claude Code auto-loads SKILL.md files from
+# ---- Apply workspace.spec ---------------------------------------------
+# templates/workspace.spec is the single source of truth for the workspace
+# layout (trees to copy, directories to ensure). The imperative bits
+# (welcome flag, permissions, banner) stay in bash because they need
+# conditional logic.
+#
+# Skills ride along inside `copy_tree templates` (they live under
+# templates/.claude/skills/); Claude Code auto-loads SKILL.md files from
 # <workspace>/.claude/skills/<name>/SKILL.md without any extra wiring.
-copy_tree "$SCRIPT_DIR/scripts" "scripts"
-copy_tree "$SCRIPT_DIR/cron"    "cron"
+process_workspace_spec() {
+  local spec="$SCRIPT_DIR/templates/workspace.spec"
+  if [ ! -f "$spec" ]; then
+    echo -e "${RED}Error: workspace.spec not found at $spec${NC}" >&2
+    exit 1
+  fi
+  local lineno=0
+  local created_dir_header=0
+  # Read with a fallback newline so a trailing-newline-less file still
+  # processes its last line.
+  while IFS= read -r raw || [ -n "$raw" ]; do
+    lineno=$((lineno + 1))
+    # Strip comments (everything from the first '#' onward) and trim.
+    local line="${raw%%#*}"
+    # Trim leading whitespace
+    line="${line#"${line%%[![:space:]]*}"}"
+    # Trim trailing whitespace
+    line="${line%"${line##*[![:space:]]}"}"
+    [ -z "$line" ] && continue
 
-# ---- Additional directories -------------------------------------------
-echo -e "${YELLOW}Creating directory structure...${NC}"
-if [ "$DRY_RUN" -eq 0 ]; then
-  mkdir -p \
-    "$WORKSPACE_PATH/memory" \
-    "$WORKSPACE_PATH/notes/00-Inbox" \
-    "$WORKSPACE_PATH/notes/01-Projects/Active" \
-    "$WORKSPACE_PATH/notes/01-Projects/Archive" \
-    "$WORKSPACE_PATH/notes/02-Areas" \
-    "$WORKSPACE_PATH/notes/03-Resources" \
-    "$WORKSPACE_PATH/notes/04-Archive" \
-    "$WORKSPACE_PATH/.learnings" \
-    "$WORKSPACE_PATH/scripts" \
-    "$WORKSPACE_PATH/.claude/skills" \
-    "$WORKSPACE_PATH/cron/logs" \
-    "$WORKSPACE_PATH/reference" \
-    "$WORKSPACE_PATH/tmp"
-fi
+    # Split into verb + rest.
+    local verb="${line%% *}"
+    local rest=""
+    if [ "$verb" != "$line" ]; then
+      rest="${line#* }"
+      rest="${rest#"${rest%%[![:space:]]*}"}"
+    fi
+
+    case "$verb" in
+      dir)
+        if [ -z "$rest" ]; then
+          echo -e "${RED}workspace.spec:$lineno: 'dir' requires a path${NC}" >&2
+          exit 1
+        fi
+        if [ "$created_dir_header" -eq 0 ]; then
+          echo -e "${YELLOW}Creating directory structure...${NC}"
+          created_dir_header=1
+        fi
+        if [ "$DRY_RUN" -eq 0 ]; then
+          mkdir -p "$WORKSPACE_PATH/$rest"
+        fi
+        echo -e "  ${GREEN}dir ${NC}$rest"
+        ;;
+      copy_tree)
+        if [ -z "$rest" ]; then
+          echo -e "${RED}workspace.spec:$lineno: 'copy_tree' requires a source${NC}" >&2
+          exit 1
+        fi
+        # rest is "<src>" or "<src> <dst>"
+        local src_rel dst_rel
+        src_rel="${rest%% *}"
+        if [ "$src_rel" != "$rest" ]; then
+          dst_rel="${rest#* }"
+          dst_rel="${dst_rel#"${dst_rel%%[![:space:]]*}"}"
+        else
+          dst_rel=""
+        fi
+        copy_tree "$SCRIPT_DIR/$src_rel" "$dst_rel"
+        ;;
+      *)
+        echo -e "${RED}workspace.spec:$lineno: unknown verb '$verb'${NC}" >&2
+        exit 1
+        ;;
+    esac
+  done < "$spec"
+}
+
+process_workspace_spec
 
 # ---- Permissions ------------------------------------------------------
 if [ "$DRY_RUN" -eq 0 ]; then

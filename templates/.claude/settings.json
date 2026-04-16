@@ -19,13 +19,13 @@
       "Grep(*)",
       "Glob(*)",
       "Write(memory/*)",
-      "Write(notes/*)",
       "Write(MEMORY.md)",
       "Write(MEMORY_COMPACT.md)",
       "Edit(memory/*)",
-      "Edit(notes/*)",
       "Edit(MEMORY.md)",
-      "Edit(MEMORY_COMPACT.md)"
+      "Edit(MEMORY_COMPACT.md)",
+      "Write(notes/*)",
+      "Edit(notes/*)"
     ],
     "deny": []
   },
