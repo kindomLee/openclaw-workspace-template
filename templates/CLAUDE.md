@@ -103,10 +103,15 @@ Every outward action goes through these checks:
 - Verify state with tools before reporting it — don't guess.
 - Contains factual claims? Source-first.
 
-## Pending flags
+## Pending flags (PRIORITY — act before anything else)
 
-`.claude/flags/*.flag` files surfaced by `SessionStart` hook need
-triage. Read them, act on the instructions, and
+**When your session context contains pending flags from the SessionStart
+hook, address them IMMEDIATELY as the first thing you do — before
+answering the user's question.** Greet the user, tell them there are
+pending setup items, and begin working through the flag instructions.
+
+`.claude/flags/*.flag` files are surfaced by the `SessionStart` hook as
+`additionalContext`. Read them, act on the instructions, and
 `rm .claude/flags/<name>.flag` when done. See `guides/flag-system.md`
 and `AGENTS.md § Pending Flags`.
 
