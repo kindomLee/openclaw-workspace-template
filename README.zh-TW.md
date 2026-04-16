@@ -236,6 +236,19 @@ Agent 會隨時間累積決策偏好，寫在 `SOUL.md`，overrides 通用 best 
 - [Flag System](guides/flag-system.md) — `cron → flag → SessionStart hook` 背景工作 triage
 - [Smart Wikilinks (選用)](guides/smart-wikilinks.md) — Embedding-based 相關筆記推薦配方
 - [Context Tree](guides/context-tree.md) — 兩層記憶架構（journal + knowledge）
+- [升級指南](guides/upgrading.md) — 當 template 發新版時如何更新既有 workspace
+
+## 升級
+
+Template 發新版時：
+
+```bash
+cd /path/to/openclaw-workspace-template && git pull
+bash bootstrap.sh --path /your/workspace --yes    # 只加新檔案
+bash scripts/template-diff.sh /your/workspace      # 顯示哪些檔案有差異
+```
+
+`bootstrap.sh` 用 **skip-if-exists** — 不會覆蓋你客製過的檔案。更新過的 template 檔案（`CLAUDE.md`、hooks、scripts）需要自己看 diff 手動合併。完整流程見 [guides/upgrading.md](guides/upgrading.md)。
 
 ## 客製化
 

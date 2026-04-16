@@ -232,6 +232,19 @@ Before responding, the agent classifies each message:
 - [Post-Install Checklist](guides/post-install-checklist.md) — Verify everything actually works after setup
 - [Flag System](guides/flag-system.md) — `cron → flag → SessionStart hook` for background work triage
 - [Smart Wikilinks (optional)](guides/smart-wikilinks.md) — Recipe for embedding-based related-note suggestions
+- [Upgrading](guides/upgrading.md) — How to update an existing workspace when the template releases a new version
+
+## Upgrading
+
+When a new template version is released:
+
+```bash
+cd /path/to/openclaw-workspace-template && git pull
+bash bootstrap.sh --path /your/workspace --yes    # adds new files only
+bash scripts/template-diff.sh /your/workspace      # shows what changed
+```
+
+`bootstrap.sh` uses **skip-if-exists** — it never overwrites your customized files. For updated template files (`CLAUDE.md`, hooks, scripts), review the diff and manually merge. See [guides/upgrading.md](guides/upgrading.md) for the full process.
 
 ## Customization
 
