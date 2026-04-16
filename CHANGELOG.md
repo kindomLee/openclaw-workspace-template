@@ -7,14 +7,80 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Backported from another round of production use on `cc-memory-project`.
-Themes this round: cron jobs stop *looking* like they hang when they
-are actually just finishing while the laptop is asleep, the memory
-curator skill gets out from under a global-skill name collision, and
-the memory-search hook stops being a reminder and starts auto-injecting
-ranked search results into the next turn.
+## [3.0.0] - 2026-04-16
+
+Major release: **Claude Code-first pivot**, declarative workspace spec,
+capability-grouped permissions, and guided first-run onboarding.
+
+Themes: the template shifts from "OpenClaw-only" to "Claude Code default,
+OpenClaw optional", bootstrap moves from imperative bash to a declarative
+spec, and the first-run experience goes from "read the README and edit
+files yourself" to "type `hi` and the agent walks you through it".
 
 ### Added
+
+- **First-run profile setup flag** (`welcome-profile-setup.flag`):
+  `bootstrap.sh` writes a flag that the SessionStart hook surfaces on
+  the first `claude` session. Claude uses `AskUserQuestion` to walk the
+  user through personalizing `USER.md` / `IDENTITY.md` / `SOUL.md` /
+  `TOOLS.md` one field at a time, in 繁體中文 by default. Skippable
+  fields become `<!-- TODO: fill in -->` markers. (#6)
+- **Declarative workspace spec** (`templates/workspace.spec`): 44-line
+  DSL file (`dir`, `copy_tree` verbs) that replaces the imperative
+  `mkdir`/`copy_tree` block in `bootstrap.sh`. Single source of truth
+  for the workspace shape, diffable, parseable by pure bash. Unknown
+  verbs fail loudly with `workspace.spec:<line>:` error messages. (#7)
+- **Capability-grouped permissions** (`settings.capabilities.toml` +
+  `tools/build-settings.py`): `settings.json`'s flat allow list is now
+  generated from a TOML spec grouped into 6 capability buckets
+  (`run_scripts`, `inspect_git`, `inspect_shell`, `read_files`,
+  `write_memory`, `write_notes`). Build script uses stdlib `tomllib`,
+  preserves hooks verbatim, idempotent. Permission set unchanged
+  (25 entries). (#7)
+- **`templates/.claude/SETTINGS_GUIDE.md`**: documents capability
+  buckets, add/remove workflow, and why we generate instead of hand-edit.
+- **Claude Code-first README** + **繁體中文 README** (`README.zh-TW.md`):
+  rewrote Quick Start to default to `claude` CLI, with OpenClaw as an
+  alternative. Added Features at a Glance table.
+- **`templates/CLAUDE.md`**: new priming file with wake-up protocol,
+  core truths (condensed from SOUL.md), hall classification cheat sheet,
+  correction routing matrix, pending flags priority instruction, and
+  reply principles. This is the first file Claude reads on session start.
+- **Dual-mode guides** (`guides/multi-instance.md`, `guides/post-install-checklist.md`,
+  `guides/routine-checks.md`): rewrites covering both Claude Code and
+  OpenClaw usage.
+
+### Changed
+
+- **`bootstrap.sh`**: refactored to read `workspace.spec` via
+  `process_workspace_spec()`. CLI parsing, DRY_RUN, confirmation,
+  welcome flag, permissions, and next-steps banner stay in bash. "Next
+  steps" now says "type `hi`" instead of "edit files manually". (#6, #7, #8)
+- **`templates/.claude/settings.json`**: now a generated artifact from
+  `settings.capabilities.toml`. Same 25 permission entries, reordered
+  by capability group. Hooks preserved verbatim.
+- **`templates/CLAUDE.md` § Pending flags**: rewritten from passive
+  "need triage" to **"PRIORITY — act before anything else"**, ensuring
+  flags (especially the welcome flag) are addressed immediately on the
+  user's first message. (#8)
+- **Scripts**: removed hardcoded paths, unified naming, dual-mode health
+  check (`scripts/health-check.sh`).
+- **Cron system**: job timeout, 9-job schedule, per-job `allowed_tools`,
+  macOS + Linux installer hardening.
+- **`.claude/hooks`**: hardened and promoted to workspace-local.
+
+### Backported (from cc-memory-project production)
+
+- **`cron/runner.sh`**: active vs wall elapsed metric (avoids false-hang
+  reports from host sleep), network readiness gate raised to 120s with
+  soft skip, prompt delivery via stdin, error-handling fix.
+- **`memory-search-trigger.py`**: upgraded from reminder-only to
+  auto-search + rerank with 3 layers (query classification, domain
+  routing, category dedup) + 60s TTL cache.
+- **`skills/memory/` → `skills/curate-memory/`**: renamed to avoid
+  global-skill name collision with `save-memory`.
+
+### Technical details (cron runner + memory-search hook)
 
 - **`cron/bin/mono_seconds.py`**: prints `CLOCK_UPTIME_RAW` seconds via
   `ctypes`. On macOS this clock does NOT advance while the host is
