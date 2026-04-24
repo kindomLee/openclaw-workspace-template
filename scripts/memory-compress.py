@@ -9,20 +9,29 @@ Rather than deleting expired entries, this script *compresses* them:
     drop the how-we-got-there details.
   * P0 / Cases / Patterns: permanent, never touched.
 
-Separately: archive raw daily logs in `memory/*.md` older than 90 days into
-`memory/archive/`.
+Separately: archive raw daily logs in `memory/*.md` older than the threshold
+(default 30 days; override with ``--archive-days``) into month-bucketed
+subdirectories ``memory/archive/YYYY-MM/YYYY-MM-DD.md``. Each move appends a
+JSONL line to ``memory/archive/MANIFEST.jsonl`` recording archived_at,
+source, final_path, file_date, sha256, bytes, and lines — inspired by the
+Anthropic Managed Agents ``memory_versions`` audit trail. The ``--restore``
+and ``--list-archive`` commands read this manifest to roll back or inspect
+prior archives.
 
 Not to be confused with `cron/prompts/memory-janitor.md`, which is a
 different job (LLM-driven hall-tag backfill / duplicate detection / notes
 quality check — run by the cron runner, not this script).
 
 Usage:
-  python3 memory-compress.py                    # dry run: scan + report
-  python3 memory-compress.py --force            # execute compression + archive
-  python3 memory-compress.py --dry-run          # explicit preview
-  python3 memory-compress.py --notify           # dry run + Telegram report
-  python3 memory-compress.py --force --notify   # execute + Telegram report
-  python3 memory-compress.py --workspace DIR    # override workspace root
+  python3 memory-compress.py                       # dry run: scan + report
+  python3 memory-compress.py --force               # execute compression + archive
+  python3 memory-compress.py --dry-run             # explicit preview
+  python3 memory-compress.py --notify              # dry run + Telegram report
+  python3 memory-compress.py --force --notify      # execute + Telegram report
+  python3 memory-compress.py --workspace DIR       # override workspace root
+  python3 memory-compress.py --archive-days 90     # restore legacy 90-day threshold
+  python3 memory-compress.py --list-archive        # print manifest table
+  python3 memory-compress.py --restore 2026-02-14  # preview rollback (add --force)
 
 Configuration (environment variables, typically in cron/config.env):
   TG_BOT_TOKEN       Telegram bot token (required for --notify)
@@ -34,6 +43,7 @@ earlier version of this file had `WORKSPACE = Path("/root/clawd")` and a
 hardcoded Telegram chat id — do not reintroduce either.
 """
 import argparse
+import hashlib
 import json
 import os
 import shutil
@@ -47,7 +57,7 @@ from pathlib import Path
 TIMELINE_COMPRESS_DAYS = 90   # fold old month blocks
 P1_COMPRESS_DAYS = 90         # flag P1 entries for review
 P2_COMPRESS_DAYS = 30         # compress P2 blocks
-DAILY_LOG_ARCHIVE_DAYS = 90   # archive raw daily logs
+DAILY_LOG_ARCHIVE_DAYS = 30   # archive raw daily logs (was 90; see --archive-days)
 
 
 def resolve_workspace(cli_value: str | None) -> Path:
@@ -254,8 +264,68 @@ def compress_p2_section(section: dict):
     return new_body, True
 
 
-def archive_old_daily_logs(memory_dir: Path, archive_dir: Path, today, force: bool) -> list[str]:
-    cutoff = today - timedelta(days=DAILY_LOG_ARCHIVE_DAYS)
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _count_lines(path: Path) -> int:
+    try:
+        with path.open("r", encoding="utf-8") as fh:
+            return sum(1 for _ in fh)
+    except (UnicodeDecodeError, OSError):
+        return -1
+
+
+def _manifest_path(archive_dir: Path) -> Path:
+    return archive_dir / "MANIFEST.jsonl"
+
+
+def _append_manifest(archive_dir: Path, entry: dict) -> None:
+    """Append a JSON line to archive/MANIFEST.jsonl (created if missing)."""
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    path = _manifest_path(archive_dir)
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+
+def load_manifest(archive_dir: Path) -> list[dict]:
+    path = _manifest_path(archive_dir)
+    if not path.exists():
+        return []
+    entries: list[dict] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            entries.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    return entries
+
+
+def archive_old_daily_logs(
+    memory_dir: Path,
+    archive_dir: Path,
+    today,
+    force: bool,
+    archive_days: int = DAILY_LOG_ARCHIVE_DAYS,
+) -> list[str]:
+    """Move daily logs older than ``archive_days`` into month-bucketed archives.
+
+    Each archived file records a manifest entry with sha256, bytes, line count,
+    and source/destination paths so ``--restore`` can roll back later. Layout:
+
+        memory/archive/
+            YYYY-MM/
+                YYYY-MM-DD.md
+            MANIFEST.jsonl
+    """
+    cutoff = today - timedelta(days=archive_days)
     archived: list[str] = []
     archive_dir.mkdir(parents=True, exist_ok=True)
 
@@ -266,11 +336,130 @@ def archive_old_daily_logs(memory_dir: Path, archive_dir: Path, today, force: bo
         if not m:
             continue
         file_date = datetime.strptime(m.group(1), "%Y-%m-%d").date()
-        if file_date < cutoff:
-            if force:
-                shutil.move(str(f), str(archive_dir / f.name))
+        if file_date >= cutoff:
+            continue
+
+        if not force:
             archived.append(f.name)
+            continue
+
+        # Capture metadata BEFORE move (file still at source path)
+        sha = _sha256_file(f)
+        size = f.stat().st_size
+        lines = _count_lines(f)
+
+        bucket = archive_dir / f"{file_date.year:04d}-{file_date.month:02d}"
+        bucket.mkdir(parents=True, exist_ok=True)
+
+        dest = bucket / f.name
+        if dest.exists():
+            # Collision guard: suffix -v2, -v3, … until free slot.
+            n = 2
+            while (bucket / f"{f.stem}-v{n}{f.suffix}").exists():
+                n += 1
+            dest = bucket / f"{f.stem}-v{n}{f.suffix}"
+
+        workspace = memory_dir.parent
+        source_rel = str(f.relative_to(workspace)) if workspace in f.parents else str(f)
+        dest_rel = str(dest.relative_to(workspace)) if workspace in dest.parents else str(dest)
+
+        shutil.move(str(f), str(dest))
+        _append_manifest(archive_dir, {
+            "archived_at": datetime.now().isoformat(timespec="seconds"),
+            "source": source_rel,
+            "final_path": dest_rel,
+            "file_date": str(file_date),
+            "sha256": sha,
+            "bytes": size,
+            "lines": lines,
+        })
+        archived.append(f.name)
+
     return archived
+
+
+def restore_from_archive(
+    memory_dir: Path,
+    archive_dir: Path,
+    file_date_str: str,
+    force: bool,
+) -> int:
+    """Roll back ``memory/archive/…/YYYY-MM-DD.md`` to ``memory/YYYY-MM-DD.md``.
+
+    Validates sha256 against the manifest before moving, aborts if destination
+    exists, and appends a new manifest entry tagged ``"op": "restore"`` for
+    audit purposes.
+    """
+    try:
+        datetime.strptime(file_date_str, "%Y-%m-%d")
+    except ValueError:
+        print(f"❌ invalid date format (expected YYYY-MM-DD): {file_date_str}", file=sys.stderr)
+        return 1
+
+    entries = [
+        e for e in load_manifest(archive_dir)
+        if e.get("file_date") == file_date_str and e.get("op") != "restore"
+    ]
+    if not entries:
+        print(f"❌ no manifest entry found for {file_date_str}", file=sys.stderr)
+        return 1
+
+    entry = entries[-1]  # newest archive event
+    workspace = memory_dir.parent
+    archived_path = workspace / entry["final_path"]
+    if not archived_path.exists():
+        print(f"❌ archived file missing on disk: {archived_path}", file=sys.stderr)
+        return 1
+
+    current_sha = _sha256_file(archived_path)
+    if current_sha != entry["sha256"]:
+        print("❌ sha256 mismatch on archived file (corruption or tampering)", file=sys.stderr)
+        print(f"   expected {entry['sha256']}, got {current_sha}", file=sys.stderr)
+        return 2
+
+    dest = memory_dir / f"{file_date_str}.md"
+    if dest.exists():
+        print(f"⚠ memory/{dest.name} already exists — aborting to avoid overwrite", file=sys.stderr)
+        return 1
+
+    print(f"🔄 restore {entry['final_path']} → memory/{file_date_str}.md")
+    print(f"   archived_at={entry['archived_at']} bytes={entry['bytes']} lines={entry['lines']}")
+
+    if not force:
+        print("   (dry-run — pass --force to apply)")
+        return 0
+
+    shutil.move(str(archived_path), str(dest))
+    _append_manifest(archive_dir, {
+        "archived_at": datetime.now().isoformat(timespec="seconds"),
+        "source": entry["final_path"],
+        "final_path": str(dest.relative_to(workspace)),
+        "file_date": file_date_str,
+        "sha256": current_sha,
+        "bytes": dest.stat().st_size,
+        "lines": entry["lines"],
+        "op": "restore",
+    })
+    print("✅ restored")
+    return 0
+
+
+def list_archive(archive_dir: Path) -> int:
+    entries = load_manifest(archive_dir)
+    if not entries:
+        print("(archive manifest empty)")
+        return 0
+
+    print(f"{'archived_at':<20}  {'file_date':<10}  {'bytes':>7}  {'lines':>5}  path")
+    for e in entries:
+        marker = "↶" if e.get("op") == "restore" else " "
+        ts = e.get("archived_at", "")[:19]
+        print(
+            f"{ts:<20}  {e.get('file_date','?'):<10}  "
+            f"{e.get('bytes','?'):>7}  {e.get('lines','?'):>5}  "
+            f"{marker} {e.get('final_path','?')}"
+        )
+    return 0
 
 
 def main() -> int:
@@ -279,13 +468,37 @@ def main() -> int:
     ap.add_argument("--force", action="store_true", help="Apply changes (default: dry run)")
     ap.add_argument("--dry-run", action="store_true", help="Explicit preview mode (default)")
     ap.add_argument("--notify", action="store_true", help="Send Telegram notification when done")
+    ap.add_argument(
+        "--archive-days",
+        type=int,
+        default=DAILY_LOG_ARCHIVE_DAYS,
+        help=f"Move daily logs older than N days to archive/YYYY-MM/ (default {DAILY_LOG_ARCHIVE_DAYS}; "
+             "pre-3.1 default was 90)",
+    )
+    ap.add_argument(
+        "--restore",
+        metavar="YYYY-MM-DD",
+        help="Roll back an archived daily log to memory/ (validates sha256). Pass --force to apply.",
+    )
+    ap.add_argument(
+        "--list-archive",
+        action="store_true",
+        help="Print archive/MANIFEST.jsonl as a table and exit.",
+    )
     args = ap.parse_args()
 
-    dry_run = not args.force
     workspace = resolve_workspace(args.workspace)
-    memory_file = workspace / "MEMORY.md"
     memory_dir = workspace / "memory"
     archive_dir = memory_dir / "archive"
+
+    # Archive-management shortcuts bypass the compression pipeline.
+    if args.list_archive:
+        return list_archive(archive_dir)
+    if args.restore:
+        return restore_from_archive(memory_dir, archive_dir, args.restore, force=args.force)
+
+    dry_run = not args.force
+    memory_file = workspace / "MEMORY.md"
 
     if not memory_file.exists():
         print(f"ERROR: {memory_file} not found", file=sys.stderr)
@@ -326,9 +539,12 @@ def main() -> int:
             new_sections.append(s)
 
     if memory_dir.exists():
-        archived_logs = archive_old_daily_logs(memory_dir, archive_dir, today, force=args.force)
+        archived_logs = archive_old_daily_logs(
+            memory_dir, archive_dir, today,
+            force=args.force, archive_days=args.archive_days,
+        )
         if archived_logs:
-            actions.append(f"📁 Archive: {len(archived_logs)} daily file(s) >{DAILY_LOG_ARCHIVE_DAYS}d")
+            actions.append(f"📁 Archive: {len(archived_logs)} daily file(s) >{args.archive_days}d")
     else:
         archived_logs = []
 
