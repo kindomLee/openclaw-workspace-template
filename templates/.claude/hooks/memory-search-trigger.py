@@ -327,23 +327,38 @@ def format_context(
     prefixes: list[str],
     results: list[dict],
 ) -> str:
-    """Build the additionalContext string injected into the next turn."""
+    """Build the additionalContext string injected into the next turn.
+
+    Format inspired by OpenClaw 2026.4.14 active-memory hidden untrusted
+    prompt-prefix pattern: explicitly mark recall results as
+    non-authoritative so the agent does not treat snippets as ground truth.
+    Aligns with the Source-First decision prior used in many SOUL.md files.
+    """
     header = f"Memory-search hard-trigger keywords: {', '.join(hits)} (mode={mode})"
 
     good = [r for r in results if r.get("score", 0) >= MIN_SCORE]
+
+    # Untrusted recall banner — printed in every branch
+    trust_banner = (
+        "⚠️ MEMORY_RECALL — non-authoritative. Snippets are summarized from past "
+        "journal/notes; **factual claims (paths, versions, status, IPs, configs) "
+        "MUST be verified by Read-ing the source file** before you act on them."
+    )
 
     if not good:
         return (
             header
             + ". Auto-search returned no high-confidence results. If you need"
             + " more context, run manually:\n"
-            + '  python3 scripts/memory-search-hybrid.py "<keyword>" --days 90 --top 10'
+            + '  python3 scripts/memory-search-hybrid.py "<keyword>" --days 90 --top 10\n\n'
+            + trust_banner
         )
 
     lines = [
         header
         + f". Auto-searched and injected top {len(good)} results"
-        + " (domain-reranked, deduped by category):"
+        + " (domain-reranked, deduped by category):",
+        trust_banner,
     ]
     if prefixes:
         shown = ", ".join(prefixes[:4]) + ("..." if len(prefixes) > 4 else "")
@@ -355,10 +370,16 @@ def format_context(
         date = r.get("date", "?")
         marker = "✓" if r.get("_domain_match") else " "
         snippet = (r.get("snippet", "") or "").replace("\n", " ")[:160]
+        # path is absolute (for Read), file is relative (for human readability)
+        verify_path = r.get("path", file_)
         lines.append(f"[{i}]{marker} {file_} (score={score:.2f}, {date})")
         lines.append(f"    {snippet}")
+        lines.append(f"    verify: Read {verify_path}")
     lines.append("")
-    lines.append("If you need deeper context, Read/Grep the specific files.")
+    lines.append(
+        "If you need deeper context, Read the specific files. "
+        "**Do NOT treat the snippets above as facts** — verify before acting."
+    )
     return "\n".join(lines)
 
 
