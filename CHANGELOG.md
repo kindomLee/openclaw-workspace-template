@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`scripts/learnings-promotion-check.py`**：分析 `LEARNINGS.md` 條目的 confidence
+  + promotion_score、列出可 promote 到 `MEMORY.md` 的候選；提供 `--cluster
+  --cluster-threshold N` 模式偵測同主題分散的 family（greedy union-find on keyword
+  Jaccard）。動機是避免「同 pattern 重複發生時開新 entry 而非 +1 既有」造成 promotion
+  gate 永遠跨不過。靈感來自 OpenClaw 2026.4.12 dreaming light-sleep confidence + promotion
+  threshold。LEARNINGS schema 沒這個檔的話顯式報錯，當作 opt-in 工具。
+- **`scripts/lib/cron-state.sh`**：bash helper 提供 `cron_state_record` /
+  `cron_state_disable_oneshot` / `cron_state_check_oneshot_blocked` /
+  `cron_state_summary` 四個 function，記錄 cron job 執行紀錄、偵測 missed run（針對
+  Mac launchd 深度睡眠不觸發的盲點，亦適用 Linux cron 重啟漏跑）。State 寫到
+  `<project>/.claude/state/cron/<job>.json` + `<job>.runs.jsonl`，超過
+  expected_interval × multiplier 視為 missed → 寫 interrupted log + 可選 TG 告警。
+  靈感來自 OpenClaw 2026.4.25 cron interrupted-job pattern。
+- **`scripts/log-janitor.py`**：規則式壓縮老 cron log，保 ERROR/WARN/ALERT/Traceback
+  /timeout 等行 + 邊界前後 N 行（時間錨）+ 統計 buckets，丟其他 INFO 細節，寫
+  `<orig_dir>/archive/YYYY-MM/<name>.summary.md`、原檔刪。預設 `--age-days 90` 極保守，
+  `--edge-lines 10` 保 forensic 時間錨。靈感來自 OpenClaw 2026.4.22 Tokenjuice。
+
+### Changed
+
+- **`scripts/memory-search-hybrid.py`**：新增 `--preview-chars N` flag（預設 200，cap
+  每筆 snippet）+ output 加 `snippet_truncated` / `hit_line` / `more_lines` /
+  `full_lines` continuation metadata。非 JSON 模式對截斷或 hit 後 >5 行的結果額外
+  印 `… (line N of M; K lines after hit); full: Read <path>` 提示 caller 怎麼接續看
+  完整內容。靈感來自 OpenClaw 2026.4.15 bounded excerpts pattern。Hybrid 結構不變，
+  Backward-compatible（沒指定 `--preview-chars` 行為跟舊版同）。
+
 ## [3.0.0] - 2026-04-16
 
 Major release: **Claude Code-first pivot**, declarative workspace spec,
