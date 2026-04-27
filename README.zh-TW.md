@@ -192,7 +192,7 @@ Reference (reference/*.md)
 | **Rumination** | `memory-reflect.sh` | 每週三 9pm | 比對近期 vs 長期記憶找矛盾 |
 | **Forgetting** | `memory-expire.sh` | 每月 1 日 | 歸檔 30 天以上的 daily 檔 |
 | **Janitor** | `cron/prompts/memory-janitor.md` | 每日 20:07 | LLM-driven hall-tag 補標 + 重複偵測 + notes 品質檢查 |
-| **Compress** | `scripts/memory-compress.py` | 手動或月 1 次 | 長期記憶壓縮（摺舊 timeline、壓縮 P2） |
+| **Compress** | `scripts/memory-compress.py` | 手動或月 1 次 | 長期記憶壓縮（摺舊 timeline、壓縮 P2、歸檔 >30d daily 到 `memory/archive/YYYY-MM/` 並寫 `MANIFEST.jsonl`；支援 `--list-archive` / `--restore YYYY-MM-DD` 審計 + 回滾） |
 
 ### 優先級
 

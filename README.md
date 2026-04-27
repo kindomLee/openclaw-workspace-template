@@ -189,7 +189,7 @@ Inspired by research on [how biological sleep consolidates memory](https://x.com
 | **Rumination** | `memory-reflect.sh` | Weekly (Wed 9pm) | Compare recent vs long-term memory, detect contradictions |
 | **Forgetting** | `memory-expire.sh` | Monthly (1st) | Archive daily files older than 30 days |
 | **Janitor** | `cron/prompts/memory-janitor.md` | Daily (20:07) | LLM-driven hall-tag backfill + duplicate detection + notes quality check |
-| **Compress** | `scripts/memory-compress.py` | Manual or monthly | Compression-based long-term memory maintenance (fold old timeline, compress P2) |
+| **Compress** | `scripts/memory-compress.py` | Manual or monthly | Compression-based long-term memory maintenance (fold old timeline, compress P2, archive daily logs >30d into `memory/archive/YYYY-MM/` with `MANIFEST.jsonl`; supports `--list-archive` / `--restore YYYY-MM-DD` for audit + rollback) |
 
 ### Priority System
 
