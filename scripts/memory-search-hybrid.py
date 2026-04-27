@@ -14,8 +14,8 @@ STOPWORDS = frozenset(
 )
 
 def extract_keywords(text: str) -> set:
-    # Lowercase on extraction so that a "PostgreSQL" mention in the content
-    # matches a "postgresql" query. Chinese is already case-insensitive.
+    # Lowercase on extraction so a "PostgreSQL" mention in content matches
+    # a "postgresql" query. Chinese is already case-insensitive.
     words = re.findall(r'[\w\u4e00-\u9fff—、。（）【】]{2,}', text.lower())
     return {w for w in words if w not in STOPWORDS and len(w) > 1}
 
@@ -57,14 +57,24 @@ def date_from_filename(fp: Path) -> float:
             pass
     return os.path.getmtime(fp)
 
-def snippet(content: str, keywords: set, radius: int = 40) -> str:
+def snippet(content: str, keywords: set, radius: int = 40) -> tuple[str, int, int]:
+    """Return (text, hit_offset, hit_line).
+
+    hit_offset = char offset in full file where this snippet starts
+                 (-1 if no keyword hit, snippet is just file head)
+    hit_line   = 1-indexed line number of the first hit (0 if none)
+
+    Caller can use these for continuation: `Read <path> --offset <hit_line>`
+    or sed-like slicing.
+    """
     for kw in sorted(keywords, key=len, reverse=True)[:3]:
         idx = content.lower().find(kw.lower())
         if idx >= 0:
             start = max(0, idx - radius)
             end = min(len(content), idx + radius + 40)
-            return content[start:end].strip().replace('\n', ' ')
-    return content[:150].strip().replace('\n', ' ')
+            line_no = content.count('\n', 0, idx) + 1
+            return content[start:end].strip().replace('\n', ' '), start, line_no
+    return content[:150].strip().replace('\n', ' '), -1, 0
 
 def main():
     ap = argparse.ArgumentParser()
@@ -72,6 +82,8 @@ def main():
     ap.add_argument("--days", type=int, default=30)
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--top", type=int, default=10)
+    ap.add_argument("--preview-chars", type=int, default=200,
+                    help="Cap each snippet to N chars (default 200). 仿 OpenClaw 4.15 bounded excerpts pattern。")
     args = ap.parse_args()
 
     query = args.query
@@ -102,12 +114,17 @@ def main():
                 kw_overlap = len(query_kw & kw) / len(query_kw) if query_kw else 0.0
                 t_boost = temporal_boost(mtime, cutoff, now, args.days)
                 h_boost = hall_boost(content)
-                # Size factor: sqrt scaling caps at ~1.0 around 5KB but
-                # doesn't let a 50KB topic note dominate a focused 2KB
-                # journal entry. Earlier linear scaling was too generous.
+                # sqrt scaling：caps 在 5KB 附近但不讓 50KB topic note 壓過
+                # 2KB 聚焦 journal entry（linear 版對長檔太寬容）。
                 size_factor = min(1.0, (len(content) / 5000) ** 0.5)
                 base = size_factor * (0.3 if kw_overlap > 0 else 0.05)
                 fused = base * (1 + 0.3 * kw_overlap) * t_boost * h_boost
+                snip_text, snip_start, snip_line = snippet(content, query_kw)
+                full_lines = content.count('\n') + 1
+                bounded_snip = snip_text[:args.preview_chars]
+                # 4.15 continuation metadata: 讓 caller 知道是否有 cap，去哪 Read
+                more_lines = max(0, full_lines - snip_line) if snip_line else full_lines
+                truncated = len(snip_text) > args.preview_chars
                 results.append({
                     "file": str(fp.relative_to(base_dir)),
                     "path": str(fp),
@@ -117,7 +134,11 @@ def main():
                     "hall_boost": round(h_boost, 1),
                     "date": datetime.fromtimestamp(mtime).strftime("%Y-%m-%d"),
                     "age_days": round((now - mtime) / 86400, 1),
-                    "snippet": snippet(content, query_kw)[:200],
+                    "snippet": bounded_snip,
+                    "snippet_truncated": truncated,
+                    "hit_line": snip_line,
+                    "more_lines": more_lines,
+                    "full_lines": full_lines,
                 })
             except Exception:
                 continue
@@ -135,6 +156,10 @@ def main():
             print(f"[{i}] {r['file']}  score={r['score']}  kw={r['kw_overlap']}  temp={r['temporal']}  "
                   f"{r['date']} ({r['age_days']}d ago)")
             print(f"    {r['snippet'][:120]}")
+            # 4.15 continuation hint：printable form
+            if r.get("snippet_truncated") or r.get("more_lines", 0) > 5:
+                hint = f"    … (line {r.get('hit_line', '?')} of {r.get('full_lines', '?')}; {r.get('more_lines', 0)} lines after hit)"
+                print(f"{hint}; full: Read {r['path']}")
             print()
 
 if __name__ == "__main__":
