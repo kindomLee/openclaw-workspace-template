@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`templates/.claude/hooks/memory-search-trigger.py`**：`format_context()` 加
+  `⚠️ MEMORY_RECALL — non-authoritative` banner，每筆 search 結果尾巴附
+  `verify: Read <path>` hint，避免 agent 把 snippet 當事實。對齊許多 SOUL.md 採用的
+  Source-First decision prior。靈感來自 OpenClaw 2026.4.14 active-memory hidden
+  untrusted prompt-prefix pattern。
+- **`templates/.claude/skills/curate-memory/SKILL.md`**：在「Workflow §3 → Key
+  Principles」後加新段 `LEARNINGS Dedup Pass (mandatory before writing to
+  LEARNINGS.md)`：3 步驟（hybrid search 限 LEARNINGS / promotion-check `--cluster` /
+  Jaccard ≥ 0.3 視為同 family）+ 三選一決策表（+1 evidence / 加進 family / 新建）。
+  動機：避免同 meta-pattern 碎成多 rc=1 entries 跨不過 promotion gate。
+
 ### Added
 
 - **`scripts/learnings-promotion-check.py`**：分析 `LEARNINGS.md` 條目的 confidence

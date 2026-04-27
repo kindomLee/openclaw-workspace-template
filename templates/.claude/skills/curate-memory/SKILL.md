@@ -97,6 +97,41 @@ Is this "what happened" or "what was learned"?
 - **Don't put topics in memory/:** memory/ is for date-based journal only; topic knowledge goes to notes/
 - **Keep memory/ clean:** Only recent 5 days + system files
 
+### LEARNINGS Dedup Pass (mandatory before writing to LEARNINGS.md)
+
+Without this pass, the same meta-pattern fragments into multiple `rc=1` entries
+and never crosses the promotion gate. Each time you want to write a new LEARNINGS
+entry, run these three steps to decide **+1 existing** vs **create new**.
+
+**Step 1 — Topic search**: extract 3-5 keywords from the new claim, run hybrid
+search restricted to LEARNINGS:
+
+```bash
+python3 scripts/memory-search-hybrid.py "<keyword 1> <keyword 2> <keyword 3>" \
+    --days 365 --top 10 | grep -i "LEARNINGS\|^\[[0-9]" | head -10
+```
+
+**Step 2 — Cluster candidates**: run promotion-check cluster mode to see if a
+relevant family already exists (requires `LEARNINGS.md` to be present):
+
+```bash
+python3 scripts/learnings-promotion-check.py --cluster --json \
+  | jq '.clusters[] | select(.size >= 2) | {keywords, members: [.entries[].id]}'
+```
+
+**Step 3 — Three-way decision**:
+
+| Situation | Action |
+|---|---|
+| Step 1 hits a high-score entry with overlapping claim | **+1 evidence**: append `- YYYY-MM-DD: <new case summary>` to that entry's evidence section, increment `recurring_count` |
+| Step 2 shows a cluster of size ≥ 3 already exists | **Add to family**: pick the cluster's most representative entry and +1 there (don't create another isolated entry) |
+| Neither — genuinely new pattern | **Create new entry**, but reserve `related: KG-XXXX-XXX` cross-link slot for future linkage |
+
+**Overlap rule of thumb**: extract 5-10 keywords from the new claim and compare
+against existing entries' keyword sets. **Jaccard ≥ 0.3** → same family, prefer
++1 over creating. The `--cluster` mode in `learnings-promotion-check.py` uses
+this threshold by default.
+
 ### 4. Report
 List: what was recorded (summary), where it was stored, what priority level.
 Nothing to record → `✅ No unrecorded important information`
