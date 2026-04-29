@@ -20,13 +20,27 @@ for arg in "$@"; do
   esac
 done
 
-# Parse plist files and generate crontab lines
+# Parse plist files and generate crontab lines.
+# Supports two plist styles:
+#   1. runner.sh dispatch:    ProgramArguments = [<...>/cron/runner.sh, <job>]
+#                             → emits  `<sched>  <runner> <job>`
+#   2. direct shell wrapper:  ProgramArguments = [/bin/bash, -lc, "<cmd>"]
+#                             → emits  `<sched>  <cmd-with-placeholders-resolved>`
+# Placeholder substitution (`__PROJECT_DIR__`, `__HOME__`) mirrors what
+# install-mac.sh does for plist contents at install time.
 generate_crontab_entries() {
-  python3 - "$PLIST_DIR" "$RUNNER" <<'PYEOF'
+  python3 - "$PLIST_DIR" "$RUNNER" "$PROJECT_DIR" "$HOME" <<'PYEOF'
 import plistlib, sys, os
 
-plist_dir = sys.argv[1]
-runner = sys.argv[2]
+plist_dir   = sys.argv[1]
+runner      = sys.argv[2]
+project_dir = sys.argv[3]
+home_dir    = sys.argv[4]
+
+
+def resolve(s: str) -> str:
+    return s.replace('__PROJECT_DIR__', project_dir).replace('__HOME__', home_dir)
+
 
 for fname in sorted(os.listdir(plist_dir)):
     if not fname.endswith('.plist'):
@@ -43,15 +57,24 @@ for fname in sorted(os.listdir(plist_dir)):
         print(f"# WARNING: failed to parse {fname}: {e} (skipped)", file=sys.stderr)
         continue
 
-    try:
-        job_name = d['ProgramArguments'][-1]
-    except (KeyError, IndexError) as e:
-        print(f"# WARNING: {fname} missing ProgramArguments: {e} (skipped)", file=sys.stderr)
+    prog = d.get('ProgramArguments') or []
+    if not prog:
+        print(f"# WARNING: {fname} missing ProgramArguments (skipped)", file=sys.stderr)
         continue
 
     cal = d.get('StartCalendarInterval', {})
     if not cal:
         print(f"# WARNING: {fname} has no StartCalendarInterval (skipped)", file=sys.stderr)
+        continue
+
+    # Decide which plist style we have, build the command tail.
+    first = prog[0] if prog else ''
+    if first.endswith('runner.sh') and len(prog) >= 2:
+        cmd_tail = f"{runner} {prog[-1]}"
+    elif first in ('/bin/bash', '/bin/sh') and len(prog) >= 3 and prog[1] in ('-lc', '-c'):
+        cmd_tail = resolve(prog[-1])
+    else:
+        print(f"# WARNING: {fname} unsupported ProgramArguments shape (skipped)", file=sys.stderr)
         continue
 
     entries = cal if isinstance(cal, list) else [cal]
@@ -69,11 +92,8 @@ for fname in sorted(os.listdir(plist_dir)):
             seen[key].add(dow)
 
     for (m, h, dom), dows in seen.items():
-        if dows:
-            dow_str = ','.join(sorted(dows))
-        else:
-            dow_str = '*'
-        print(f"{m} {h} {dom} * {dow_str}  {runner} {job_name}")
+        dow_str = ','.join(sorted(dows)) if dows else '*'
+        print(f"{m} {h} {dom} * {dow_str}  {cmd_tail}")
 PYEOF
 }
 

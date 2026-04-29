@@ -36,3 +36,11 @@ OPENCLAW_WORKSPACE=/path/to/your/workspace
 15 3  * * * $OPENCLAW_WORKSPACE/scripts/memory-reflect.sh            >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
 30 3  * * 0 $OPENCLAW_WORKSPACE/scripts/memory-dream.sh              >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
 45 3  1 * * $OPENCLAW_WORKSPACE/scripts/memory-expire.sh             >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
+
+# --- memory archive (Mac/Linux portable Python janitor; pure shell, no LLM) ---
+# rotate-journal: move memory/YYYY-MM-DD*.md older than 5 days to archive-YYYY-MM/
+#   (honors ~/.claude/state/mem-access.jsonl access counts to pin hot files)
+# archive-timeline: on day 1 of month, move MEMORY.md ### YYYY-MM blocks
+#   older than current month into memory/timeline-archive.md
+5  9 * * *  $OPENCLAW_WORKSPACE/scripts/cron-memory-archive.sh rotate    >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
+10 9 1 * *  $OPENCLAW_WORKSPACE/scripts/cron-memory-archive.sh timeline  >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
