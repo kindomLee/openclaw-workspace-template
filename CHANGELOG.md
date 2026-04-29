@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`templates/.claude/hooks/memory-search-trigger.py`**：升級成 LMM-style proactive
+  recall（靈感：Engramme/Memorious 2026 哈佛 spinout 的 Large Memory Model 三特性）。
+  三層注入：(1) keyword hard-trigger（保留原行為）(2) **always-on fallback**：沒命中
+  關鍵字但 prompt 實質（≥ `MIN_PROMPT_CHARS`、非 slash command、非 `TRIVIAL_REPLIES`）
+  → 跑嚴格 search（`days=30 / top=3 / min_score=0.7`），無高分靜默退出 (3) **Graph
+  1-hop traversal**：載入 `graphify-out/graph.json`，對 `degree ≥ MIN_NODE_DEGREE` 的
+  god-node 建 label index — 同時索引完整 label / norm_label + 拆字後 distinctive
+  token（過 `TOKEN_STOPWORDS`），命中即列 1-hop neighbors 標 `[relation w=…] source_file`；
+  graph 檔不存在則 graceful no-op。新增 `is_substantive_prompt` / `load_graph` /
+  `detect_graph_nodes` / `graph_traversal_section` / `log_access` 五個 helper，全部
+  pure-function 段過 `--self-test`。`MIN_PROMPT_CHARS` 設 8 以容納 dense CJK。
 - **`templates/.claude/hooks/memory-search-trigger.py`**：`format_context()` 加
   `⚠️ MEMORY_RECALL — non-authoritative` banner，每筆 search 結果尾巴附
   `verify: Read <path>` hint，避免 agent 把 snippet 當事實。對齊許多 SOUL.md 採用的
@@ -39,6 +50,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   /timeout 等行 + 邊界前後 N 行（時間錨）+ 統計 buckets，丟其他 INFO 細節，寫
   `<orig_dir>/archive/YYYY-MM/<name>.summary.md`、原檔刪。預設 `--age-days 90` 極保守，
   `--edge-lines 10` 保 forensic 時間錨。靈感來自 OpenClaw 2026.4.22 Tokenjuice。
+- **`scripts/memory-archive.py`** + **`scripts/cron-memory-archive.sh`**：Mac/Linux
+  通用的 Python janitor，取代 OpenClaw 專屬的 `memory-tools janitor` rust binary。
+  兩個 mode：(1) `rotate-journal` 搬超齡 `memory/YYYY-MM-DD*.md` 進
+  `archive-YYYY-MM/` (2) `archive-timeline` 把 MEMORY.md 中早於本月的
+  `### YYYY-MM` section 整段搬到 `memory/timeline-archive.md`（自動 catch up，不只
+  上個月）。Use-aware pinning：`--respect-access-log <jsonl>` 讀 hook 寫的
+  `~/.claude/state/mem-access.jsonl`，過去 30 天命中 ≥ 3 次的 file 自動 pin 不歸檔
+  （Engramme/LMM 啟發的 use-dependent consolidation）。`--dry-run` / `--rotate-days`
+  / `--access-window-days` / `--access-threshold` 都可調。系統檔
+  （`reflections.md` / `dreams.md` / `monthly-*.md` / `MEMORY*.md` /
+  `timeline-archive.md`）永不被 rotate。
+- **`cron/launchd/org.oracle.memory-archive-rotate.plist`** + **`org.oracle.memory-archive-timeline.plist`**：
+  上述兩個 mode 的 launchd 排程（rotate 每日 09:05 / timeline 每月 1 日 09:10），
+  pure shell 不走 `cron/runner.sh`（不需要 LLM）。`cron/install-mac.sh` 自動發現
+  載入；`cron/install-linux.sh` 也升級成同時支援 runner.sh-style 和 direct-shell
+  plist 兩種 ProgramArguments（`/bin/bash -lc "<cmd>"`），含 `__PROJECT_DIR__` /
+  `__HOME__` placeholder 解析。`templates/crontab.example` 同步加 OpenClaw-mode 兩
+  行對應 cron 條目。
 
 ### Changed
 
