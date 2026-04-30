@@ -58,11 +58,16 @@ After installing:
 
 ## Quick Start
 
+> **OpenAI Codex CLI users**: Codex is supported as an **interactive
+> second-opinion runtime only** — `cron/` is Claude-only by design.
+> See [`.codex/README.md`](.codex/README.md) before running `bootstrap.sh`.
+
 1. Install your runtime of choice:
 ```bash
 # Claude Code (default) — see https://docs.claude.com/claude-code for installer
 # OpenClaw (alternative)
 curl -fsSL https://openclaw.ai/install.sh | bash
+# OpenAI Codex (interactive only — no cron) — see .codex/README.md
 ```
 
 2. Clone this template:

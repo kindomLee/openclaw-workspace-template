@@ -1,0 +1,16 @@
+# Gitleaks config for openclaw-workspace-template
+# Extends default rules; project-specific allowlist goes here.
+# See https://github.com/gitleaks/gitleaks
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "global allowlist"
+paths = [
+    '''cron/config\.env\.example$''',          # placeholder values like 'your-bot-token'
+    '''templates/USER\.md$''',                 # template scaffold for user fields
+    '''templates/MEMORY\.md$''',               # placeholder MEMORY scaffold
+    '''templates/IDENTITY\.md$''',             # placeholder identity scaffold
+    '''CHANGELOG\.md$''',                      # historical references may resemble tokens
+]
