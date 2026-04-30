@@ -58,11 +58,16 @@
 
 ## Quick Start
 
+> **OpenAI Codex CLI 使用者**：Codex 僅支援 **互動式 second-opinion**，
+> `cron/` 路徑是 Claude-only by design。在跑 `bootstrap.sh` 之前請先讀
+> [`.codex/README.md`](.codex/README.md)（單一英文來源，避免雙語漂移）。
+
 1. 安裝你要的 runtime：
 ```bash
 # Claude Code（預設）— 見 https://docs.claude.com/claude-code 的安裝方式
 # OpenClaw（替代方案）
 curl -fsSL https://openclaw.ai/install.sh | bash
+# OpenAI Codex（僅互動式 — 不支援 cron）— 見 .codex/README.md
 ```
 
 2. Clone 這份 template：

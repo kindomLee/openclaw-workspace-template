@@ -6,6 +6,7 @@
 #   ./bootstrap.sh --path ~/my-workspace    # Non-interactive path
 #   ./bootstrap.sh --path . --yes           # Fully non-interactive
 #   ./bootstrap.sh --dry-run                # Preview only, no writes
+#   ./bootstrap.sh --skip-claude-check      # Codex-only users (no Claude CLI)
 #   ./bootstrap.sh --help                   # Show help
 set -euo pipefail
 
@@ -21,6 +22,7 @@ DEFAULT_WORKSPACE="."
 WORKSPACE_PATH=""
 ASSUME_YES=0
 DRY_RUN=0
+SKIP_CLAUDE_CHECK=0
 
 usage() {
   cat <<EOF
@@ -29,16 +31,19 @@ Claude Code / OpenClaw Workspace Template Bootstrap
 Usage: bootstrap.sh [OPTIONS]
 
 Options:
-  --path DIR     Target workspace directory (default: prompt, then ".")
-  --yes, -y      Skip confirmation prompts (for CI / automation)
-  --dry-run      Show what would happen without writing any files
-  --help, -h     Show this help and exit
+  --path DIR             Target workspace directory (default: prompt, then ".")
+  --yes, -y              Skip confirmation prompts (for CI / automation)
+  --dry-run              Show what would happen without writing any files
+  --skip-claude-check    Don't require the Claude Code CLI (Codex-only setup;
+                         see .codex/README.md — cron path stays Claude-only)
+  --help, -h             Show this help and exit
 
 Examples:
   ./bootstrap.sh
   ./bootstrap.sh --path ~/my-workspace
   ./bootstrap.sh --path . --yes
   ./bootstrap.sh --dry-run --path /tmp/preview --yes
+  ./bootstrap.sh --skip-claude-check --path ~/codex-only-workspace
 EOF
 }
 
@@ -48,10 +53,11 @@ while [ $# -gt 0 ]; do
     --path)
       [ $# -ge 2 ] || { echo "--path requires an argument" >&2; exit 2; }
       WORKSPACE_PATH="$2"; shift 2 ;;
-    --yes|-y)     ASSUME_YES=1; shift ;;
-    --dry-run)    DRY_RUN=1; shift ;;
-    --help|-h)    usage; exit 0 ;;
-    *)            echo "Unknown option: $1" >&2; usage; exit 2 ;;
+    --yes|-y)            ASSUME_YES=1; shift ;;
+    --dry-run)           DRY_RUN=1; shift ;;
+    --skip-claude-check) SKIP_CLAUDE_CHECK=1; shift ;;
+    --help|-h)           usage; exit 0 ;;
+    *)                   echo "Unknown option: $1" >&2; usage; exit 2 ;;
   esac
 done
 
@@ -67,7 +73,11 @@ for cmd in python3 curl; do
   command -v "$cmd" >/dev/null 2>&1 || MISSING+=("$cmd")
 done
 if ! command -v claude >/dev/null 2>&1; then
-  MISSING+=("claude (Claude Code CLI — see https://docs.claude.com/claude-code)")
+  if [ "$SKIP_CLAUDE_CHECK" -eq 1 ]; then
+    RECOMMENDED_MISSING+=("claude (Claude Code CLI — skipped via --skip-claude-check; cron/ remains Claude-only)")
+  else
+    MISSING+=("claude (Claude Code CLI — see https://docs.claude.com/claude-code, or pass --skip-claude-check for Codex-only setup)")
+  fi
 fi
 if ! command -v timeout >/dev/null 2>&1 && ! command -v gtimeout >/dev/null 2>&1; then
   MISSING+=("timeout (macOS: brew install coreutils)")
@@ -329,17 +339,30 @@ echo -e "${GREEN}Workspace setup complete.${NC}"
 echo
 echo -e "${BLUE}Next steps:${NC}"
 echo
-echo -e "${BLUE}[Claude Code — default]${NC}"
-echo -e "  1. ${YELLOW}cd $WORKSPACE_PATH${NC}"
-echo -e "  2. ${YELLOW}cp cron/config.env.example cron/config.env${NC} and fill TG_BOT_TOKEN / TG_CHAT_ID (optional, for Telegram alerts)"
-echo -e "  3. Install cron: ${YELLOW}bash cron/install-mac.sh${NC}  (macOS)  or  ${YELLOW}bash cron/install-linux.sh${NC}  (Linux)"
-echo -e "  4. Run ${YELLOW}claude${NC} and type ${YELLOW}hi${NC} — the agent will guide you through"
-echo -e "     personalizing IDENTITY.md / USER.md / SOUL.md / TOOLS.md step by step"
-echo
+if [ "$SKIP_CLAUDE_CHECK" -eq 0 ]; then
+  echo -e "${BLUE}[Claude Code — default]${NC}"
+  echo -e "  1. ${YELLOW}cd $WORKSPACE_PATH${NC}"
+  echo -e "  2. ${YELLOW}cp cron/config.env.example cron/config.env${NC} and fill TG_BOT_TOKEN / TG_CHAT_ID (optional, for Telegram alerts)"
+  echo -e "  3. Install cron: ${YELLOW}bash cron/install-mac.sh${NC}  (macOS)  or  ${YELLOW}bash cron/install-linux.sh${NC}  (Linux)"
+  echo -e "  4. Run ${YELLOW}claude${NC} and type ${YELLOW}hi${NC} — the agent will guide you through"
+  echo -e "     personalizing IDENTITY.md / USER.md / SOUL.md / TOOLS.md step by step"
+  echo
+fi
+
 echo -e "${BLUE}[OpenClaw — alternative]${NC}"
 echo -e "  1. ${YELLOW}openclaw workspace set $WORKSPACE_PATH${NC}"
 echo -e "  2. Install cron: ${YELLOW}bash scripts/install-cron.sh --install${NC}"
 echo -e "  3. Run ${YELLOW}openclaw${NC} and type ${YELLOW}hi${NC} — agent guides you through setup"
+
+if [ "$SKIP_CLAUDE_CHECK" -eq 1 ]; then
+  echo
+  echo -e "${BLUE}[OpenAI Codex — interactive only, no cron]${NC}"
+  echo -e "  1. ${YELLOW}cd $WORKSPACE_PATH${NC}"
+  echo -e "  2. Read ${YELLOW}.codex/README.md${NC} — privacy boundary, opt-in deep priming, limits"
+  echo -e "  3. Register the workspace: append ${YELLOW}[projects.\"$WORKSPACE_PATH\"]${NC} to ${YELLOW}~/.codex/config.toml${NC}"
+  echo -e "  4. ${YELLOW}codex${NC} — first prompt: \"Read AGENTS.md and MEMORY_COMPACT.md; do not scan memory/ unless I ask\""
+  echo -e "  ${YELLOW}Note:${NC} cron/ is Claude-only by design — Codex headless OAuth doesn't survive launchd"
+fi
 echo
 echo -e "${BLUE}Health check:${NC} ${YELLOW}bash scripts/health-check.sh${NC}"
 echo -e "${BLUE}Docs:${NC}         ${YELLOW}$WORKSPACE_PATH/guides/${NC}"
