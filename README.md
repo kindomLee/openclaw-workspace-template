@@ -28,7 +28,7 @@ After installing:
 
 - 📚 **Your agent builds a knowledge base** — Topic-organized notes (`notes/areas/`, `notes/resources/`) complement daily logs (`memory/`). The knowledge layer merges related entries instead of creating fragments. Add `notes/` to `memorySearch.extraPaths` for full-text retrieval. See [Context Tree guide](guides/context-tree.md).
 
-- 🔍 **Your agent finds things faster** — Hybrid memory search (`scripts/memory-search-hybrid.py`) scores `memory/` and `notes/` by keyword overlap × temporal recency × hall-type boost. A MemPalace-inspired hall taxonomy (`hall_facts`, `hall_events`, `hall_discoveries`, `hall_preferences`, `hall_advice`) tags journal entries for better retrieval, and a UserPromptSubmit hook forces a memory search whenever hard-trigger keywords appear — so "should I search memory?" is no longer a judgment call.
+- 🔍 **Your agent finds things faster** — Hybrid memory search (`scripts/memory-search-hybrid.py`) scores `memory/` and `notes/` by **BM25 (with jieba CJK tokenization) × temporal recency × hall-type boost**. Auto-falls back to a pure keyword-overlap mode when `jieba` / `rank_bm25` aren't installed (or via `--no-bm25`). A MemPalace-inspired hall taxonomy (`hall_facts`, `hall_events`, `hall_discoveries`, `hall_preferences`, `hall_advice`) tags journal entries for better retrieval, and a UserPromptSubmit hook forces a memory search whenever hard-trigger keywords appear — so "should I search memory?" is no longer a judgment call.
 
 - 🚩 **Your agent has a pending-work inbox** — A **cron → flag → SessionStart hook** pipeline turns deterministic background checks (broken wikilinks, TODO backlog, stale caches) into flag files under `.claude/flags/`. Cron does the detection; the next Claude session picks them up via a SessionStart hook and acts on them. Cron never wakes the LLM directly — "hard trigger, soft action". See [flag-system guide](guides/flag-system.md).
 
@@ -40,7 +40,7 @@ After installing:
 | **Long-term memory** | `MEMORY.md` | Curated facts, infrastructure, patterns (P0/P1/P2 priority) |
 | **AAAK compact** | `MEMORY_COMPACT.md` | Lossless ~200-token snapshot loaded on every session |
 | **Knowledge base** | `notes/areas/`, `notes/resources/` | Topic-organized notes that complement journal entries |
-| **Hybrid search** | `scripts/memory-search-hybrid.py` | keyword × temporal recency × hall-type boost |
+| **Hybrid search** | `scripts/memory-search-hybrid.py` | BM25 (jieba CJK) × temporal recency × hall-type boost; falls back to keyword overlap |
 | **Hall-type tags** | `[hall_facts]` `[hall_events]` `[hall_discoveries]` `[hall_preferences]` `[hall_advice]` | Categorize journal entries for boosted retrieval |
 | **Self-improvement** | `.learnings/`, `LEARNINGS.md` | Track corrections / errors / gaps; auto-promote when recurring ≥ 3 |
 | **Memory dreaming** | `cron/prompts/memory-dream.md` | Weekly cross-domain association of unrelated memories |
@@ -154,7 +154,7 @@ workspace/
 │   ├── memory-reflect.sh  # Weekly rumination — contradiction detection
 │   ├── memory-expire.sh   # Monthly archive of old daily files
 │   ├── memory-compress.py # Long-term memory compression (MEMORY.md + archive)
-│   ├── memory-search-hybrid.py   # Hybrid keyword × temporal × hall scoring
+│   ├── memory-search-hybrid.py   # BM25 (jieba) × temporal × hall scoring (legacy fallback)
 │   ├── hall-tagger.sh             # Backfill hall_* tags on journal bullets
 │   ├── compact-update.py          # Generate MEMORY_COMPACT.md from markers
 │   ├── check-broken-wikilinks.py  # Standalone broken-link scanner

@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`scripts/memory-search-hybrid.py`**：升級成 BM25 + jieba 中文分詞為主排序，保留
+  `temporal × hall` 為乘數。新增 `--no-bm25` 強制 legacy 模式；`jieba` / `rank_bm25`
+  未安裝時自動降級成 keyword-overlap（既有行為）→ 無依賴的環境零破壞。靈感來自 Rein
+  (lyr1cs/rein) 的 Tantivy BM25 + jieba 三通道檢索。本機驗證：中文同義詞召回打通
+  （「萃取不均」匹中「通道效應」「channeling」），meta noise files (timeline /
+  reflections / dreams) 從 top 5 擠掉，實際相關 notes 排上來。Bench 2.2s（hook 6s
+  subprocess 預算內）。輸出 schema 加 `mode` / `bm25_raw` 欄位，向下相容（既有
+  `score` / `kw_overlap` 仍存在）。
 - **`templates/.claude/hooks/memory-search-trigger.py`**：升級成 LMM-style proactive
   recall（靈感：Engramme/Memorious 2026 哈佛 spinout 的 Large Memory Model 三特性）。
   三層注入：(1) keyword hard-trigger（保留原行為）(2) **always-on fallback**：沒命中
