@@ -28,7 +28,7 @@
 
 - 📚 **Agent 會建立知識庫** — 主題化筆記（`notes/areas/`、`notes/resources/`）補足 daily journal 的不足。Knowledge layer 採 merge-first 策略，避免碎片化。把 `notes/` 加到 `memorySearch.extraPaths` 就能全文搜。詳見 [Context Tree 指南](guides/context-tree.md)。
 
-- 🔍 **Agent 找東西更快** — Hybrid memory search（`scripts/memory-search-hybrid.py`）用「關鍵字覆蓋率 × 時間新鮮度 × hall 類型加權」對 `memory/` 和 `notes/` 評分。MemPalace 啟發的 hall taxonomy（`hall_facts` / `hall_events` / `hall_discoveries` / `hall_preferences` / `hall_advice`）把 journal entry 標類型強化檢索，搭配 UserPromptSubmit hook 在偵測到硬觸發關鍵字時**強制搜尋** —— 「要不要搜記憶」不再是判斷題。
+- 🔍 **Agent 找東西更快** — Hybrid memory search（`scripts/memory-search-hybrid.py`）用 **BM25（jieba 中文分詞）× 時間新鮮度 × hall 類型加權** 對 `memory/` 和 `notes/` 評分。沒裝 `jieba` / `rank_bm25` 時自動 fallback 到 keyword overlap 模式（也可用 `--no-bm25` 強制）。MemPalace 啟發的 hall taxonomy（`hall_facts` / `hall_events` / `hall_discoveries` / `hall_preferences` / `hall_advice`）把 journal entry 標類型強化檢索，搭配 UserPromptSubmit hook 在偵測到硬觸發關鍵字時**強制搜尋** —— 「要不要搜記憶」不再是判斷題。
 
 - 🚩 **Agent 有待辦收件匣** — **cron → flag → SessionStart hook** pipeline 把固定邏輯的背景檢查（broken wikilinks、TODO backlog、stale cache）變成 `.claude/flags/` 下的 flag 檔。Cron 只做偵測，下一次 Claude session 會透過 SessionStart hook 接住處理。Cron 不直接叫 LLM —— 「hard trigger, soft action」。詳見 [flag-system 指南](guides/flag-system.md)。
 
@@ -40,7 +40,7 @@
 | **長期記憶** | `MEMORY.md` | 策劃過的事實、基礎設施、模式（P0/P1/P2） |
 | **AAAK compact** | `MEMORY_COMPACT.md` | 每個 session 必載的 ~200 token 壓縮快照 |
 | **知識庫** | `notes/areas/`、`notes/resources/` | 主題化筆記，補足 journal 的碎片感 |
-| **Hybrid search** | `scripts/memory-search-hybrid.py` | 關鍵字 × 時間 × hall 類型綜合評分 |
+| **Hybrid search** | `scripts/memory-search-hybrid.py` | BM25（jieba 中文分詞）× 時間 × hall 類型綜合評分；無依賴時 fallback 為 keyword overlap |
 | **Hall-type tags** | `[hall_facts]` `[hall_events]` `[hall_discoveries]` `[hall_preferences]` `[hall_advice]` | 分類 journal entry 強化檢索 |
 | **Self-improvement** | `.learnings/`、`LEARNINGS.md` | 追蹤 correction / error / gap，≥ 3 次自動 promote |
 | **Memory dreaming** | `cron/prompts/memory-dream.md` | 每週跨領域記憶關聯 |
@@ -157,7 +157,7 @@ workspace/
 │   ├── memory-reflect.sh  # 每週 rumination — 矛盾偵測
 │   ├── memory-expire.sh   # 每月歸檔舊 daily 檔
 │   ├── memory-compress.py # 長期記憶壓縮（MEMORY.md + archive）
-│   ├── memory-search-hybrid.py   # Hybrid 關鍵字 × 時間 × hall 評分
+│   ├── memory-search-hybrid.py   # BM25（jieba）× 時間 × hall 評分（legacy fallback）
 │   ├── hall-tagger.sh             # 回補 journal bullet 的 hall_* tag
 │   ├── compact-update.py          # 從 marker 生成 MEMORY_COMPACT.md
 │   ├── check-broken-wikilinks.py  # 獨立 broken-link 掃描
