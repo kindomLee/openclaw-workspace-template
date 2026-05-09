@@ -241,13 +241,19 @@ def archive_timeline(
                 "section": s["ym"], "lines": s["lines"],
             })
 
-    # Remove from MEMORY.md（reverse order 保 offset）
+    # Remove from MEMORY.md，留 tombstone 一行（reverse order 保 offset）
+    archived_at = today.isoformat()
     new_text = text
     for s in reversed(sections_to_archive):
-        new_text = new_text[:s["start"]] + new_text[s["end"]:]
+        tombstone = (
+            f"### {s['ym']} _[archived → memory/timeline-archive.md "
+            f"on {archived_at}, {s['lines']} lines]_\n\n"
+        )
+        new_text = new_text[:s["start"]] + tombstone + new_text[s["end"]:]
     # 清理多餘空行（>=3 個 newline 壓回 2 個）
     new_text = re.sub(r"\n{3,}", "\n\n", new_text)
     memory_md.write_text(new_text, encoding="utf-8")
+    result["tombstones_left"] = len(sections_to_archive)
 
     return result
 
