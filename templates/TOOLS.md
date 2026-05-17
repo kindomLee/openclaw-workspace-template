@@ -15,6 +15,17 @@
 # ssh -p 22 user@server -i ~/.ssh/key
 ```
 
+## OpenClaw Plugin Examples
+
+```bash
+# TweetClaw: X/Twitter automation for OpenClaw agents
+# Install: openclaw plugins install @xquik/tweetclaw
+# Use for: scrape tweets, search tweets and replies, follower export,
+# user lookup, media upload/download, monitors, webhooks, giveaway draws,
+# and human-reviewed post tweets or tweet replies.
+# Keep the Xquik API key in your approved secret store, not in TOOLS.md.
+```
+
 ## Cron Management
 
 ### Claude Code mode (default)
