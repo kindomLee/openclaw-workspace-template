@@ -29,6 +29,15 @@ user-invocable: true
 > When it produces a chunk of new knowledge that needs to land in the right place,
 > prefer this skill.
 
+## Modes
+
+This skill has two modes, dispatched by the invocation argument:
+
+| Mode | Triggered by | What it does |
+|---|---|---|
+| **curate** (default) | `/curate-memory`, no argument | Runs Workflow steps 1-5 below: scan → dedup → classify → report → budget guard |
+| **consolidate** | `/curate-memory consolidate`, or a SessionStart context-budget warning | Skips conversation scanning; only shrinks the existing `MEMORY.md` (see "Consolidate Mode" below) |
+
 ## Trigger Scenarios
 
 **Explicit:** "curate memory" "organize memory" "archive this" "where should this go" "/curate-memory"
@@ -96,6 +105,7 @@ Is this "what happened" or "what was learned"?
 - **Merge First:** Always search notes/ for related content before creating new
 - **Don't put topics in memory/:** memory/ is for date-based journal only; topic knowledge goes to notes/
 - **Keep memory/ clean:** Only recent 5 days + system files
+- **MEMORY.md is an index, not a journal:** each Events Timeline entry stays 4-6 lines (headline + hard facts + `see [[link]]`); step-by-step detail belongs in `memory/YYYY-MM-DD.md`. Archive prior-month entries to `memory/timeline-archive.md`. The `Last updated` field holds a single date — never a running curate log.
 
 ### LEARNINGS Dedup Pass (mandatory before writing to LEARNINGS.md)
 
@@ -135,6 +145,39 @@ this threshold by default.
 ### 4. Report
 List: what was recorded (summary), where it was stored, what priority level.
 Nothing to record → `✅ No unrecorded important information`
+
+### 5. Budget Guard (mandatory after writing)
+
+`MEMORY.md` loads into every session's context — it must not grow
+unbounded. After curating, measure the always-loaded long-term files:
+
+```bash
+for f in MEMORY.md CLAUDE.md AGENTS.md; do
+  [ -f "$f" ] && c=$(wc -m < "$f") && echo "$f ~$((c/3)) tokens"
+done
+```
+
+If the combined total exceeds the project's SessionStart context budget
+for these files → switch to **Consolidate Mode** immediately. Don't leave
+it for the next session's SessionStart warning.
+
+## Consolidate Mode
+
+Shrinks an over-budget `MEMORY.md` without scanning new conversation.
+
+1. **Compress the Events Timeline:**
+   - Move prior-month entries to `memory/timeline-archive.md` (keep only
+     the current month inline).
+   - Squeeze each remaining entry to a 4-6 line index entry: keep the
+     headline, hard facts (IPs / versions / paths / commit shas /
+     LEARNINGS IDs), the date, and **every `[[wikilink]]`**; drop the
+     step-by-step narrative (it already lives in `memory/YYYY-MM-DD.md`).
+2. **`Last updated` field:** collapse to a single `*Last updated:
+   YYYY-MM-DD*` line — never accumulate a per-session curate log there.
+3. **Verify:** re-measure the files, confirm they are back under budget,
+   and report the before/after numbers.
+4. Consolidate touches only `MEMORY.md` (and `memory/timeline-archive.md`
+   when archiving) — never delete journals or edit notes/.
 
 ## Condensation Principles
 
