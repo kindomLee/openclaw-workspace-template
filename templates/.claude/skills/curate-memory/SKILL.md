@@ -77,17 +77,52 @@ reference/                        ← Deep references
 .learnings/                       ← Errors and learnings
 ```
 
+### Per-file Role Caps
+
+Each SessionStart-loaded file has its own role and **its own token cap**. Don't let one file eat the entire budget — when a cap is exceeded, consolidate **that file**, not the total.
+
+| File | Cap (token) | Role | Over-budget action |
+|------|-------------|------|-------------------|
+| `MEMORY.md` | **≤ 4000** | Long-term index (wikilink + hard facts) | Consolidate Events Timeline → details to `notes/` |
+| `CLAUDE.md` | ≤ 1500 | Workspace entrypoint + bootstrap | Move on-demand playbooks (e.g. graphify) to notes/skills |
+| `AGENTS.md` | ≤ 1200 | Operations manual | Converge with `CLAUDE.md` to avoid dual-canonical drift |
+| `SOUL.md` + `USER.md` | ≤ 1200 combined | Persona + long-term user prefs | Persona is non-compressible; executable rules → `spec/` |
+| `MEMORY_COMPACT.md` | ≤ 500 | AAAK machine-quickload version | If overlaps with `CLAUDE.md` L0/L1, pick one as canonical |
+| **All combined** | **≤ 10000** (hygiene target) | — | Any single file over cap triggers consolidation, don't wait for total |
+
+> The old "12000 single threshold" is reframed as a hygiene target; real alerts fire on per-file caps. Source: codex review 2026-05-23.
+
+### Hard conditions for upgrading to MEMORY.md (default: NO)
+
+**The default is NOT to upgrade.** `MEMORY.md` is a long-term index, not a log. Most events should NOT go in. Only when **ALL** of the following are satisfied does the entry belong in `MEMORY.md` Events Timeline:
+
+1. **Will still be queried next month** — grep failure a week from now would hurt? Then maybe
+2. **Cannot be found via wikilink** — if a `notes/` or `spec/` file already covers it, link to that, don't restate
+3. **Affects other systems / future decisions** — pure one-off troubleshooting doesn't count (LEARNINGS or journal)
+4. **Fits in ≤ 2 lines + wikilink** — if it doesn't compress to an index entry, it's not an index entry
+
+**Blocklist** (never go in `MEMORY.md`):
+
+| ❌ Don't put in MEMORY.md | Put it here |
+|---|---|
+| Tool/service operational detail (CLI, env, ports, tokens, container versions) | `notes/resources/infrastructure/` |
+| Wallet / API key / credential fragments | Never anywhere persistent (see security rules) |
+| One-off troubleshooting (bug fixes, cache flush, disk reseat details) | `memory/YYYY-MM-DD.md` + topic wikilink |
+| Personal preference details (coffee recipes, equipment params) | `notes/areas/<topic>/` |
+| Upgrade batch container version lists | Topic wikilink (e.g. `[[portainer-upgrades]]`) |
+| Persona / profile repetition of SOUL.md / USER.md | Don't restate — SOUL/USER are canonical |
+
 ### Classification Tree
 
 ```
 Is this "what happened" or "what was learned"?
-├─ "What happened" (event/decision/status) → memory/YYYY-MM-DD.md
-│   └─ Important enough for long-term index? → Also update MEMORY.md Events Timeline
+├─ "What happened" (event/decision/status) → memory/YYYY-MM-DD.md (default stops here)
+│   └─ Passes ALL 4 hard conditions above + not in blocklist?
+│      → Only then update MEMORY.md Events Timeline (≤ 2 lines wikilink-only)
 ├─ "What was learned" (knowledge/method/principle)
 │   ├─ Related notes/ already exist? → Merge into existing (don't create new)
 │   ├─ New topic + >500 words? → notes/areas/ or resources/ (create new)
 │   └─ Fragment <500 words? → memory/YYYY-MM-DD.md, let cron sync organize
-├─ Preference/infrastructure/core Pattern? → MEMORY.md (P0)
 ├─ Error/learning? → .learnings/LEARNINGS.md
 └─ Uncertain? → memory/YYYY-MM-DD.md (safe default)
 ```
@@ -96,6 +131,9 @@ Is this "what happened" or "what was learned"?
 - **Merge First:** Always search notes/ for related content before creating new
 - **Don't put topics in memory/:** memory/ is for date-based journal only; topic knowledge goes to notes/
 - **Keep memory/ clean:** Only recent 5 days + system files
+- **MEMORY.md is an index, not a log:** Events Timeline entries are **≤ 2 lines** (headline + hard facts + `详: [[link]]`). Step-by-step details stay in `memory/YYYY-MM-DD.md`.
+- **`### YYYY-MM` heading is mandatory:** Before writing the first entry of a month into Events Timeline, ensure a `### YYYY-MM` heading exists so `scripts/memory-archive.py --mode archive-timeline` can auto-rotate it to `timeline-archive.md` on the 1st of next month.
+- **`Last updated` field:** single-line date only; do NOT accumulate per-session curate logs.
 
 ### LEARNINGS Dedup Pass (mandatory before writing to LEARNINGS.md)
 
