@@ -442,9 +442,10 @@ only wake the LLM when something actually needs judgment.
 
 ---
 
-[2.4.0]: https://github.com/kindomLee/openclaw-workspace-template/compare/v2.3.0...v2.4.0
-[2.3.0]: https://github.com/kindomLee/openclaw-workspace-template/compare/v2.2.0...v2.3.0
-[2.2.0]: https://github.com/kindomLee/openclaw-workspace-template/compare/v2.1.0...v2.2.0
+[Unreleased]: https://github.com/kindomLee/openclaw-workspace-template/compare/v3.0.0...HEAD
+[3.0.0]: https://github.com/kindomLee/openclaw-workspace-template/compare/v2.2.0...v3.0.0
+[2.4.0]: #240---2026-04-10
+[2.3.0]: #230---2026-03-28
 [2.1.0]: https://github.com/kindomLee/openclaw-workspace-template/compare/v2.0.0...v2.1.0
-[2.0.0]: https://github.com/kindomLee/openclaw-workspace-template/compare/v1.0.0...v2.0.0
-[1.0.0]: https://github.com/kindomLee/openclaw-workspace-template/tree/v1.0.0
+[2.0.0]: #200---2026-03-17
+[1.0.0]: #100---2026-03-02
