@@ -6,9 +6,29 @@ It is pure regex, has no external dependencies, and catches the case you
 actually lose sleep over: stale `[[links]]` whose targets no longer exist.
 
 Separately, you may want **proactive wikilink suggestions** — "when I open
-note X, offer 4 related notes I should link to." This is genuinely useful
-but requires an embedding model, so the template treats it as an optional
-recipe rather than a built-in.
+note X, offer 4 related notes I should link to."
+
+## Shipped: zero-LLM version (`cron/bin/smart-wikilinks-bare.sh`)
+
+The template now ships a **deterministic, zero-LLM** proactive suggester that
+needs no embedding model and no API quota — it reuses the existing
+`scripts/memory-search-hybrid.py` (BM25 + jieba) for relatedness.
+
+- `cron/runner.sh smart-wikilinks` auto-prefers `cron/bin/smart-wikilinks-bare.sh`
+  over the `claude -p` prompt (the prompt is kept only as a fallback — delete
+  the bare script to revert). This "`bin/<job>-bare.sh` beats `prompts/<job>.md`"
+  escape hatch is generic: any cron job can be converted to zero-LLM the same way.
+- For notes **without** a `## Related` section it appends one automatically,
+  guarded against spurious matches (a candidate filename's kebab-case words must
+  actually appear in the note body).
+- For notes that **already have** `## Related` it does not edit inline; it writes
+  suggestions to `cron/state/wikilink-suggestions.md` for human review.
+- Runs in ~1s instead of the prompt version's minutes, and sends a Telegram
+  summary if `TG_BOT_TOKEN` / `TG_CHAT_ID` are set in `cron/config.env`.
+
+The embedding-based recipe below remains an **optional quality upgrade** when
+BM25 relatedness isn't good enough for your corpus (e.g. heavily multilingual or
+synonym-rich notes where lexical overlap misses semantic neighbours).
 
 ## When you want this
 
