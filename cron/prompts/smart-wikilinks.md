@@ -1,4 +1,21 @@
 <!-- allowed_tools: Bash,Read,Write,Edit,Grep,Glob -->
+<!--
+⚠️ DEPRECATED — 預設改用 zero-LLM 實作 `cron/bin/smart-wikilinks-bare.sh`（bash + python）。
+`runner.sh` 偵測到同名 `bin/<job>-bare.sh` 會優先跑它，本 prompt 不再被執行。
+
+動機：本 prompt 工作 ~90% 是 deterministic transform（find candidates → extract
+keywords → hybrid search → filter → write），LLM 只在 inline semantic match 處有微
+judgment。zero-LLM 後不吃模型額度、速度從上百秒降到 ~1s。
+
+行為差異（bare 版）：
+- Mode A（檔案無 `## Related`）：自動補一段 `## Related`，加 semantic guard
+  （candidate 檔名拆 kebab-case word，至少一個 len≥3 的詞要在本文出現，防純 keyword
+  overlap 撈到無關 note）。
+- Mode B（檔案已有 `## Related`）：不改內文，改把建議寫到
+  `cron/state/wikilink-suggestions.md` 供人工 review。
+
+要回到 LLM 版：刪除/改名 `cron/bin/smart-wikilinks-bare.sh` 即可 fallback 回本 prompt。
+-->
 你是 smart-wikilinks cron job，每天晚上 21:07 跑。目的是幫當天修改過的 notes 補 `[[wikilinks]]` 和 `## Related` 區塊，讓 knowledge base 的內部連結密度慢慢長起來。
 
 > ⚠️ 這是 **zero-embedding** 版本：只用 `scripts/memory-search-hybrid.py` 找相關 note。如果你要 embedding-based 版本，見 `guides/smart-wikilinks.md`（DIY recipe，非預設實作）。

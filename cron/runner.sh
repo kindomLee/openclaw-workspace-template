@@ -14,6 +14,21 @@ LOG_DIR="$SCRIPT_DIR/logs"
 LOG_FILE="$LOG_DIR/${JOB}-$(date +%Y%m%d-%H%M%S).log"
 CONFIG_FILE="$SCRIPT_DIR/config.env"
 
+# Zero-LLM escape hatch: if a bin/<job>-bare.sh exists, run it instead of the
+# `claude -p` prompt. This lets a job be converted from an LLM agent to a
+# deterministic bash+python implementation (faster, no model cost, no API
+# quota) WITHOUT changing its plist/crontab wiring — the bare script just
+# needs to land in cron/bin/. The bare script is self-contained: it loads its
+# own config.env, writes its own log, and needs no network readiness wait
+# (deterministic jobs don't call the model). Jobs with no bare script fall
+# through to the prompt-driven path below unchanged.
+BARE_SCRIPT="$SCRIPT_DIR/bin/${JOB}-bare.sh"
+if [ -f "$BARE_SCRIPT" ]; then
+  mkdir -p "$LOG_DIR"
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Running zero-LLM bare implementation: $BARE_SCRIPT" | tee "$LOG_FILE"
+  exec bash "$BARE_SCRIPT"
+fi
+
 # Check prompt file exists
 if [ ! -f "$PROMPT_FILE" ]; then
   echo "ERROR: prompt file not found: $PROMPT_FILE" >&2
