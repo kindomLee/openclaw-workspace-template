@@ -17,6 +17,9 @@ try:
     HAS_BM25 = True
 except ImportError:
     HAS_BM25 = False
+    print("⚠️ jieba/rank_bm25 不可用，降級 legacy keyword 模式（召回品質會明顯變差，"
+          "且偏袒大檔）。請對執行此 script 的 interpreter 裝 deps：pip install jieba rank_bm25",
+          file=sys.stderr)
 
 STOPWORDS = frozenset(
     "的了是在和有你他她它這那也就都不會能要以被從到或與等著過把讓向對為就還可但而如則"
@@ -68,6 +71,85 @@ def hall_boost(text: str) -> float:
     if re.search(r'建議|推薦|應該|最好|recommend|suggest|should|advice', t):
         return 1.1
     return 1.0
+
+
+# frontmatter status：key 大小寫不敏感（YAML 慣例小寫，但容錯 Status:/STATUS:）。
+_STATUS_RE = re.compile(r'^status:\s*(.+?)\s*$', re.M | re.I)
+# digest/aggregate「滾動彙整」檔：什麼主題都提一句、字多 → BM25 docstring 點名的
+# meta noise 來源。住 memory/ root 故 A 層目錄判斷碰不到，需 filename 顯式降權。
+_AGGREGATE_STEMS = ('timeline-archive', 'reflections', 'dreams')
+# 超長 digest 安全網門檻（char）：見 confidence_boost A'' 層註解的語料分布依據。
+_OVERLONG_CHARS = 20000
+
+
+def _frontmatter_status(content: str):
+    """只從檔首 YAML frontmatter fence（首組 --- ... ---）取 status，回傳 lower 後的值或 None。
+
+    刻意 NOT 掃全文：避免正文出現「status: stale」這類散句被誤判為低可信
+    （adversarial review 2026-06-01 抓到的 false-match bug）。
+    """
+    if not content.startswith('---'):
+        return None
+    end = content.find('\n---', 3)
+    if end == -1:
+        return None
+    m = _STATUS_RE.search(content[3:end])
+    return m.group(1).strip().lower() if m else None
+
+
+def confidence_boost(fp, content: str) -> float:
+    """Deterministic 可信度乘數（Karry Orb 召回退化的對應補強，2026-05-31）。
+
+    純函式：給定 (路徑, 內容) 必回同一分數。但「deterministic」≠「無人為輸入」——
+    可信度反映的是「檔案被怎麼歸檔/標 status」這個*組織*訊號，不是內容*被驗證過*。
+    歸檔位置與 frontmatter status 仍由 agent/人寫，會 drift；選它們而非內文標記
+    （superseded/⚠️）是因為覆蓋廣（notes 432 檔有 frontmatter vs 41 檔有內文標記）
+    且可被 lint 強制、結構上與正文分離（不會被散句誤觸）。
+
+    A 層（目錄結構）：看目錄 component，timeline-archive.md 這種檔名含 archive 但
+      住 root 的當前資料不被目錄判斷誤降。
+    A' 層（aggregate filename）：滾動彙整檔（timeline-archive/reflections/dreams）
+      顯式降權——它們正是 Karry bug 的「越常討論越易召回」噪音源，目錄判斷碰不到。
+    B 層（frontmatter status）：僅從 frontmatter fence 取，stale/superseded 再懲罰。
+    """
+    parts = [s.lower() for s in Path(fp).parts]
+    name = parts[-1] if parts else ''
+    stem = name[:-3] if name.endswith('.md') else name
+    dirs = parts[:-1]
+
+    # --- A 層：目錄結構 ---
+    if any(d.startswith('archive') or d.startswith('04-') for d in dirs):
+        conf = 0.85                      # 歷史歸檔：非錯但非當前
+    elif '03-resources' in dirs:
+        conf = 1.15                      # 參考資料庫（curated reference）
+    elif '02-areas' in dirs:
+        conf = 1.1                       # 主題知識（較穩定）
+    elif '00-inbox' in dirs:
+        conf = 0.7                       # 未整理收件匣
+    else:
+        conf = 1.0                       # daily journal / active project baseline
+
+    # --- A' 層：scratchpad / aggregate（看 filename，零判斷）---
+    if ('proposals' in name or stem.startswith('dreams.pending')
+            or stem.startswith('dreams.review') or '.review' in name):
+        conf = min(conf, 0.6)            # 未裁決 scratchpad
+    if stem in _AGGREGATE_STEMS:
+        conf = min(conf, 0.6)            # 滾動彙整 digest noise
+
+    # --- A'' 層：超長 digest 安全網（_AGGREGATE_STEMS 白名單漏網的通用兜底）---
+    # threshold 20000 由語料分布定（median≈1700、p95≈11000）：乾淨切開
+    # 「最大的真實單日 journal ~19.4K」與「滾動彙整 ~23K+」。輕罰 ×0.9（非 0.6）
+    # 因為長 ≠ 低可信（curated changelog 也會很長），只當溫和去噪；min() 堆疊不雙埋。
+    if len(content) > _OVERLONG_CHARS:
+        conf = min(conf, 0.9)
+
+    # --- B 層：notes frontmatter status ---
+    st = _frontmatter_status(content)
+    if st in ('stale', 'archived', 'superseded', 'deprecated'):
+        conf *= 0.5
+    elif st == 'paused':
+        conf *= 0.7
+    return conf
 
 
 def date_from_filename(fp: Path) -> float:
@@ -147,6 +229,8 @@ def main():
                     help="Cap each snippet to N chars (default 200). 仿 OpenClaw 4.15 bounded excerpts。")
     ap.add_argument("--no-bm25", action="store_true",
                     help="Force legacy keyword-overlap mode (skip BM25 even if available).")
+    ap.add_argument("--no-confidence", action="store_true",
+                    help="關閉 confidence 維（除錯/對照用，回到 bm25×temporal×hall）")
     args = ap.parse_args()
 
     query = args.query
@@ -175,18 +259,19 @@ def main():
         kw_overlap = len(query_kw & kw) / len(query_kw) if query_kw else 0.0
         t_boost = temporal_boost(mtime, cutoff, now, args.days)
         h_boost = hall_boost(content)
+        c_boost = 1.0 if args.no_confidence else confidence_boost(fp, content)
 
         if use_bm25 and bm25_max > 0:
-            # BM25 主排序：normalize 到 [0,1]，再乘 temporal/hall。
+            # BM25 主排序：normalize 到 [0,1]，再乘 temporal/hall/confidence。
             # 沒命中 (bm25_raw=0) 的文件給極小 baseline，避免完全消失。
             bm25_norm = bm25_raw[i] / bm25_max
             base = bm25_norm if bm25_norm > 0 else 0.02
-            fused = base * t_boost * h_boost
+            fused = base * t_boost * h_boost * c_boost
         else:
             # Legacy fallback：keyword-overlap + size scaling。
             size_factor = min(1.0, (len(content) / 5000) ** 0.5)
             base = size_factor * (0.3 if kw_overlap > 0 else 0.05)
-            fused = base * (1 + 0.3 * kw_overlap) * t_boost * h_boost
+            fused = base * (1 + 0.3 * kw_overlap) * t_boost * h_boost * c_boost
 
         snip_text, snip_start, snip_line = snippet(content, query_kw)
         full_lines = content.count('\n') + 1
@@ -202,6 +287,7 @@ def main():
             "kw_overlap": round(kw_overlap, 3),
             "temporal": round(t_boost, 3),
             "hall_boost": round(h_boost, 1),
+            "confidence": round(c_boost, 3),
             "date": datetime.fromtimestamp(mtime).strftime("%Y-%m-%d"),
             "age_days": round((now - mtime) / 86400, 1),
             "snippet": bounded_snip,
