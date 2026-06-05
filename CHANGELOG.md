@@ -41,6 +41,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Skill 自我改進雙軸（`scripts/evolve_skill.py` / `scripts/skill_evolve_apply.py` /
+  `scripts/skill_genesis_mine.py` + `cron/bin/skill-evolve-mm.sh` /
+  `cron/bin/skill-genesis-mm.sh`）**：靈感來自 Anthropic「When AI builds itself」(2026-06)
+  的 RSI 方法論。兩軸互補——**evolve**（精煉既有 skill：MiniMax-M3 產 evolved 候選 + eval，
+  經 keep/revert 閘決定是否套回）+ **genesis**（從 `LEARNINGS.md` 的 `manual_repeat` /
+  `best_practice` 萃取「新 skill 候選」，草擬 skeleton 等人覆審，無 `LEARNINGS.md` 則
+  graceful no-op）。安全設計：keep/revert 三層閘 = deterministic content-loss guard（防刪 +
+  防新增危險指令，硬擋）+ delta 門檻（須在 judge 噪音 ±12 之上）+ M3 信度；genesis 用強制
+  三分類 SKILL/PRINCIPLE/ONE_OFF + 三問擋掉「原則型」誤判（無約束 LLM judge 傾向一律放行）。
+  **絕不自動建/改檔**：M3 信度不足或候選不確定 → 寫 `.claude/flags/` flag 等互動式覆審。
+  全程走 MiniMax-M3，零 `claude -p`。需 `cron/config.env` 設 `MINIMAX_API_KEY`。
+- **`.claude/skills/migration-hardcode-sweep/SKILL.md`**：外流前清毒 skill——把腳本/config
+  推上遠端/template/跨主機前，grep 硬編碼絕對路徑 + 個人 ID/token + 明文 secret → 命中即
+  fail → env 化 → 重掃歸零。由 `skill_genesis_mine.py` 從一條重複手動操作紀錄自動萃取、
+  人工覆審後 scaffold（dogfood）。`PERSONAL_PATTERNS` 留給使用者填自己環境的真實值。
 - **`scripts/learnings-promotion-check.py`**：分析 `LEARNINGS.md` 條目的 confidence
   + promotion_score、列出可 promote 到 `MEMORY.md` 的候選；提供 `--cluster
   --cluster-threshold N` 模式偵測同主題分散的 family（greedy union-find on keyword
