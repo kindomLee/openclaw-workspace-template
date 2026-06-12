@@ -8,8 +8,9 @@ Checked documents:
   - `templates/HEARTBEAT.md`   (per README.md, this is the *designated*
     source of truth for humans; we still diff it against plists to catch
     the case where a plist is added but HEARTBEAT forgets)
-  - `cron/README.md`           (convenience copy, high drift risk)
-  - `guides/routine-checks.md` (convenience copy, even higher drift risk)
+  - `guides/routine-checks.md` (convenience copy with Layer view)
+  (`cron/README.md` intentionally links to HEARTBEAT instead of carrying
+  its own table — one less copy to drift.)
 
 Usage:
   python3 scripts/check-schedule-drift.py             # check all
@@ -208,10 +209,17 @@ def load_plist_schedule(plist_dir: Path) -> dict:
         except Exception as e:
             print(f"WARNING: failed to parse {fname}: {e}", file=sys.stderr)
             continue
-        try:
-            job_name = d["ProgramArguments"][-1]
-        except (KeyError, IndexError):
+        prog = d.get("ProgramArguments") or []
+        if not prog:
             continue
+        if prog[0].endswith("runner.sh") and len(prog) >= 2:
+            job_name = prog[-1]
+        else:
+            # Direct-shell plists (/bin/bash -lc "<long cmd>"): taking the
+            # last ProgramArguments element would yield the whole command
+            # string — derive the job name from the filename instead
+            # (org.oracle.<job>.plist → <job>), mirroring install-linux.sh.
+            job_name = fname[:-len(".plist")].rsplit(".", 1)[-1]
         sched = plist_to_schedule(d)
         if sched is None:
             print(f"WARNING: {fname} has no usable StartCalendarInterval", file=sys.stderr)
@@ -264,7 +272,6 @@ def compare_doc(doc_label: str, doc_rows: list, plist_sched: dict):
 
 DEFAULT_DOCS = [
     ("templates/HEARTBEAT.md", "templates/HEARTBEAT.md"),
-    ("cron/README.md", "cron/README.md"),
     ("guides/routine-checks.md", "guides/routine-checks.md"),
 ]
 
@@ -277,7 +284,7 @@ def main() -> int:
         action="append",
         default=None,
         help="check a single doc path (can be passed multiple times); "
-             "default: HEARTBEAT.md, cron/README.md, guides/routine-checks.md",
+             "default: HEARTBEAT.md, guides/routine-checks.md",
     )
     args = ap.parse_args()
 

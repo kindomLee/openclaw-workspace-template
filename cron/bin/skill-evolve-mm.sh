@@ -1,7 +1,7 @@
 #!/bin/bash
 # skill-evolve-mm.sh — skill 自動進化 + keep/revert 決策（RSI 閉環）
 #
-# 全程走 MM MiniMax-M3（evolve + 審查），禁 claude -p（6/15 credit pool 約束）。
+# 全程走輕量 LLM endpoint（LLM_API_URL/LLM_MODEL，預設 MiniMax），不佔用互動式 agent 額度。
 # Phase 1: evolve_skill.py 用 M3 產 evolved 候選 + eval 分數
 # Phase 2: skill_evolve_apply.py 決策 AUTO_APPLY / FLAG / REVERT
 #   - content-loss guard（硬擋）+ delta 門檻 + M3 信度
@@ -30,13 +30,14 @@ if [ -f "$CONFIG_FILE" ]; then
 else
   echo "ERROR: $CONFIG_FILE not found" >&2; exit 1
 fi
-: "${MINIMAX_API_KEY:?MINIMAX_API_KEY 未設（cron/config.env）}"
+: "${LLM_API_KEY:=${MINIMAX_API_KEY:-}}"
+[ -n "$LLM_API_KEY" ] || { echo "ERROR: LLM_API_KEY (or legacy MINIMAX_API_KEY) not set in cron/config.env" >&2; exit 1; }
+export LLM_API_KEY
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"; }
 
-# 用 hook 自己的 interpreter 偏好：優先 miniforge（有 httpx），fallback python3
-PY="$(command -v python3)"
-[ -x "$HOME/miniforge3/bin/python3" ] && PY="$HOME/miniforge3/bin/python3"
+# Interpreter：預設 PATH 上的 python3（需 httpx）；可用 PY_BIN 覆寫
+PY="${PY_BIN:-$(command -v python3)}"
 
 AUTO_APPLY=""
 [[ " $* " == *" --auto-apply "* ]] && AUTO_APPLY="--auto-apply"

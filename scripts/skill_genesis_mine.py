@@ -13,7 +13,7 @@
   worth 且不重複且信度夠 → 寫草稿 `cron/state/skill-genesis/<slug>/SKILL.draft.md`
   + per-candidate flag 等人覆審；核准後由人 + skill-creator scaffold，再進 evolve 迴路。
 
-6/15 約束：只用 MM `MiniMax-M3`，禁 `claude -p`。
+Backend：LLM_API_URL/LLM_MODEL 指定的輕量 endpoint（預設 MiniMax），不佔用互動式 agent 額度。
 
 Usage:
     skill_genesis_mine.py [--min-rc 2] [--gate 0.7] [--dry-run] [--limit N]
@@ -39,8 +39,8 @@ DRAFT_DIR = REPO / "cron" / "state" / "skill-genesis"
 TELEMETRY = REPO / "cron" / "state" / "skill-genesis-log.jsonl"
 FLAG_DIR = REPO / ".claude" / "flags"
 
-API_URL = "https://api.minimax.io/anthropic/v1/messages"
-MODEL = "MiniMax-M3"
+API_URL = os.environ.get("LLM_API_URL", "https://api.minimax.io/anthropic/v1/messages")
+MODEL = os.environ.get("LLM_MODEL", "MiniMax-M3")
 
 # 程序型 type（值得成 skill 的本質是「可重用步驟」）
 PROCEDURAL_TYPES = {"manual_repeat", "best_practice"}
@@ -117,7 +117,7 @@ def existing_skills() -> list[dict]:
 # ── MM-M3 判斷 + 草擬 ─────────────────────────────────────────────────────
 
 def call_m3(prompt: str, timeout: int = 120) -> str | None:
-    api_key = os.environ.get("MINIMAX_API_KEY")
+    api_key = os.environ.get("LLM_API_KEY") or os.environ.get("MINIMAX_API_KEY")
     if not api_key:
         return None
     body = {

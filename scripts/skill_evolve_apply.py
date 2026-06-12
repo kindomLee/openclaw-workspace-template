@@ -21,7 +21,7 @@
 
 AUTO_APPLY 寫檔：git 乾淨檢查 + timestamped 不覆蓋備份 + 原子 rename；被拒則降級 FLAG。
 
-6/15 約束：只用 MM `MiniMax-M3`，禁 `claude -p`。M3 品質不足時退到 FLAG（人在場再裁）。
+Backend：LLM_API_URL/LLM_MODEL 指定的輕量 endpoint（預設 MiniMax），不佔用互動式 agent 額度。品質不足時退到 FLAG（人在場再裁）。
 
 Usage:
     skill_evolve_apply.py --skill PATH --output DIR [--auto-apply]
@@ -43,8 +43,8 @@ REPO = Path(__file__).resolve().parent.parent
 TELEMETRY = REPO / "cron" / "state" / "skill-evolve-log.jsonl"
 FLAG_DIR = REPO / ".claude" / "flags"
 
-API_URL = "https://api.minimax.io/anthropic/v1/messages"
-MODEL = "MiniMax-M3"
+API_URL = os.environ.get("LLM_API_URL", "https://api.minimax.io/anthropic/v1/messages")
+MODEL = os.environ.get("LLM_MODEL", "MiniMax-M3")
 
 MIN_TOKEN_LEN = 4       # 太短的 token（如 `ls`）易誤判 + 噪音大，略過
 VERDICT_WINDOW = 6000   # M3 verdict 只看每邊前 N 字；超過則無法完整審 → 不自動套用（L10）
@@ -184,9 +184,9 @@ def m3_verdict(original: str, evolved: str, delta: float, timeout: int = 90) -> 
     回傳 {ok, keep, confidence, content_preserved, reason}；ok=False 代表 M3
     呼叫/解析失敗（品質不足）→ 上層走 FLAG。
     """
-    api_key = os.environ.get("MINIMAX_API_KEY")
+    api_key = os.environ.get("LLM_API_KEY") or os.environ.get("MINIMAX_API_KEY")
     if not api_key:
-        return {"ok": False, "reason": "MINIMAX_API_KEY 未設"}
+        return {"ok": False, "reason": "LLM_API_KEY / MINIMAX_API_KEY 未設"}
 
     prompt = f"""你是嚴格的 skill 變更審查員。判斷「evolved 版」是否為真正且安全的改進。
 

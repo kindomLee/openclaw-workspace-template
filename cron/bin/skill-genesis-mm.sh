@@ -1,7 +1,7 @@
 #!/bin/bash
 # skill-genesis-mm.sh — 從 LEARNINGS 萃取「新 skill 候選」（生成軸，與 evolve 互補）
 #
-# 全程走 MM MiniMax-M3，禁 claude -p（6/15 credit pool 約束）。
+# 全程走輕量 LLM endpoint（LLM_API_URL/LLM_MODEL，預設 MiniMax），不佔用互動式 agent 額度。
 # 流程：skill_genesis_mine.py 掃 LEARNINGS manual_repeat/best_practice(rc≥2, 有步驟)
 #   → M3 強制三分類 SKILL/PRINCIPLE/ONE_OFF + 三問 → 對既有 skill 去重
 #   → **絕不自動建檔**：worth 的寫 cron/state/skill-genesis/<slug>/SKILL.draft.md + flag。
@@ -26,12 +26,14 @@ if [ -f "$CONFIG_FILE" ]; then
 else
   echo "ERROR: $CONFIG_FILE not found" >&2; exit 1
 fi
-: "${MINIMAX_API_KEY:?MINIMAX_API_KEY 未設（cron/config.env）}"
+: "${LLM_API_KEY:=${MINIMAX_API_KEY:-}}"
+[ -n "$LLM_API_KEY" ] || { echo "ERROR: LLM_API_KEY (or legacy MINIMAX_API_KEY) not set in cron/config.env" >&2; exit 1; }
+export LLM_API_KEY
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"; }
 
-PY="$(command -v python3)"
-[ -x "$HOME/miniforge3/bin/python3" ] && PY="$HOME/miniforge3/bin/python3"
+# Interpreter：預設 PATH 上的 python3（需 httpx）；可用 PY_BIN 覆寫
+PY="${PY_BIN:-$(command -v python3)}"
 
 # 預設參數，可被 CLI 覆寫
 MIN_RC="2"; GATE="0.7"

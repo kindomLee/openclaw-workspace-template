@@ -71,8 +71,8 @@ memory/YYYY-MM-DD.md              ← What happened (events, decisions, status c
 
 ═══ Layer 2: Knowledge (notes/) — Semantic ═══
 MEMORY.md                        ← Long-term index (P0 prefs/infra, P1 tech, P2 experiments)
-notes/areas/{topic}/              ← Topic knowledge (merge-first, don't create fragments)
-notes/resources/{topic}/          ← Tools/services references
+notes/02-Areas/{topic}/           ← Topic knowledge (merge-first, don't create fragments)
+notes/03-Resources/{topic}/       ← Tools/services references
 reference/                        ← Deep references
 .learnings/                       ← Errors and learnings
 ```
@@ -105,10 +105,10 @@ Each SessionStart-loaded file has its own role and **its own token cap**. Don't 
 
 | ❌ Don't put in MEMORY.md | Put it here |
 |---|---|
-| Tool/service operational detail (CLI, env, ports, tokens, container versions) | `notes/resources/infrastructure/` |
+| Tool/service operational detail (CLI, env, ports, tokens, container versions) | `notes/03-Resources/infrastructure/` |
 | Wallet / API key / credential fragments | Never anywhere persistent (see security rules) |
 | One-off troubleshooting (bug fixes, cache flush, disk reseat details) | `memory/YYYY-MM-DD.md` + topic wikilink |
-| Personal preference details (coffee recipes, equipment params) | `notes/areas/<topic>/` |
+| Personal preference details (coffee recipes, equipment params) | `notes/02-Areas/<topic>/` |
 | Upgrade batch container version lists | Topic wikilink (e.g. `[[portainer-upgrades]]`) |
 | Persona / profile repetition of SOUL.md / USER.md | Don't restate — SOUL/USER are canonical |
 
@@ -121,7 +121,7 @@ Is this "what happened" or "what was learned"?
 │      → Only then update MEMORY.md Events Timeline (≤ 2 lines wikilink-only)
 ├─ "What was learned" (knowledge/method/principle)
 │   ├─ Related notes/ already exist? → Merge into existing (don't create new)
-│   ├─ New topic + >500 words? → notes/areas/ or resources/ (create new)
+│   ├─ New topic + >500 words? → notes/02-Areas/ or 03-Resources/ (create new)
 │   └─ Fragment <500 words? → memory/YYYY-MM-DD.md, let cron sync organize
 ├─ Error/learning? → .learnings/LEARNINGS.md
 └─ Uncertain? → memory/YYYY-MM-DD.md (safe default)

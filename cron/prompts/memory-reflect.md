@@ -1,3 +1,4 @@
+<!-- expected_interval: 604800 -->
 你是記憶反思 cron job。回顧最近的 memory journal 和 notes，找出矛盾、更新和需要整合的內容。
 
 ## 核心原則
@@ -109,7 +110,7 @@ python3 scripts/memory-search-hybrid.py "<journal 提到的主題>" --days 90 --
 | 項目 | 原因 | 建議 |
 |------|------|------|
 | GPT-5.4 教訓入 notes | hybrid search hit agent-cases.md L36 score=0.8 | 從追蹤清單移除 |
-| 連續 4 次未處理的 X | recurring_count=4 | 請馬克決定 do/wontfix |
+| 連續 4 次未處理的 X | recurring_count=4 | 請使用者決定 do/wontfix |
 ```
 
 「觀察」可被忽略，「待處理」必須逐條 close。**待處理**每條的驗證命令要能在下次 reflect 跑出 yes/no 結果。

@@ -26,7 +26,7 @@
 
 - 🧬 **Agent 的靈魂會演化** — 行為糾正累積成 proposal，同類糾正 ≥ 3 次就提議更新 `SOUL.md`（需你核可）。
 
-- 📚 **Agent 會建立知識庫** — 主題化筆記（`notes/areas/`、`notes/resources/`）補足 daily journal 的不足。Knowledge layer 採 merge-first 策略，避免碎片化。把 `notes/` 加到 `memorySearch.extraPaths` 就能全文搜。詳見 [Context Tree 指南](guides/context-tree.md)。
+- 📚 **Agent 會建立知識庫** — 主題化筆記採 PARA 編號目錄（`notes/01-Projects/`…`notes/04-Archive/`）補足 daily journal 的不足。Knowledge layer 採 merge-first 策略，避免碎片化。Claude Code 模式內建掃 `memory/` + `notes/`；OpenClaw 模式把 `notes/` 加到 `memorySearch.extraPaths` 就能全文搜。詳見 [Context Tree 指南](guides/context-tree.md)。
 
 - 🔍 **Agent 找東西更快** — Hybrid memory search（`scripts/memory-search-hybrid.py`）用 **BM25（jieba 中文分詞）× 時間新鮮度 × hall 類型加權** 對 `memory/` 和 `notes/` 評分。沒裝 `jieba` / `rank_bm25` 時自動 fallback 到 keyword overlap 模式（也可用 `--no-bm25` 強制）。MemPalace 啟發的 hall taxonomy（`hall_facts` / `hall_events` / `hall_discoveries` / `hall_preferences` / `hall_advice`）把 journal entry 標類型強化檢索，搭配 UserPromptSubmit hook 在偵測到硬觸發關鍵字時**強制搜尋** —— 「要不要搜記憶」不再是判斷題。
 
@@ -39,13 +39,13 @@
 | **Memory journal** | `memory/YYYY-MM-DD.md` | 每日日誌，用 `[hall_*]` 分類 tag |
 | **長期記憶** | `MEMORY.md` | 策劃過的事實、基礎設施、模式（P0/P1/P2） |
 | **AAAK compact** | `MEMORY_COMPACT.md` | 每個 session 必載的 ~200 token 壓縮快照 |
-| **知識庫** | `notes/areas/`、`notes/resources/` | 主題化筆記，補足 journal 的碎片感 |
+| **知識庫** | `notes/01-Projects/`–`notes/04-Archive/`（PARA） | 主題化筆記，補足 journal 的碎片感 |
 | **Hybrid search** | `scripts/memory-search-hybrid.py` | BM25（jieba 中文分詞）× 時間 × hall 類型綜合評分；無依賴時 fallback 為 keyword overlap |
 | **Hall-type tags** | `[hall_facts]` `[hall_events]` `[hall_discoveries]` `[hall_preferences]` `[hall_advice]` | 分類 journal entry 強化檢索 |
 | **Self-improvement** | `.learnings/`、`LEARNINGS.md` | 追蹤 correction / error / gap，≥ 3 次自動 promote |
 | **Memory dreaming** | `cron/prompts/memory-dream.md` | 每週跨領域記憶關聯 |
 | **Memory rumination** | `cron/prompts/memory-reflect.md` | 每週矛盾偵測 + action tracking + stale check |
-| **Memory expiry** | `cron/prompts/memory-expire.md` | 每月自動歸檔 30 天以上的 journal |
+| **Memory archiving** | `scripts/memory-archive.py`（每日 rotate + 每月 timeline 摺疊） | 純 shell journal 歸檔，不需 LLM session |
 | **Memory janitor** | `cron/prompts/memory-janitor.md` | Hall tag 補標 + 重複偵測 + notes 品質檢查 |
 | **Cron → flag → hook** | `.claude/flags/`、`.claude/hooks/session-start-flags.sh` | 背景檢查寫 flag，下一個 session 接手 |
 | **人格** | `SOUL.md`、`IDENTITY.md`、`USER.md` | 決策偏好、名字/emoji、使用者資料 |
@@ -64,7 +64,7 @@
 
 1. 安裝你要的 runtime：
 ```bash
-# Claude Code（預設）— 見 https://docs.claude.com/claude-code 的安裝方式
+# Claude Code（預設）— 見 https://code.claude.com/docs 的安裝方式
 # OpenClaw（替代方案）
 curl -fsSL https://openclaw.ai/install.sh | bash
 # OpenAI Codex（僅互動式 — 不支援 cron）— 見 .codex/README.md
@@ -155,7 +155,7 @@ workspace/
 │   ├── cron-notes-todo-check.sh    # TODO backlog > N 就寫 flag
 │   ├── memory-dream.sh    # 每週 "dreaming" — 冷記憶聯想
 │   ├── memory-reflect.sh  # 每週 rumination — 矛盾偵測
-│   ├── memory-expire.sh   # 每月歸檔舊 daily 檔
+│   ├── memory-expire.sh   # （已棄用——由 memory-archive.py 取代）
 │   ├── memory-compress.py # 長期記憶壓縮（MEMORY.md + archive）
 │   ├── memory-search-hybrid.py   # BM25（jieba）× 時間 × hall 評分（legacy fallback）
 │   ├── hall-tagger.sh             # 回補 journal bullet 的 hall_* tag
@@ -195,7 +195,7 @@ Reference (reference/*.md)
 | **Curate** | `cron/prompts/curate-memory.md` | 每小時 (:02) | Early-return wrapper；有新 journal entry 就 promote 到 MEMORY.md / notes/ / LEARNINGS.md |
 | **Dreaming** | `memory-dream.sh` | 每週日 3am | 隨機跨領域記憶聯想找意外洞見 |
 | **Rumination** | `memory-reflect.sh` | 每週三 9pm | 比對近期 vs 長期記憶找矛盾 |
-| **Forgetting** | `memory-expire.sh` | 每月 1 日 | 歸檔 30 天以上的 daily 檔 |
+| **Forgetting** | `scripts/memory-archive.py` | 每日 09:05 | 5 天以上 journal rotate 進 `archive-YYYY-MM/` |
 | **Janitor** | `cron/prompts/memory-janitor.md` | 每日 20:07 | LLM-driven hall-tag 補標 + 重複偵測 + notes 品質檢查 |
 | **Compress** | `scripts/memory-compress.py` | 手動或月 1 次 | 長期記憶壓縮（摺舊 timeline、壓縮 P2、歸檔 >30d daily 到 `memory/archive/YYYY-MM/` 並寫 `MANIFEST.jsonl`；支援 `--list-archive` / `--restore YYYY-MM-DD` 審計 + 回滾） |
 

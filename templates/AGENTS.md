@@ -74,9 +74,9 @@ Two-layer memory system: **journal** (temporal) + **knowledge** (semantic).
 - **Use for:** "What happened" — things that occurred
 
 ### Layer 2: Knowledge (notes/)
-- **Structure:** `notes/areas/` (topics) + `notes/resources/` (tools/services)
+- **Structure:** PARA numbered dirs — `notes/00-Inbox/`, `notes/01-Projects/{Active,Archive}/`, `notes/02-Areas/` (topics), `notes/03-Resources/` (tools/services), `notes/04-Archive/`
 - **Strategy:** Merge before creating new — search first, append if exists
-- **Retrieval:** Add to `memorySearch.extraPaths` for full-text search
+- **Retrieval:** Claude Code scans `memory/` + `notes/` natively; OpenClaw mode adds `notes/` to `memorySearch.extraPaths`
 - **Use for:** "What was learned" — knowledge, methods, references
 
 ### Classification Tree
@@ -86,7 +86,7 @@ Is this "what happened" or "what was learned"?
 │   └─ Important enough for long-term index? → Also update MEMORY.md Events Timeline
 ├─ "What was learned" (knowledge/method/principle)
 │   ├─ Related notes/ already exist? → Merge into existing (don't create new)
-│   ├─ New topic + >500 words? → notes/areas/ or resources/ (create new)
+│   ├─ New topic + >500 words? → notes/02-Areas/ or 03-Resources/ (create new)
 │   └─ Fragment <500 words? → memory/YYYY-MM-DD.md, let cron sync organize
 ├─ Preference/infrastructure/core Pattern? → MEMORY.md (P0)
 ├─ Error/learning? → .learnings/LEARNINGS.md

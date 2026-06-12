@@ -22,7 +22,8 @@ fi
 # Also grab some MEMORY.md sections randomly
 MEMORY_SECTIONS=""
 if [ -f "$MEMORY_MD" ]; then
-  MEMORY_SECTIONS=$(grep -n "^## \|^### \|^- \*\*" "$MEMORY_MD" | shuf | head -5 | cut -d: -f2-)
+  # sort -R works on both BSD and GNU; shuf is GNU-only (absent on stock macOS)
+  MEMORY_SECTIONS=$(grep -nE "^## |^### |^- \*\*" "$MEMORY_MD" | sort -R | head -5 | cut -d: -f2-)
 fi
 
 # Build the prompt

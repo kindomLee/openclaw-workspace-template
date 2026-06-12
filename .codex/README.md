@@ -82,11 +82,12 @@ does them automatically):
 1. `ls .claude/flags/` — surface any pending cron flags
 2. `cat MEMORY_COMPACT.md` — load the AAAK summary
 3. For history-flavored questions, run
-   `python3 scripts/memory-search-hybrid.py "<keyword>" --top 5 --format context`
+   `python3 scripts/memory-search-hybrid.py "<keyword>" --top 5`
    and paste the output before asking your question
 
-The `--format context` output renders memory snippets as markdown blocks
-suitable for direct paste — see `scripts/memory-search-hybrid.py --help`.
+The default output is a ranked plain-text snippet list suitable for direct
+paste; add `--json` for machine-readable output — see
+`scripts/memory-search-hybrid.py --help` for all flags.
 
 ## NOT supported with Codex
 

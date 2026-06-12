@@ -1,3 +1,4 @@
+<!-- expected_interval: 604800 -->
 你是「做夢」引擎 cron job。從 memory journal 和 notes 知識庫中隨機抽取片段，找出跨領域的意外洞察。
 
 ## 步驟
@@ -11,10 +12,8 @@ find memory/ -name "2026-*.md" -mtime -30 -not -path "*/archive*" -not -name "dr
 
 **Notes 碎片**：從 notes/ 不同領域各抽 1-2 篇：
 ```bash
-# 從不同領域各抽一篇
-find notes/02-Areas/Coffee -name "*.md" | sort -R | head -1
-find notes/02-Areas/Tech -name "*.md" | sort -R | head -2
-find notes/02-Areas/Finance -name "*.md" | sort -R | head -1
+# 從每個 Area 各抽一篇（領域名依工作區實際分類，不假設特定主題）
+for d in notes/02-Areas/*/; do find "$d" -name "*.md" | sort -R | head -1; done
 find notes/03-Resources -name "*.md" | sort -R | head -1
 find notes/01-Projects/Active -name "*.md" | sort -R | head -1
 ```

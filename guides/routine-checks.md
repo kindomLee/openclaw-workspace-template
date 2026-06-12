@@ -83,7 +83,7 @@ COUNT=$(wc -l < "$REPORT" | tr -d ' ')
 if [ "$COUNT" -ge 5 ]; then
   cat > .claude/flags/broken-links.flag <<EOF
 Broken wikilinks ≥ 5 (found $COUNT).
-Run: read $REPORT, triage with scripts/add-wikilink-single.py, then rm .claude/flags/broken-links.flag
+Run: read $REPORT, fix the links or remove stale references, then rm .claude/flags/broken-links.flag
 EOF
 fi
 ```
@@ -136,21 +136,24 @@ The matching `cron/prompts/memory-janitor.md` tells the LLM exactly what to do (
 
 Used when a job genuinely needs multi-step reasoning over context — e.g. `memory-reflect` (weekly rumination) or `memory-dream` (weekly cross-domain association). Same wiring as Layer 2, the difference is just that the script upstream barely collects anything — the prompt tells the LLM to go read files itself.
 
-### Default schedule (shipped in `cron/launchd/`)
+### Default schedule
+
+Master table: [`templates/HEARTBEAT.md`](../templates/HEARTBEAT.md). The Layer
+view below adds the script-vs-LLM classification:
 
 | Time | Job | Layer | Purpose |
 |------|-----|-------|---------|
 | `:02` hourly | curate-memory | 2 | Early-return wrapper; when new journal entries exist, promote to MEMORY.md / notes/ / LEARNINGS.md |
-| 20:07 daily | memory-janitor | 2 | Hall-tag backfill + duplicate detection |
-| 21:07 daily | smart-wikilinks | 2 | Conservative wikilink/Related section suggestions for today's notes |
+| 09:05 daily | memory-archive-rotate | 1 | Journal >5 days → archive-YYYY-MM/ (pure shell) |
+| 20:07 daily | memory-janitor | 2 | Hall-tag backfill + duplicate detection + notes QA |
+| 21:07 daily | smart-wikilinks | 1 | Zero-LLM bare script: wikilink/Related suggestions |
 | 21:03 Wed (weekly) | memory-reflect | 3 | Contradiction detection across recent vs long-term memory |
-| 21:00 Mon (weekly) | weekly-memory-hygiene | 2 | Weekly bulk hygiene: hall tags, wikilinks, dedup, broken-link triage |
 | 03:03 Sun | memory-dream | 3 | Cross-domain cold-memory association |
-| 10:00 1st of month | monthly-review | 3 | Monthly highlights + stale-content review |
-| 03:33 1st of month | memory-expire | 1 | Archive memory/*.md older than 30 days |
+| 09:10 1st of month | memory-archive-timeline | 1 | MEMORY.md timeline rollup (pure shell) |
+| 10:00 1st of month | monthly-review | 3 | Monthly highlights + stale-content review + old-archive cleanup suggestions |
 | 21:30 Sat | self-improvement | 2 | Promote `.learnings/*` entries with `recurring_count ≥ 3` |
-| Mon 11:30 | cron-broken-links-check | 1 | Flag when broken wikilinks ≥ 5 |
-| Mon 11:32 | cron-notes-todo-check | 1 | Flag when TODO backlog ≥ 20 |
+| Mon 11:30 | cron-broken-links-check | 1 | Flag when broken wikilinks ≥ 5 — `templates/crontab.example` (OpenClaw mode), no launchd plist |
+| Mon 11:32 | cron-notes-todo-check | 1 | Flag when TODO backlog ≥ 20 — `templates/crontab.example` (OpenClaw mode), no launchd plist |
 
 Install: `bash cron/install-mac.sh` (macOS) or `bash cron/install-linux.sh` (Linux). See `cron/README.md` for details.
 

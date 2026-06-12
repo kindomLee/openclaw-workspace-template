@@ -1,4 +1,5 @@
 <!-- allowed_tools: Bash,Read,Write,Edit,Grep,Glob -->
+<!-- expected_interval: 86400 -->
 <!--
 ⚠️ DEPRECATED — 預設改用 zero-LLM 實作 `cron/bin/smart-wikilinks-bare.sh`（bash + python）。
 `runner.sh` 偵測到同名 `bin/<job>-bare.sh` 會優先跑它，本 prompt 不再被執行。

@@ -28,10 +28,12 @@ from datetime import datetime
 from difflib import unified_diff
 from pathlib import Path
 
-API_URL = "https://api.minimax.io/anthropic/v1/messages"
-API_KEY = os.environ["MINIMAX_API_KEY"]
-# 對齊 2026-06-04 本機 mm cron 全面切 M3（commit e5cda77）；M3 能力 > M2.7。
-MODEL = "MiniMax-M3"
+# Any Anthropic-compatible /v1/messages endpoint works (Anthropic, MiniMax, self-hosted proxy).
+API_URL = os.environ.get("LLM_API_URL", "https://api.minimax.io/anthropic/v1/messages")
+API_KEY = os.environ.get("LLM_API_KEY") or os.environ.get("MINIMAX_API_KEY") or ""
+if not API_KEY:
+    raise SystemExit("LLM_API_KEY (or legacy MINIMAX_API_KEY) not set")
+MODEL = os.environ.get("LLM_MODEL", "MiniMax-M3")
 
 # Timeouts scale with task complexity
 TIMEOUT_EVAL = 90       # Eval: short output but thinking takes time

@@ -76,7 +76,7 @@ if ! command -v claude >/dev/null 2>&1; then
   if [ "$SKIP_CLAUDE_CHECK" -eq 1 ]; then
     RECOMMENDED_MISSING+=("claude (Claude Code CLI — skipped via --skip-claude-check; cron/ remains Claude-only)")
   else
-    MISSING+=("claude (Claude Code CLI — see https://docs.claude.com/claude-code, or pass --skip-claude-check for Codex-only setup)")
+    MISSING+=("claude (Claude Code CLI — see https://code.claude.com/docs, or pass --skip-claude-check for Codex-only setup)")
   fi
 fi
 if ! command -v timeout >/dev/null 2>&1 && ! command -v gtimeout >/dev/null 2>&1; then

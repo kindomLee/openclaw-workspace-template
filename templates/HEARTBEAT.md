@@ -27,17 +27,26 @@ launchd / crontab
 
 Default schedule:
 
+> **This table is the single source of truth** for the shipped schedule.
+> `cron/README.md` and `guides/routine-checks.md` link here; verify with
+> `python3 scripts/check-schedule-drift.py`.
+
 | Time | Job | Purpose |
 |------|-----|---------|
 | `:02` hourly | curate-memory | Early-return curate (journal → MEMORY.md/notes/LEARNINGS.md) |
-| 20:07 daily | memory-janitor | Hall tag backfill + dup detection |
-| 21:07 daily | smart-wikilinks | Daily wikilink/Related suggestions |
+| 09:05 daily | memory-archive-rotate | Journal >5 days → `archive-YYYY-MM/` (pure shell, no LLM) |
+| 20:07 daily | memory-janitor | Hall tag backfill + dup detection + notes QA |
+| 21:07 daily | smart-wikilinks | Wikilink/Related suggestions (zero-LLM bare script) |
 | 21:03 Wed (weekly) | memory-reflect | Contradiction detection |
-| 21:00 Mon (weekly) | weekly-memory-hygiene | Bulk hygiene + broken-link triage |
 | 21:30 Sat (weekly) | self-improvement | LEARNINGS promote |
 | 03:03 Sun (weekly) | memory-dream | Cross-domain association |
-| 10:00 1st (monthly) | monthly-review | Monthly highlights + stale-content review |
-| 03:33 1st (monthly) | memory-expire | Archive old memories |
+| 09:10 1st (monthly) | memory-archive-timeline | MEMORY.md timeline rollup (pure shell, no LLM) |
+| 10:00 1st (monthly) | monthly-review | Monthly highlights + stale-content review + old-archive cleanup suggestions |
+
+Retired jobs: `memory-expire` (daily rotate made its monthly 60-day scan a
+permanent no-op; surviving duties moved into monthly-review) and
+`weekly-memory-hygiene` (every duty was a superset copy of memory-janitor /
+smart-wikilinks / the Monday broken-links flag check).
 
 Install: `bash cron/install-mac.sh` or `bash cron/install-linux.sh`
 
