@@ -22,6 +22,9 @@
 copy_tree templates
 copy_tree scripts scripts
 copy_tree cron cron
+# .codex/ ships the Codex-runtime usage notes that bootstrap.sh's Codex
+# next-steps point at — without this line new workspaces lack the file.
+copy_tree .codex .codex
 
 # ---- Directories created unconditionally ------------------------------
 # These exist so downstream tooling (memory system, notes system, cron

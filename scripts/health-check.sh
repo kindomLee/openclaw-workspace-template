@@ -114,7 +114,7 @@ if [ "$MODE" = "claude" ]; then
     if command -v claude >/dev/null 2>&1; then
         pass "claude CLI"
     else
-        fail "claude CLI not in PATH (install: https://docs.claude.com/claude-code)"
+        fail "claude CLI not in PATH (install: https://code.claude.com/docs)"
     fi
     if [ -f "$WORKSPACE/.claude/settings.json" ]; then
         if python3 -c "import json; json.load(open('$WORKSPACE/.claude/settings.json'))" 2>/dev/null; then

@@ -26,11 +26,11 @@ After installing:
 
 - 🧬 **Your agent evolves its soul** — Behavioral corrections accumulate as proposals; after 3+ similar corrections, the agent proposes a `SOUL.md` update (with your approval).
 
-- 📚 **Your agent builds a knowledge base** — Topic-organized notes (`notes/areas/`, `notes/resources/`) complement daily logs (`memory/`). The knowledge layer merges related entries instead of creating fragments. Add `notes/` to `memorySearch.extraPaths` for full-text retrieval. See [Context Tree guide](guides/context-tree.md).
+- 📚 **Your agent builds a knowledge base** — Topic-organized notes in PARA-style numbered dirs (`notes/01-Projects/` … `notes/04-Archive/`) complement daily logs (`memory/`). The knowledge layer merges related entries instead of creating fragments. Claude Code mode scans `memory/` + `notes/` out of the box; in OpenClaw mode add `notes/` to `memorySearch.extraPaths` for full-text retrieval. See [Context Tree guide](guides/context-tree.md).
 
 - 🔍 **Your agent finds things faster** — Hybrid memory search (`scripts/memory-search-hybrid.py`) scores `memory/` and `notes/` by **BM25 (with jieba CJK tokenization) × temporal recency × hall-type boost**. Auto-falls back to a pure keyword-overlap mode when `jieba` / `rank_bm25` aren't installed (or via `--no-bm25`). A MemPalace-inspired hall taxonomy (`hall_facts`, `hall_events`, `hall_discoveries`, `hall_preferences`, `hall_advice`) tags journal entries for better retrieval, and a UserPromptSubmit hook forces a memory search whenever hard-trigger keywords appear — so "should I search memory?" is no longer a judgment call.
 
-- 🚩 **Your agent has a pending-work inbox** — A **cron → flag → SessionStart hook** pipeline turns deterministic background checks (broken wikilinks, TODO backlog, stale caches) into flag files under `.claude/flags/`. Cron does the detection; the next Claude session picks them up via a SessionStart hook and acts on them. Cron never wakes the LLM directly — "hard trigger, soft action". See [flag-system guide](guides/flag-system.md).
+- 🚩 **Your agent has a pending-work inbox** — A **cron → flag → SessionStart hook** pipeline turns deterministic background checks (broken wikilinks, TODO backlog, stale caches) into flag files under `.claude/flags/`. Cron does the detection; the next Claude session picks them up via a SessionStart hook and acts on them. The flag pipeline itself never wakes the LLM — "hard trigger, soft action" (the LLM cron jobs under [cron/](cron/README.md) are a separate, schedule-driven path that does run `claude -p`). See [flag-system guide](guides/flag-system.md).
 
 ## Features at a Glance
 
@@ -39,7 +39,7 @@ After installing:
 | **Memory journal** | `memory/YYYY-MM-DD.md` | Daily logs with `[hall_*]` taxonomy tags for retrieval |
 | **Long-term memory** | `MEMORY.md` | Curated facts, infrastructure, patterns (P0/P1/P2 priority) |
 | **AAAK compact** | `MEMORY_COMPACT.md` | Lossless ~200-token snapshot loaded on every session |
-| **Knowledge base** | `notes/areas/`, `notes/resources/` | Topic-organized notes that complement journal entries |
+| **Knowledge base** | `notes/01-Projects/` – `notes/04-Archive/` (PARA) | Topic-organized notes that complement journal entries |
 | **Hybrid search** | `scripts/memory-search-hybrid.py` | BM25 (jieba CJK) × temporal recency × hall-type boost; falls back to keyword overlap |
 | **Hall-type tags** | `[hall_facts]` `[hall_events]` `[hall_discoveries]` `[hall_preferences]` `[hall_advice]` | Categorize journal entries for boosted retrieval |
 | **Self-improvement** | `.learnings/`, `LEARNINGS.md` | Track corrections / errors / gaps; auto-promote when recurring ≥ 3 |
@@ -64,7 +64,7 @@ After installing:
 
 1. Install your runtime of choice:
 ```bash
-# Claude Code (default) — see https://docs.claude.com/claude-code for installer
+# Claude Code (default) — see https://code.claude.com/docs for installer
 # OpenClaw (alternative)
 curl -fsSL https://openclaw.ai/install.sh | bash
 # OpenAI Codex (interactive only — no cron) — see .codex/README.md
@@ -114,12 +114,14 @@ See [cron/README.md](cron/README.md) for details and [Post-Install Checklist](gu
 
 ```
 workspace/
+├── CLAUDE.md          # Claude Code priming (read first each session)
 ├── AGENTS.md          # Operating manual (read every session)
 ├── SOUL.md            # Personality & decision priors
 ├── IDENTITY.md        # Name & emoji
 ├── USER.md            # About the human
 ├── TOOLS.md           # Quick reference for tools & connections
 ├── MEMORY.md          # Curated long-term memory (P0/P1/P2)
+├── MEMORY_COMPACT.md  # Machine-oriented compact memory (generated)
 ├── HEARTBEAT.md       # Scheduled tasks architecture
 ├── BOOTSTRAP.md       # Pre-generation task classification
 ├── memory/            # Daily journal (YYYY-MM-DD.md)
@@ -127,8 +129,11 @@ workspace/
 │   ├── reflections.md # Weekly memory rumination (Wed 9pm)
 │   └── archive-*/     # Auto-archived old memories
 ├── notes/             # Knowledge base — optional, merge-first (see guides/context-tree.md)
-│   ├── areas/         # Topics by domain
-│   └── resources/     # Tools, services, references
+│   ├── 00-Inbox/      # Unsorted captures
+│   ├── 01-Projects/   # Active / Archive project notes
+│   ├── 02-Areas/      # Topics by domain
+│   ├── 03-Resources/  # Tools, services, references
+│   └── 04-Archive/    # Retired notes
 ├── .learnings/        # Self-improvement tracking
 │   ├── ERRORS.md
 │   ├── LEARNINGS.md
@@ -161,11 +166,7 @@ workspace/
 │   ├── check-schedule-drift.py    # Verify doc schedule tables match plists
 │   ├── install-cron.sh            # Print / install the crontab snippet
 │   └── health-check.sh            # Post-install verification
-└── guides/            # Reference documentation
-    ├── self-improvement.md
-    ├── sub-agent-patterns.md
-    ├── routine-checks.md
-    └── multi-instance.md
+└── guides/            # Reference documentation — see the Guides section below
 ```
 
 ## Memory System
@@ -181,7 +182,7 @@ Knowledge Base (notes/)     # Optional — topics organized by theme
 Reference (reference/*.md)
 ```
 
-> **Optional:** Add `notes/` to `memorySearch.extraPaths` for full-text search across the knowledge base. See [Context Tree guide](guides/context-tree.md) for setup details.
+> **Optional (OpenClaw mode):** Add `notes/` to `memorySearch.extraPaths` for full-text search across the knowledge base. Claude Code mode already scans `memory/` + `notes/` — no extra config needed. See [Context Tree guide](guides/context-tree.md) for setup details.
 
 ### Sleep-Inspired Memory Lifecycle
 

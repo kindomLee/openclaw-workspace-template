@@ -83,7 +83,7 @@ COUNT=$(wc -l < "$REPORT" | tr -d ' ')
 if [ "$COUNT" -ge 5 ]; then
   cat > .claude/flags/broken-links.flag <<EOF
 Broken wikilinks ≥ 5 (found $COUNT).
-Run: read $REPORT, triage with scripts/add-wikilink-single.py, then rm .claude/flags/broken-links.flag
+Run: read $REPORT, fix the links or remove stale references, then rm .claude/flags/broken-links.flag
 EOF
 fi
 ```
