@@ -105,20 +105,24 @@ for plist in "$PLIST_DIR"/*.plist; do
   echo "  + Installed $LABEL"
 done
 
-# Orphan sweep: previously-installed org.oracle.* jobs whose plist no longer
-# ships in cron/launchd/ (retired jobs, e.g. memory-expire) would otherwise
-# keep firing against deleted prompts. Install acts as a sync.
-for installed in "$LAUNCH_AGENTS_DIR"/org.oracle.*.plist; do
+# Retired-job sweep: jobs this template used to ship but has since removed
+# would otherwise keep firing against deleted prompts on existing installs.
+# Deliberately an explicit list — NOT a generic "anything org.oracle.* we
+# don't know" sweep, because users may run other org.oracle.* LaunchAgents
+# that have nothing to do with this template.
+RETIRED_JOBS=(
+  org.oracle.memory-expire
+  org.oracle.weekly-memory-hygiene
+)
+for LABEL in "${RETIRED_JOBS[@]}"; do
+  installed="$LAUNCH_AGENTS_DIR/$LABEL.plist"
   [ -f "$installed" ] || continue
-  LABEL=$(basename "$installed" .plist)
-  if [ ! -f "$PLIST_DIR/$LABEL.plist" ]; then
-    if [ "$DRY_RUN" = "true" ]; then
-      echo "  [dry-run] would remove retired job $LABEL"
-    else
-      launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
-      rm -f "$installed"
-      echo "  - Removed retired job $LABEL"
-    fi
+  if [ "$DRY_RUN" = "true" ]; then
+    echo "  [dry-run] would remove retired job $LABEL"
+  else
+    launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
+    rm -f "$installed"
+    echo "  - Removed retired job $LABEL"
   fi
 done
 
