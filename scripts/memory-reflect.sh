@@ -29,7 +29,7 @@ fi
 # Gather MEMORY.md key sections (not full file to keep prompt small)
 MEMORY_CONTEXT=""
 if [ -f "$MEMORY_MD" ]; then
-  MEMORY_CONTEXT=$(grep -A 2 "^## \|^### \|^- \*\*" "$MEMORY_MD" | head -60)
+  MEMORY_CONTEXT=$(grep -A 2 -E "^## |^### |^- \*\*" "$MEMORY_MD" | head -60)
 fi
 
 PROMPT="You are a memory rumination engine. Review recent memories against long-term memory.

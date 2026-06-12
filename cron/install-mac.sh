@@ -67,6 +67,24 @@ echo "  Project: $PROJECT_DIR"
 echo "  Home:    $HOME"
 [ "$DRY_RUN" = "true" ] && echo "  [dry-run — no files will be written and launchctl will not be called]"
 
+# launchd does not inherit the login-shell PATH. The plists ship a static
+# PATH; if `claude` lives elsewhere (nvm / volta / asdf installs), prepend
+# its real directory so jobs can find the CLI.
+PLIST_PATH_TEMPLATE="__HOME__/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+EFFECTIVE_PATH="$PLIST_PATH_TEMPLATE"
+CLAUDE_BIN="$(command -v claude 2>/dev/null || true)"
+if [ -n "$CLAUDE_BIN" ]; then
+  CLAUDE_DIR="$(dirname "$CLAUDE_BIN")"
+  EXPANDED_PATH="${PLIST_PATH_TEMPLATE//__HOME__/$HOME}"
+  case ":$EXPANDED_PATH:" in
+    *":$CLAUDE_DIR:"*) ;;  # already covered
+    *) EFFECTIVE_PATH="$CLAUDE_DIR:$PLIST_PATH_TEMPLATE"
+       echo "  PATH:    prepending $CLAUDE_DIR (claude lives outside the default plist PATH)" ;;
+  esac
+else
+  echo "  WARNING: 'claude' not found in PATH — launchd jobs will fail until it is installed" >&2
+fi
+
 for plist in "$PLIST_DIR"/*.plist; do
   [ -f "$plist" ] || continue
   LABEL=$(basename "$plist" .plist)
@@ -79,7 +97,8 @@ for plist in "$PLIST_DIR"/*.plist; do
 
   # bootout first — safe to fail if the job isn't already loaded
   launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
-  sed -e "s|__PROJECT_DIR__|$PROJECT_DIR|g" \
+  sed -e "s|$PLIST_PATH_TEMPLATE|$EFFECTIVE_PATH|g" \
+      -e "s|__PROJECT_DIR__|$PROJECT_DIR|g" \
       -e "s|__HOME__|$HOME|g" \
       "$plist" > "$DEST"
   launchctl bootstrap "gui/$(id -u)" "$DEST"

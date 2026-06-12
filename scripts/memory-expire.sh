@@ -17,7 +17,7 @@ EXPIRED_COUNT=0
 # Find daily memory files older than cutoff
 while IFS= read -r file; do
   basename=$(basename "$file" .md)
-  file_date=$(echo "$basename" | grep -oP '^\d{4}-\d{2}-\d{2}' 2>/dev/null || echo "$basename" | grep -oE '^[0-9]{4}-[0-9]{2}-[0-9]{2}' || true)
+  file_date=$(echo "$basename" | grep -oE '^[0-9]{4}-[0-9]{2}-[0-9]{2}' || true)
   
   if [ -n "$file_date" ] && [[ "$file_date" < "$CUTOFF_DATE" ]]; then
     EXPIRED_COUNT=$((EXPIRED_COUNT + 1))

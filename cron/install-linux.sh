@@ -29,13 +29,26 @@ done
 # Placeholder substitution (`__PROJECT_DIR__`, `__HOME__`) mirrors what
 # install-mac.sh does for plist contents at install time.
 generate_crontab_entries() {
-  python3 - "$PLIST_DIR" "$RUNNER" "$PROJECT_DIR" "$HOME" <<'PYEOF'
+  # Vixie cron runs jobs with PATH=/usr/bin:/bin and does NOT expand
+  # variables in env lines, so we detect claude's real location here and
+  # bake a fully-expanded PATH line into the generated block.
+  local claude_dir
+  claude_dir="$(dirname "$(command -v claude 2>/dev/null)" 2>/dev/null || true)"
+  python3 - "$PLIST_DIR" "$RUNNER" "$PROJECT_DIR" "$HOME" "$claude_dir" <<'PYEOF'
 import plistlib, sys, os
 
 plist_dir   = sys.argv[1]
 runner      = sys.argv[2]
 project_dir = sys.argv[3]
 home_dir    = sys.argv[4]
+claude_dir  = sys.argv[5] if len(sys.argv) > 5 else ''
+
+# PATH for all generated entries (mirrors the launchd plists' PATH, fully
+# expanded because cron env lines do not expand variables).
+path_dirs = [os.path.join(home_dir, '.local/bin'), '/usr/local/bin', '/usr/bin', '/bin']
+if claude_dir and claude_dir not in path_dirs:
+    path_dirs.insert(0, claude_dir)
+print('PATH=' + ':'.join(path_dirs))
 
 
 def resolve(s: str) -> str:
@@ -70,17 +83,33 @@ for fname in sorted(os.listdir(plist_dir)):
     # Decide which plist style we have, build the command tail.
     first = prog[0] if prog else ''
     if first.endswith('runner.sh') and len(prog) >= 2:
+        stem = prog[-1]
         cmd_tail = f"{runner} {prog[-1]}"
     elif first in ('/bin/bash', '/bin/sh') and len(prog) >= 3 and prog[1] in ('-lc', '-c'):
+        stem = fname[:-len('.plist')].rsplit('.', 1)[-1]
         cmd_tail = resolve(prog[-1])
     else:
         print(f"# WARNING: {fname} unsupported ProgramArguments shape (skipped)", file=sys.stderr)
         continue
 
+    # cron has no launchd StandardOutPath equivalent — without a redirect,
+    # stdout becomes local mail. Append per-job log redirection unless the
+    # command already manages its own.
+    if '>>' not in cmd_tail and '2>&1' not in cmd_tail:
+        log_path = os.path.join(project_dir, 'cron/logs', f'cron-{stem}.log')
+        cmd_tail = f"{cmd_tail} >> {log_path} 2>&1"
+
     entries = cal if isinstance(cal, list) else [cal]
     # Deduplicate: group by (minute, hour, day) and merge weekdays
     seen = {}
     for c in entries:
+        # launchd ANDs Day with Weekday; POSIX cron ORs them — silently
+        # different semantics, so refuse to translate that shape.
+        if 'Day' in c and 'Weekday' in c:
+            print(f"# WARNING: {fname} sets both Day and Weekday "
+                  "(launchd=AND, cron=OR — semantics differ); entry skipped",
+                  file=sys.stderr)
+            continue
         m = str(c.get('Minute', '*'))
         h = str(c.get('Hour', '*'))
         dom = str(c.get('Day', '*'))
@@ -135,6 +164,9 @@ if $DRY_RUN; then
   echo "$BLOCK"
   exit 0
 fi
+
+# Generated entries redirect into cron/logs — make sure it exists.
+mkdir -p "$PROJECT_DIR/cron/logs"
 
 # Get current crontab, remove old Oracle block, add new one
 CURRENT=$(crontab -l 2>/dev/null || true)
