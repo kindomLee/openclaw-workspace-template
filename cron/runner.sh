@@ -83,7 +83,14 @@ BARE_SCRIPT="$SCRIPT_DIR/bin/${JOB}-bare.sh"
 if [ -f "$BARE_SCRIPT" ]; then
   mkdir -p "$LOG_DIR"
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] Running zero-LLM bare implementation: $BARE_SCRIPT" | tee "$LOG_FILE"
-  if bash "$BARE_SCRIPT"; then exit 0; else exit $?; fi
+  if bash "$BARE_SCRIPT"; then
+    exit 0
+  else
+    BARE_EXIT=$?
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Bare job $JOB failed with exit $BARE_EXIT" | tee -a "$LOG_FILE"
+    notify "❌ Cron job ${JOB} (bare script) failed with exit ${BARE_EXIT} (log: $(basename "$LOG_FILE"))"
+    exit "$BARE_EXIT"
+  fi
 fi
 
 # Check prompt file exists
