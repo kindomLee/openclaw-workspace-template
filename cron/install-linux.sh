@@ -32,8 +32,14 @@ generate_crontab_entries() {
   # Vixie cron runs jobs with PATH=/usr/bin:/bin and does NOT expand
   # variables in env lines, so we detect claude's real location here and
   # bake a fully-expanded PATH line into the generated block.
-  local claude_dir
-  claude_dir="$(dirname "$(command -v claude 2>/dev/null)" 2>/dev/null || true)"
+  local claude_bin claude_dir
+  claude_bin="$(command -v claude 2>/dev/null || true)"
+  claude_dir=""
+  if [ -n "$claude_bin" ]; then
+    claude_dir="$(dirname "$claude_bin")"
+  else
+    echo "WARNING: 'claude' not found in PATH — generated jobs will fail until it is installed" >&2
+  fi
   python3 - "$PLIST_DIR" "$RUNNER" "$PROJECT_DIR" "$HOME" "$claude_dir" <<'PYEOF'
 import plistlib, sys, os
 

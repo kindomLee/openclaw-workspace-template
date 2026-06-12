@@ -1,4 +1,5 @@
 <!-- allowed_tools: Bash,Read,Write,Edit,Grep,Glob -->
+<!-- expected_interval: 3600 -->
 Cron curate-memory wrapper（定期跑，預設 no-op 快速返回）。
 
 ## 設計原則

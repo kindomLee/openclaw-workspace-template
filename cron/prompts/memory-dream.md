@@ -1,3 +1,4 @@
+<!-- expected_interval: 604800 -->
 你是「做夢」引擎 cron job。從 memory journal 和 notes 知識庫中隨機抽取片段，找出跨領域的意外洞察。
 
 ## 步驟

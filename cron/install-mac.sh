@@ -105,6 +105,23 @@ for plist in "$PLIST_DIR"/*.plist; do
   echo "  + Installed $LABEL"
 done
 
+# Orphan sweep: previously-installed org.oracle.* jobs whose plist no longer
+# ships in cron/launchd/ (retired jobs, e.g. memory-expire) would otherwise
+# keep firing against deleted prompts. Install acts as a sync.
+for installed in "$LAUNCH_AGENTS_DIR"/org.oracle.*.plist; do
+  [ -f "$installed" ] || continue
+  LABEL=$(basename "$installed" .plist)
+  if [ ! -f "$PLIST_DIR/$LABEL.plist" ]; then
+    if [ "$DRY_RUN" = "true" ]; then
+      echo "  [dry-run] would remove retired job $LABEL"
+    else
+      launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
+      rm -f "$installed"
+      echo "  - Removed retired job $LABEL"
+    fi
+  fi
+done
+
 if [ "$DRY_RUN" = "true" ]; then
   echo "Dry run complete. Re-run without --dry-run to actually install."
 else

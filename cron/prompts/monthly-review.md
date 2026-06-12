@@ -1,4 +1,5 @@
 <!-- allowed_tools: Bash,Read,Write,Grep,Glob -->
+<!-- expected_interval: 2678400 -->
 你是 monthly review cron job。每月一次整理 memory + notes 的月度狀況，並回顧過時內容。
 
 ## 設計原則

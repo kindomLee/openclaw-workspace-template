@@ -1,3 +1,4 @@
+<!-- expected_interval: 604800 -->
 你是 Self-Improvement cron job。定期檢查 LEARNINGS.md，分析 recurring patterns，必要時提升到 MEMORY.md。
 
 ## 步驟
