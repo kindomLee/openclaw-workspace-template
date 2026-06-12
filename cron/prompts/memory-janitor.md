@@ -47,7 +47,7 @@ Hall Tag 補標：
 • 2026-04-12.md 第 15 行 ≈ 第 23 行（疑似重複，已標記）
 
 Notes 品質：
-• polymarket-research.md — 缺 tags
+• research-notes.md — 缺 tags
 • blog-content-2026.md — 缺 Related 區塊
 
 MEMORY_COMPACT：L1_RECENT 已更新

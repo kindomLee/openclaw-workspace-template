@@ -102,7 +102,7 @@ won't override the default job timeout.
 
 | Variable | Purpose |
 |----------|---------|
-| `MINIMAX_API_KEY` | MiniMax LLM API, used by some prompts if available |
+| `LLM_API_URL` / `LLM_MODEL` / `LLM_API_KEY` | Optional Anthropic-compatible endpoint for the lightweight skill-evolve / skill-genesis scripts (defaults to MiniMax; legacy `MINIMAX_API_KEY` still honored) |
 | `NOTIFY_CHANNEL` / `SLACK_WEBHOOK_URL` | Alternative non-Telegram notification routing — see `scripts/lib/notify.sh` |
 
 Jobs themselves can override `JOB_TIMEOUT` by exporting a different

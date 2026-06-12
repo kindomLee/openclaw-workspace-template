@@ -6,13 +6,13 @@
 # - skip unsafe startup replay
 # - disable interrupted one-shot jobs to surface visible failure
 #
-# 解的問題（polymarket-bot.md 已知坑）：
+# 解的問題（Mac 深度睡眠時 launchd 不補跑的已知坑）：
 #   "Mac 深度睡眠時 launchd StartCalendarInterval 不觸發，醒來只補跑 1 次
 #    → 盲點，目前無 safety net"
 #
 # 用法（在每個 cron-wrapper.sh 開頭）：
 #     source "$PROJECT_DIR/scripts/lib/cron-state.sh"
-#     cron_state_record "polymarket-cron" 1800   # job_id, expected_interval_seconds
+#     cron_state_record "my-job" 1800   # job_id, expected_interval_seconds
 #     ... 你的 cron 邏輯 ...
 #
 # 環境變數：

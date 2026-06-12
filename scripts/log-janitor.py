@@ -4,10 +4,7 @@
 仿 OpenClaw 2026.4.22 Tokenjuice pattern：壓縮 noisy exec/bash 輸出。
 不靠 LLM，純規則：保留 ALERT/ERROR/WARN 行 + 統計，丟 INFO 細節。
 
-預設掃以下路徑（可用 --root 覆寫，多個用逗號）：
-- {project_root}/cron/logs/*.log
-- /Users/cfh00929692/projects/polymarket-bot/logs/cron-*.log
-- /Users/cfh00929692/projects/polymarket-bot/logs/patrol-*.log
+預設掃 {project_root}/cron/logs/*.log（可用 --root 覆寫，多個用逗號）。
 
 Usage:
     python3 scripts/log-janitor.py                      # 預設 dry-run
