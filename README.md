@@ -45,7 +45,7 @@ After installing:
 | **Self-improvement** | `.learnings/`, `LEARNINGS.md` | Track corrections / errors / gaps; auto-promote when recurring ≥ 3 |
 | **Memory dreaming** | `cron/prompts/memory-dream.md` | Weekly cross-domain association of unrelated memories |
 | **Memory rumination** | `cron/prompts/memory-reflect.md` | Weekly contradiction detection with action-tracking + stale-check |
-| **Memory expiry** | `cron/prompts/memory-expire.md` | Monthly auto-archive of memories older than 30 days |
+| **Memory archiving** | `scripts/memory-archive.py` (daily rotate + monthly timeline rollup) | Pure-shell journal archiving — no LLM session needed |
 | **Memory janitor** | `cron/prompts/memory-janitor.md` | Hall-tag backfill + duplicate detection + notes quality check |
 | **Cron → flag → hook** | `.claude/flags/`, `.claude/hooks/session-start-flags.sh` | Background checks drop flags; next session picks them up |
 | **Personality** | `SOUL.md`, `IDENTITY.md`, `USER.md` | Decision priors, name/emoji, user profile |
@@ -157,7 +157,7 @@ workspace/
 │   ├── cron-notes-todo-check.sh    # Flag when TODO backlog > N
 │   ├── memory-dream.sh    # Weekly "dreaming" — cold memory association
 │   ├── memory-reflect.sh  # Weekly rumination — contradiction detection
-│   ├── memory-expire.sh   # Monthly archive of old daily files
+│   ├── memory-expire.sh   # (deprecated — superseded by memory-archive.py)
 │   ├── memory-compress.py # Long-term memory compression (MEMORY.md + archive)
 │   ├── memory-search-hybrid.py   # BM25 (jieba) × temporal × hall scoring (legacy fallback)
 │   ├── hall-tagger.sh             # Backfill hall_* tags on journal bullets
@@ -193,7 +193,7 @@ Inspired by research on [how biological sleep consolidates memory](https://x.com
 | **Curate** | `cron/prompts/curate-memory.md` | Hourly (:02) | Early-return wrapper; when new journal entries exist, promote to MEMORY.md / notes/ / LEARNINGS.md |
 | **Dreaming** | `memory-dream.sh` | Weekly (Sun 3am) | Random cross-domain memory association for unexpected insights |
 | **Rumination** | `memory-reflect.sh` | Weekly (Wed 9pm) | Compare recent vs long-term memory, detect contradictions |
-| **Forgetting** | `memory-expire.sh` | Monthly (1st) | Archive daily files older than 30 days |
+| **Forgetting** | `scripts/memory-archive.py` | Daily (09:05) | Rotate journal >5 days into `archive-YYYY-MM/` |
 | **Janitor** | `cron/prompts/memory-janitor.md` | Daily (20:07) | LLM-driven hall-tag backfill + duplicate detection + notes quality check |
 | **Compress** | `scripts/memory-compress.py` | Manual or monthly | Compression-based long-term memory maintenance (fold old timeline, compress P2, archive daily logs >30d into `memory/archive/YYYY-MM/` with `MANIFEST.jsonl`; supports `--list-archive` / `--restore YYYY-MM-DD` for audit + rollback) |
 

@@ -1,7 +1,13 @@
 #!/bin/bash
 # memory-expire.sh — Auto-archive old daily memory files
 # Moves daily memory files older than 30 days to archive-YYYY-MM/
+#
+# DEPRECATED: the daily memory-archive rotate job (scripts/memory-archive.py
+# via cron-memory-archive.sh, 5-day window) supersedes this monthly 30-day
+# scan — with both installed this script never finds anything. Kept for
+# workspaces that opted out of the daily rotate. Not in crontab.example.
 set -euo pipefail
+echo "NOTE: memory-expire.sh is deprecated — prefer the daily memory-archive rotate job (see templates/HEARTBEAT.md)" >&2
 
 WORKSPACE="${OPENCLAW_WORKSPACE:-$(cd "$(dirname "$0")/.." && pwd)}"
 MEMORY_DIR="$WORKSPACE/memory"

@@ -45,7 +45,7 @@
 | **Self-improvement** | `.learnings/`、`LEARNINGS.md` | 追蹤 correction / error / gap，≥ 3 次自動 promote |
 | **Memory dreaming** | `cron/prompts/memory-dream.md` | 每週跨領域記憶關聯 |
 | **Memory rumination** | `cron/prompts/memory-reflect.md` | 每週矛盾偵測 + action tracking + stale check |
-| **Memory expiry** | `cron/prompts/memory-expire.md` | 每月自動歸檔 30 天以上的 journal |
+| **Memory archiving** | `scripts/memory-archive.py`（每日 rotate + 每月 timeline 摺疊） | 純 shell journal 歸檔，不需 LLM session |
 | **Memory janitor** | `cron/prompts/memory-janitor.md` | Hall tag 補標 + 重複偵測 + notes 品質檢查 |
 | **Cron → flag → hook** | `.claude/flags/`、`.claude/hooks/session-start-flags.sh` | 背景檢查寫 flag，下一個 session 接手 |
 | **人格** | `SOUL.md`、`IDENTITY.md`、`USER.md` | 決策偏好、名字/emoji、使用者資料 |
@@ -155,7 +155,7 @@ workspace/
 │   ├── cron-notes-todo-check.sh    # TODO backlog > N 就寫 flag
 │   ├── memory-dream.sh    # 每週 "dreaming" — 冷記憶聯想
 │   ├── memory-reflect.sh  # 每週 rumination — 矛盾偵測
-│   ├── memory-expire.sh   # 每月歸檔舊 daily 檔
+│   ├── memory-expire.sh   # （已棄用——由 memory-archive.py 取代）
 │   ├── memory-compress.py # 長期記憶壓縮（MEMORY.md + archive）
 │   ├── memory-search-hybrid.py   # BM25（jieba）× 時間 × hall 評分（legacy fallback）
 │   ├── hall-tagger.sh             # 回補 journal bullet 的 hall_* tag
@@ -195,7 +195,7 @@ Reference (reference/*.md)
 | **Curate** | `cron/prompts/curate-memory.md` | 每小時 (:02) | Early-return wrapper；有新 journal entry 就 promote 到 MEMORY.md / notes/ / LEARNINGS.md |
 | **Dreaming** | `memory-dream.sh` | 每週日 3am | 隨機跨領域記憶聯想找意外洞見 |
 | **Rumination** | `memory-reflect.sh` | 每週三 9pm | 比對近期 vs 長期記憶找矛盾 |
-| **Forgetting** | `memory-expire.sh` | 每月 1 日 | 歸檔 30 天以上的 daily 檔 |
+| **Forgetting** | `scripts/memory-archive.py` | 每日 09:05 | 5 天以上 journal rotate 進 `archive-YYYY-MM/` |
 | **Janitor** | `cron/prompts/memory-janitor.md` | 每日 20:07 | LLM-driven hall-tag 補標 + 重複偵測 + notes 品質檢查 |
 | **Compress** | `scripts/memory-compress.py` | 手動或月 1 次 | 長期記憶壓縮（摺舊 timeline、壓縮 P2、歸檔 >30d daily 到 `memory/archive/YYYY-MM/` 並寫 `MANIFEST.jsonl`；支援 `--list-archive` / `--restore YYYY-MM-DD` 審計 + 回滾） |
 

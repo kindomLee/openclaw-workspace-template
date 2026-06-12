@@ -77,8 +77,8 @@ notes/
 └── 04-Archive/              # Cold storage — moved out of daily use
 ```
 
-The cron prompts (`curate-memory`, `weekly-memory-hygiene`,
-`monthly-review`, `smart-wikilinks`) all assume this layout — if you
+The cron prompts (`curate-memory`, `monthly-review`) and the
+smart-wikilinks bare script all assume this layout — if you
 rename or flatten it, adjust those prompts too.
 
 > **Naming convention:** Use kebab-case directory and file names (e.g., `home-automation/`, `wireguard-setup.md`). Organize by topic, not by date.
@@ -114,7 +114,7 @@ rename or flatten it, adjust those prompts too.
 ### Journal (memory/)
 - **5-day rolling window** — keeps recent context accessible
 - **Monthly archive** — old journals moved to `archive-YYYY-MM/`
-- **Cron job:** `memory-expire.sh` (monthly)
+- **Cron job:** `memory-archive-rotate` (daily, pure shell — see templates/HEARTBEAT.md)
 
 ### Knowledge (notes/)
 - **Merge, don't create** — always search first
@@ -160,8 +160,8 @@ mkdir -p notes/{00-Inbox,01-Projects/Active,01-Projects/Archive,02-Areas,03-Reso
    shown above.
 
 3. The cron jobs already handle journal cleanup. For knowledge
-   consolidation, `cron/prompts/weekly-memory-hygiene.md` runs every
-   Mon 21:00 and covers most of it.
+   consolidation, the daily `memory-janitor` job (20:07) plus the hourly
+   `curate-memory` job cover it.
 
 ## Backward Compatibility
 

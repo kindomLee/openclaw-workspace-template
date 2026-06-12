@@ -27,21 +27,16 @@ The Linux installer auto-converts them to crontab entries.
 
 ## Default Jobs
 
-> **Source of truth**: the master schedule lives in `templates/HEARTBEAT.md`.
-> This table is a convenience copy — if you update either, update both
-> or they will drift.
+> **Source of truth**: the master schedule table lives in
+> [`templates/HEARTBEAT.md`](../templates/HEARTBEAT.md) — it is intentionally
+> NOT duplicated here (copies drift; `scripts/check-schedule-drift.py`
+> verifies HEARTBEAT and `guides/routine-checks.md` against the plists).
 
-| Schedule | Job | Purpose |
-|----------|-----|---------|
-| `:02` hourly | curate-memory | Early-return curation (journal → MEMORY.md / notes/ / LEARNINGS.md) |
-| 20:07 daily | memory-janitor | Hall-tag backfill + duplicate detection |
-| 21:07 daily | smart-wikilinks | Conservative wikilink / Related-section suggestions for today's notes |
-| 21:00 Mon (weekly) | weekly-memory-hygiene | Bulk hygiene: hall tags, wikilinks, dedupe, broken-link triage |
-| 21:03 Wed (weekly) | memory-reflect | Recent-vs-long-term memory contradiction detection |
-| 21:30 Sat (weekly) | self-improvement | Promote `.learnings/*` entries with `recurring_count ≥ 3` |
-| 03:03 Sun (weekly) | memory-dream | Cross-domain cold-memory association |
-| 10:00 1st (monthly) | monthly-review | Monthly highlights + stale-content review |
-| 03:33 1st (monthly) | memory-expire | Archive `memory/*.md` older than 30 days |
+**Zero-LLM escape hatch**: if `cron/bin/<job>-bare.sh` exists, `runner.sh`
+runs it instead of `claude -p` with the same plist/crontab wiring — this is
+how a prompt-driven job gets converted to a deterministic implementation
+without touching the schedule (shipped example: `smart-wikilinks`, whose
+prompt file is therefore inert).
 
 ## Installation
 
@@ -199,21 +194,17 @@ cron/
 ├── install-linux.sh       ← Linux crontab installer (reads plists via plistlib)
 ├── config.env             ← Secrets — gitignored
 ├── config.env.example     ← Config template
-├── prompts/               ← Per-job Markdown prompts (9 shipped)
-│   ├── curate-memory.md             ← hourly :02
-│   ├── memory-janitor.md            ← daily 20:07
-│   ├── smart-wikilinks.md           ← daily 21:07
-│   ├── memory-reflect.md            ← Wed 21:03
-│   ├── weekly-memory-hygiene.md     ← Mon 21:00
-│   ├── self-improvement.md          ← Sat 21:30
-│   ├── memory-dream.md              ← Sun 03:03
-│   ├── monthly-review.md            ← 1st 10:00
-│   └── memory-expire.md             ← 1st 03:33
-├── launchd/               ← macOS plist schedule definitions (one per prompt)
+├── prompts/               ← Per-job Markdown prompts (7 shipped — see templates/HEARTBEAT.md)
+├── launchd/               ← macOS plist schedule definitions (9 shipped: 7 prompt
+│   │                        jobs + 2 direct-shell memory-archive jobs)
 │   └── org.oracle.<job-name>.plist
+├── state/locks/           ← Per-job reentrancy locks (managed by runner.sh)
 ├── logs/                  ← Per-job execution logs (auto-cleaned after 30 days)
 └── bin/
-    └── mono_seconds.py    ← CLOCK_UPTIME_RAW reader for active-time measurement
+    ├── mono_seconds.py            ← CLOCK_UPTIME_RAW reader for active-time measurement
+    ├── smart-wikilinks-bare.sh    ← Zero-LLM implementation (overrides the prompt)
+    ├── skill-evolve-mm.sh         ← Manual RSI tool (not scheduled by default)
+    └── skill-genesis-mm.sh        ← Manual RSI tool (not scheduled by default)
 ```
 
 ## OpenClaw vs Claude Code

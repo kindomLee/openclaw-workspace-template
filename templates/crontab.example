@@ -32,10 +32,9 @@ OPENCLAW_WORKSPACE=/path/to/your/workspace
 32 11 * * 1  $OPENCLAW_WORKSPACE/scripts/cron-notes-todo-check.sh    >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
 
 # --- memory maintenance (OpenClaw-mode shell wrappers) ---
-0  */1 * * * $OPENCLAW_WORKSPACE/scripts/cron-memory-sync.sh         >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
+2  * * * *  $OPENCLAW_WORKSPACE/scripts/cron-memory-sync.sh         >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
 15 3  * * * $OPENCLAW_WORKSPACE/scripts/memory-reflect.sh            >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
 30 3  * * 0 $OPENCLAW_WORKSPACE/scripts/memory-dream.sh              >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
-45 3  1 * * $OPENCLAW_WORKSPACE/scripts/memory-expire.sh             >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
 
 # --- memory archive (Mac/Linux portable Python janitor; pure shell, no LLM) ---
 # rotate-journal: move memory/YYYY-MM-DD*.md older than 5 days to archive-YYYY-MM/

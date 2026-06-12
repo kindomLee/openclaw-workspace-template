@@ -14,7 +14,7 @@
 讀 memory/ 上個月所有 `YYYY-MM-DD.md`（不含 archive）。
 
 ```bash
-LAST_MONTH=$(date -v-1m +%Y-%m)  # macOS
+LAST_MONTH=$(date -v-1m +%Y-%m 2>/dev/null || date -d "last month" +%Y-%m)  # macOS || GNU
 ls memory/${LAST_MONTH}-*.md 2>/dev/null
 ```
 
@@ -44,8 +44,8 @@ done
 
 ```bash
 # 上個月修改過的 notes
-LAST_MONTH_START=$(date -v-1m -v1d +%F)
-THIS_MONTH_START=$(date -v1d +%F)
+LAST_MONTH_START=$(date -v-1m -v1d +%F 2>/dev/null || date -d "last month" +%Y-%m-01)
+THIS_MONTH_START=$(date -v1d +%F 2>/dev/null || date +%Y-%m-01)
 find notes/ -name "*.md" -newermt "$LAST_MONTH_START" -not -newermt "$THIS_MONTH_START" -not -path "*/04-Archive/*"
 ```
 
@@ -77,6 +77,16 @@ find notes/01-Projects/Active notes/02-Areas notes/03-Resources \
   → 建議：(更新 / archive / no action)
 ```
 
+### 4.5 超舊 archive 清理候選（從 memory-expire 繼承）
+
+列出 5 年以上的 archive 內容當清理候選：
+
+```bash
+find memory/ -path "*archive*" -name "*.md" -mtime +1825 2>/dev/null | head -20
+```
+
+**只列清單進報告，絕不自動刪除**——與本 prompt 其他步驟同一原則（不裁決）。
+
 ### 5. 報告產出
 
 寫進 `notes/01-Projects/Archive/YYYY-MM-月度回顧.md`（覆蓋上月，新月新檔）：
@@ -99,6 +109,9 @@ tags: [monthly-review]
 
 ## 過時內容候選
 <最多 10 條>
+
+## 超舊 archive 清理候選
+<清單或「無」>
 
 ## 建議行動
 <總結 1-3 條最該做的事>
