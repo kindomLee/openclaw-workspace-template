@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed (2026-06-12 review sweep)
+
+- **`memory-expire` cron job**（plist + prompt）：每日 memory-archive rotate（5 天窗）
+  使其每月 60 天掃描永遠零命中，卻仍每月燒一次 LLM session。Journal 歸檔由 rotate
+  承擔；notes 歸檔建議與超舊 archive 清理候選併入 `monthly-review`（只列清單、不再讓
+  無人值守 LLM 做不可逆刪除）。OpenClaw 版 `scripts/memory-expire.sh` 標 deprecated
+  並退出 `crontab.example`。
+- **`weekly-memory-hygiene` cron job**（plist + prompt）：職責為 memory-janitor /
+  smart-wikilinks / 週一 broken-links flag check 的全集複製，且造成週一 21:00–21:07
+  三個 job 併發寫 `memory/`。
+
+### Fixed (2026-06-12 review sweep)
+
+- **Linux cron 全滅修復**：`install-linux.sh` 產生的 crontab 先前完全遺失 PATH
+  （Vixie cron 預設 `/usr/bin:/bin` 找不到 `claude` → 全部 job exit 127）。現在
+  輸出完整展開的 PATH 行 + 安裝時偵測 `claude` 實際位置；`install-mac.sh` 同步
+  處理 nvm/volta/asdf 安裝情境；另補 Day+Weekday 同設警告與 per-job log 重導。
+- **macOS dream job 修復**：`scripts/memory-dream.sh` 的 `shuf`（GNU-only）改
+  `sort -R`；`memory-reflect.sh` / `memory-expire.sh` 的 GNU-only grep 寫法改可攜。
+- **`runner.sh` 可靠性三件套**：mkdir-based per-job lock（stock macOS 無 flock）、
+  接上 `scripts/lib/cron-state.sh` missed-run 偵測（先前 0 採用）、失敗通知統一走
+  `scripts/lib/notify.sh`（先前 Linux 上一般失敗完全靜默）；持久 append-only log
+  改 size-truncate（`-mtime +30` 永遠清不到它們）。
+- **文件統一 notes PARA 命名**：舊 `notes/areas/`、`notes/resources/` 寫法會讓
+  hourly curate job 寫入的內容脫離自動化檢索循環；README「Cron never wakes the
+  LLM directly」措辭與 `claude -p` 主路徑矛盾已修正；`.codex/README.md` 不存在的
+  `--format context` flag 改為實際用法；Claude Code docs URL 更新為
+  code.claude.com/docs；`workspace.spec` 補 `copy_tree .codex`（bootstrap 的 Codex
+  next-steps 指向該檔但先前不會複製）。
+- **`check-schedule-drift.py`**：direct-shell plist 改由檔名導出 job 名（先前兩個
+  memory-archive plist 落在檢查盲區）；排程表收斂為 HEARTBEAT 單一 source。
+
+### Changed (2026-06-12 review sweep)
+
+- **LLM backend 共用化（第一步）**：skill-evolve / skill-genesis 腳本群改讀
+  `LLM_API_URL` / `LLM_MODEL` / `LLM_API_KEY`（`MINIMAX_API_KEY` 保留為 legacy
+  fallback）；清除 miniforge3 個人路徑、維護者個人額度註解與本名等模板污染。
+
 ### Changed
 
 - **`scripts/memory-search-hybrid.py`**：升級成 BM25 + jieba 中文分詞為主排序，保留
