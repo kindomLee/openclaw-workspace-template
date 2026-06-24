@@ -31,6 +31,14 @@ OPENCLAW_WORKSPACE=/path/to/your/workspace
 30 11 * * 1  $OPENCLAW_WORKSPACE/scripts/cron-broken-links-check.sh  >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
 32 11 * * 1  $OPENCLAW_WORKSPACE/scripts/cron-notes-todo-check.sh    >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
 
+# --- correction capture (opt-in; needs an LLM) ---
+# The UserPromptSubmit hook (correction-capture.py) queues messages that look
+# like corrections into cron/state/pending-corrections.jsonl with zero latency.
+# This job classifies them out-of-band and flags high-confidence ones for review.
+# Requires httpx + LLM_API_KEY (or MINIMAX_API_KEY); skips cleanly if unset.
+# Uncomment to enable:
+# 0  9 * * *  $OPENCLAW_WORKSPACE/scripts/classify-corrections.py     >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
+
 # --- memory maintenance (OpenClaw-mode shell wrappers) ---
 2  * * * *  $OPENCLAW_WORKSPACE/scripts/cron-memory-sync.sh         >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
 15 3  * * * $OPENCLAW_WORKSPACE/scripts/memory-reflect.sh            >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
