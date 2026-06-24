@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-06-24 — runtime feedback hooks)
+
+Three project-level hooks that turn passive runtime signals into reviewable
+flags, following the existing **hard trigger, soft action** pattern (cheap/zero
+detection → `.claude/flags/*.flag` → you review → `rm`). Ported from the
+upstream Oracle Memory workspace after a design review; nothing auto-applies to
+memory and nothing aborts a turn.
+
+- **`budget-flag-guard.py`** (SessionStart): measures the spec files
+  (SOUL/AGENTS/USER/MEMORY/CLAUDE) and writes `sessionstart-budget.flag` when a
+  file exceeds its role cap; auto-removes the flag once back under cap.
+  Self-contained caps — tune `PER_FILE_CAPS` for your workspace.
+- **`runtime-friction-monitor.py`** (PostToolUse): observe-only, pure-count
+  signals — `tool_loop` / `file_thrash` / `tool_volume` / `bash_errors` — written
+  to `runtime-friction.flag`. No token-window introspection, no LLM, never aborts.
+- **`correction-capture.py`** (UserPromptSubmit) + **`scripts/classify-corrections.py`**:
+  a bilingual (EN/CJK) regex gate queues messages that look like corrections to
+  `cron/state/pending-corrections.jsonl` with zero latency; the out-of-band
+  classifier (opt-in LLM, skips cleanly if `MINIMAX_API_KEY` is unset) promotes
+  only high-confidence corrections into `cron/state/observations.jsonl` for review.
+- Registered all three in `templates/.claude/settings.json`
+  (UserPromptSubmit / PostToolUse / SessionStart).
+
 ### Removed (2026-06-12 review sweep)
 
 - **`memory-expire` cron job**（plist + prompt）：每日 memory-archive rotate（5 天窗）
