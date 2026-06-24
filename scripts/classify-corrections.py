@@ -11,9 +11,11 @@ This is the "cheap LLM triages -> flag -> you review" pattern: the LLM filters
 noise; nothing auto-applies to memory. We bias toward DISCARDING (a
 clarification / new request / preference is not a correction).
 
-OPT-IN: requires an LLM. If MINIMAX_API_KEY is not set (env or cron/config.env)
-the script skips cleanly (exit 0) — the regex gate keeps queueing signals for a
-later run. Swap the endpoint/model below for any Anthropic-compatible API.
+OPT-IN: requires an LLM. If no API key is set — LLM_API_KEY (or legacy
+MINIMAX_API_KEY), via env or cron/config.env — the script skips cleanly
+(exit 0) and the regex gate keeps queueing signals for a later run. Endpoint
+and model follow LLM_API_URL / LLM_MODEL (same convention as evolve_skill.py),
+so any Anthropic-compatible backend works.
 
 Usage: python3 scripts/classify-corrections.py [--dry-run] [--limit N]
 Requires: httpx.
@@ -41,9 +43,10 @@ OBSERVATIONS = REPO / "cron" / "state" / "observations.jsonl"
 FLAG = REPO / ".claude" / "flags" / "correction-candidates.flag"
 CONFIG_ENV = REPO / "cron" / "config.env"
 
-# Anthropic-compatible endpoint. Defaults to MiniMax; override for your provider.
-API_URL = "https://api.minimax.io/anthropic/v1/messages"
-MODEL = "MiniMax-M3"
+# Anthropic-compatible endpoint, overridable via env (same convention as
+# scripts/evolve_skill.py). Defaults to MiniMax; legacy MINIMAX_API_KEY honored.
+API_URL = os.environ.get("LLM_API_URL", "https://api.minimax.io/anthropic/v1/messages")
+MODEL = os.environ.get("LLM_MODEL", "MiniMax-M3")
 CONF_THRESHOLD = 0.7
 PENDING_RETENTION = 500
 MAX_RETRIES = 2
@@ -52,14 +55,17 @@ LABELS = {"correction", "clarification", "new_request", "preference", "unclear"}
 
 
 def _api_key() -> str | None:
-    key = os.environ.get("MINIMAX_API_KEY")
+    key = os.environ.get("LLM_API_KEY") or os.environ.get("MINIMAX_API_KEY")
     if key:
         return key
     if CONFIG_ENV.is_file():
         for line in CONFIG_ENV.read_text(encoding="utf-8").splitlines():
             line = line.strip()
-            if line.startswith("MINIMAX_API_KEY="):
-                return line.split("=", 1)[1].strip().strip('"').strip("'")
+            for var in ("LLM_API_KEY=", "MINIMAX_API_KEY="):
+                if line.startswith(var):
+                    val = line.split("=", 1)[1].strip().strip('"').strip("'")
+                    if val:
+                        return val
     return None
 
 
@@ -165,7 +171,7 @@ def main() -> int:
 
     api_key = _api_key()
     if not api_key:
-        print(f"MINIMAX_API_KEY not set; skipping classification "
+        print(f"LLM_API_KEY (or MINIMAX_API_KEY) not set; skipping classification "
               f"({len(pending_idx)} pending entries queued for a later run).")
         return 0
 
