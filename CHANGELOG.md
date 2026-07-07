@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-07-07 — machine migration guide)
+
+- **`guides/machine-migration.md`**: migrating a live workspace to a new
+  machine, distilled from a real cutover where eight missing dependencies
+  surfaced over five days. Covers the four blind-spot layers (packages/
+  binaries incl. the PATH-ghost trap; secrets & plugin-state hand-carry;
+  machine behavior settings; verification), the three silent-failure
+  structures (`set -e` + `2>/dev/null` + command substitution, alerting
+  wired after the failure point, sleep-killed long calls), fail-informative
+  error capture, a verify-behavior acceptance checklist, and a tmux probe
+  recipe for debugging headless TUI daemons. Linked from the README guides
+  list.
+
 ### Added (2026-06-24 — runtime feedback hooks)
 
 Three project-level hooks that turn passive runtime signals into reviewable
