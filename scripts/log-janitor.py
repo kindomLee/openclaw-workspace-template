@@ -16,6 +16,10 @@ Usage:
 這樣即使中段被壓掉，仍能看到「第一次跑何時、最後一次跑何時、跑完是哪種狀態」，
 保留 forensic 基本訊號。預設 90 天才動以求保守。
 """
+# PEP 604 annotations crash on def under python 3.9 (e.g. macOS system python
+# resolved via `bash -lc` + path_helper). Future import keeps them lazy.
+from __future__ import annotations
+
 import argparse
 import re
 import sys
