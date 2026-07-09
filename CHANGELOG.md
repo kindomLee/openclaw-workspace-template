@@ -20,6 +20,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   recipe for debugging headless TUI daemons. Linked from the README guides
   list.
 
+### Added (2026-07-09 — adversarial-review + subagent protocol + anti-drift tables)
+
+Three agent-behaviour patterns distilled from the upstream Oracle Memory
+workspace (learning from TencentDB-Agent-Memory + obra/superpowers), folded
+into existing `templates/AGENTS.md` sections rather than added as parallel ones:
+
+- **Sub-agent report protocol (4 states)** + **model tiering** — under `## Sub-agent Delegation`.
+- **Core-logic changes -> adversarial review** — scoring/ranking/dedup/threshold changes get a separate refuting reviewer + the repo's existing benchmark before merge.
+- **Rationalization red-flag tables** — pair every hard rule with an enumerated "you'll think / why it's invalid" table; under Reply Principles.
+
 ### Added (2026-06-24 — runtime feedback hooks)
 
 Three project-level hooks that turn passive runtime signals into reviewable
