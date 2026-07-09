@@ -161,6 +161,18 @@ Full architecture and how to add new flag types: `guides/flag-system.md`.
 | Missed items | Only answered first Q? | Cross-check original |
 | Unverified facts | Contains names/numbers/features without source? | Search or label "unverified" |
 
+### Rationalization red-flag tables
+
+Any hard rule an agent follows under pressure gets rationalized away ("this one's obviously fine", "faster to just ask", "too small to bother"). The excuses are enumerable — list them next to the rule and refute each. This file already uses the pattern (the friction-check table above, the hard-trigger rationale); apply it to any new hard rule:
+
+| You'll think | Why it's invalid |
+|--------------|------------------|
+| "I already know this" | Your "knowing" is model memory, not a source — the rule exists because the fact only lives in the file |
+| "This one's simple, skip the check" | Difficulty is judged by the result, not the hunch; the check is cheaper than being wrong |
+| "I'll do it after I answer" | Answering first anchors on model memory; the rule wants the step to be the *first* action |
+
+Keep it plain, not shouting — if everything is EXTREMELY IMPORTANT, nothing is. (Pattern adapted from obra/superpowers `using-superpowers`.)
+
 ## Memory Authority Ladder
 
 When information sources disagree, **the lower rank cannot override the higher** — only supplement.
@@ -230,6 +242,35 @@ Main session is the Context Curator — inject relevant context into sub-agent t
 - Task involves past decisions → excerpt relevant memory/ sections
 - Pure research/analysis (self-contained) → no extra context needed
 - **Principle: precise excerpts > full file injection.** Only give what the task needs.
+
+### Report protocol (4 states)
+
+Require every sub-agent to end its report with one of four states, and handle each deterministically:
+
+| State | Meaning | Controller action |
+|-------|---------|-------------------|
+| `DONE` | Finished, verified | Integrate and move on |
+| `DONE_WITH_CONCERNS` | Finished but flagged risks | Read the concerns before integrating; re-dispatch if real |
+| `NEEDS_CONTEXT` | Blocked on missing information | Supply the specific context and re-dispatch |
+| `BLOCKED` | Cannot proceed (error / missing access) | Escalate with the error and what was tried |
+
+### Model tiering
+
+Pick the model per task, don't inherit blindly:
+
+- Mechanical / transcription -> cheapest model
+- Integration / moderate judgment -> mid tier
+- Architecture, final review, adversarial verification -> strongest model
+- Omitting the model **silently inherits the session's most expensive model** — set it explicitly.
+- Turn count often costs more than per-token price: a cheap model on a multi-step task can take 2-3x the turns and cost more overall.
+
+### Core-logic changes -> adversarial review
+
+Changes to scoring / ranking / dedup / thresholds systematically affect large amounts of output — don't self-review:
+
+1. Spawn an **adversarial reviewer** — a *separate* agent, told to refute the first version and hunt boundary cases. An implementer's self-assessment is not verification.
+2. If the repo has an **objective benchmark** (golden set, eval harness), the reviewer runs it — a self-reported "looks fine" that never ran the existing bench is the number-one way a regression ships.
+3. Pin the converged behavior with a persistent test before merging.
 
 ## Architecture
 - **Main session** = decisions + interaction | **Sub-agent** = execution | **Script/CLI** = fixed logic
