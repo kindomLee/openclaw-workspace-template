@@ -1,0 +1,14 @@
+# recall-bench-golden-example.jsonl — SYNTHETIC example golden set for memory-recall-bench.py
+#
+# This is a schema demo with fake rows. Copy this file, replace every row with
+# your OWN queries → expected memory files, then run:
+#   python3 scripts/memory-recall-bench.py --golden path/to/your-golden.jsonl
+#
+# Line schema (one JSON object per line; lines starting with "#" or blank are ignored):
+#   {"id": "<short-id>", "query": "<search query>", "answers": ["<expected file>", ...]}
+#   - "answers" match against the "path" field of memory-search-hybrid.py --json
+#     results, by exact path or endswith — a basename like "2026-01-15.md" is enough.
+#   - List multiple answers if any of several files is an acceptable top hit.
+{"id": "example-01", "query": "database migration decision", "answers": ["memory/2026-01-15.md"]}
+{"id": "example-02", "query": "grinder brew preference", "answers": ["notes/02-Areas/example-note.md"]}
+{"id": "example-03", "query": "firewall port configuration", "answers": ["memory/2026-02-03.md", "notes/03-Resources/example-infra.md"]}
