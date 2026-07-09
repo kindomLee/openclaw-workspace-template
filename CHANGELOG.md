@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added (2026-07-09 — generalizable asset backfill)
 
+- **Fixed**: `workspace.spec` now `copy_tree guides guides` — root `guides/*.md` (referenced throughout AGENTS.md/CLAUDE.md) previously never shipped to bootstrapped workspaces; plan-file-policy.md and all sibling guides now ship.
+
 Three net-new generalizable assets ported from the upstream Oracle Memory
 workspace. All personal data was stripped; the recall-bench golden set ships
 only as a synthetic schema example (users supply their own).

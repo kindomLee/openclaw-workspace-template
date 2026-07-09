@@ -22,6 +22,9 @@
 copy_tree templates
 copy_tree scripts scripts
 copy_tree cron cron
+# guides/ holds the governance docs that AGENTS.md/CLAUDE.md reference throughout;
+# without this line new workspaces reference guides that don't exist.
+copy_tree guides guides
 # .codex/ ships the Codex-runtime usage notes that bootstrap.sh's Codex
 # next-steps point at — without this line new workspaces lack the file.
 copy_tree .codex .codex
