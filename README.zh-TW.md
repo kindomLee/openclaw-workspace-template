@@ -239,6 +239,7 @@ Agent 會隨時間累積決策偏好，寫在 `SOUL.md`，overrides 通用 best 
 - [Multi-workspace Setup](guides/multi-instance.md) — 跑多個 workspace（Claude Code 模式為主，OpenClaw 作 legacy）
 - [Post-Install Checklist](guides/post-install-checklist.md) — 裝完驗證每個東西真的能跑
 - [Flag System](guides/flag-system.md) — `cron → flag → SessionStart hook` 背景工作 triage
+- [Plan File Policy](guides/plan-file-policy.md) — 何時該建 `.claude/plans/` plan 檔的硬觸發清單，加上偵測未完成 plan 的 SessionStart 接續 hook
 - [Smart Wikilinks (選用)](guides/smart-wikilinks.md) — Embedding-based 相關筆記推薦配方
 - [Context Tree](guides/context-tree.md) — 兩層記憶架構（journal + knowledge）
 - [升級指南](guides/upgrading.md) — 當 template 發新版時如何更新既有 workspace

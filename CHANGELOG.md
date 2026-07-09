@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-07-09 — generalizable asset backfill)
+
+Three net-new generalizable assets ported from the upstream Oracle Memory
+workspace. All personal data was stripped; the recall-bench golden set ships
+only as a synthetic schema example (users supply their own).
+
+- **`scripts/memory-recall-bench.py`** + **`scripts/recall-bench-golden-example.jsonl`**:
+  objective retrieval benchmark that runs a golden set through
+  `memory-search-hybrid.py` and reports MRR / recall@k / mean-rank / misses
+  (read-only). The golden set is your data, not shipped — the example file
+  documents the `{id, query, answers[]}` schema inline with synthetic rows to
+  copy and replace. Point `--golden` at your own copy.
+- **`guides/plan-file-policy.md`** + **`templates/.claude/hooks/plan-resume-check.sh`**:
+  a hard-trigger policy for when to create a `.claude/plans/<date>-<slug>.md`
+  plan file (turns "should I plan?" from a judgment call into a pattern match),
+  plus a SessionStart hook that detects unfinished plan files (top-level
+  unchecked stages) and injects a resume/archive reminder. Wired into
+  `templates/.claude/settings.json` SessionStart; jq-optional (python3 fallback).
+- **`scripts/skill_fail_capture.py`**: the failure-triggered entry point the RSI
+  chain was missing. Deterministic, zero-LLM, sha256-deduped; appends a real
+  skill failure to a per-skill regression corpus
+  (`.claude/skills/<skill>/regression/eval_cases.json`, schema-compatible with
+  `evolve_skill.py --eval-cases --reuse-cases`) so evolution pins to observed
+  failures instead of drifting synthetic evals.
+
 ### Added (2026-07-07 — machine migration guide)
 
 - **`guides/machine-migration.md`**: migrating a live workspace to a new

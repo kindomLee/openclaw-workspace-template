@@ -238,6 +238,7 @@ Before responding, the agent classifies each message:
 - [Post-Install Checklist](guides/post-install-checklist.md) — Verify everything actually works after setup
 - [Machine Migration](guides/machine-migration.md) — Moving a live workspace to a new machine: four blind-spot layers, hand-carry list, verify-behavior acceptance
 - [Flag System](guides/flag-system.md) — `cron → flag → SessionStart hook` for background work triage
+- [Plan File Policy](guides/plan-file-policy.md) — Hard triggers for when to open a `.claude/plans/` plan file, plus a SessionStart resume hook for unfinished plans
 - [Smart Wikilinks (optional)](guides/smart-wikilinks.md) — Recipe for embedding-based related-note suggestions
 - [Upgrading](guides/upgrading.md) — How to update an existing workspace when the template releases a new version
 
