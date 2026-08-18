@@ -49,5 +49,8 @@
 ## Cases [P0]
 <!-- Recurring bugs, env regressions, incident post-mortems. Promoted
      from `.learnings/ERRORS.md` when `recurring_count ≥ 3`. Each case
-     should name the symptom, the root cause, and the fix. -->
+     should name the symptom, the root cause, and the fix.
+     Quote the symptom verbatim (exact error text) — retrieval matches
+     symptom language, not diagnosis language. Cite evidence (file path,
+     commit) and the date verified so stale cases are detectable. -->
 - Case descriptions here
