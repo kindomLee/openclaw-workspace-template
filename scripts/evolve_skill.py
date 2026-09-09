@@ -66,6 +66,10 @@ def call_llm(prompt: str, max_tokens: int = 4000, timeout: int = 90) -> str:
             )
             resp.raise_for_status()
             data = resp.json()
+            # 截斷檢查必須在取 text 之前：截斷回應一定帶部分 text block，
+            # 放在 content return 之後永遠到不了（dead code）
+            if data.get("stop_reason") == "max_tokens":
+                return '{"score": 50, "feedback": "truncated"}'
             content = data.get("content")
             if content:
                 for c in content:
@@ -74,8 +78,6 @@ def call_llm(prompt: str, max_tokens: int = 4000, timeout: int = 90) -> str:
                 for c in content:
                     if c.get("type") == "thinking":
                         return c.get("thinking", "")
-            if data.get("stop_reason") == "max_tokens":
-                return '{"score": 50, "feedback": "truncated"}'
             raise RuntimeError(f"No text in response: {json.dumps(data)[:200]}")
 
         except (httpx.ReadTimeout, httpx.ConnectTimeout, httpx.RemoteProtocolError) as e:

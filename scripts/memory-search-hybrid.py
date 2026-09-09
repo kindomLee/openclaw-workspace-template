@@ -51,8 +51,32 @@ def extract_keywords(text: str) -> set:
     return {w for w in words if w not in STOPWORDS and len(w) > 1}
 
 
-def temporal_boost(mtime: float, cutoff: float, now: float, days: int) -> float:
-    """Closer files get up to 40% boost; expired files get 30% penalty."""
+_HEADING_RE = re.compile(r'^#{1,3}\s+(.+)$', re.M)
+
+
+def field_text(content: str) -> str:
+    """抽出 frontmatter fence 內文 + H1-H3 heading 文字（hall_boost 的加權對象）。"""
+    parts = []
+    if content.startswith('---'):
+        end = content.find('\n---', 3)
+        if end != -1:
+            parts.append(content[3:end])
+    parts.extend(_HEADING_RE.findall(content))
+    return '\n'.join(parts)
+
+
+def temporal_boost(mtime: float, cutoff: float, now: float, days: int,
+                   is_journal: bool = True) -> float:
+    """Closer files get up to 40% boost; expired files get 30% penalty.
+
+    notes/ 不吃時間衰減（is_journal=False → 恆 1.0）：curated reference 的價值
+    不隨時間掉，mtime 反映的是「上次被編輯」而非「還準不準」。notes 沒有事件
+    日期只能吃 mtime，超過搜尋窗就一律重罰，常青筆記結構性地浮不上來；剛被
+    批次工具掃過的反而拿高分。journal 的日期來自 date_from_filename（事件
+    日期），衰減對它才有意義。
+    """
+    if not is_journal:
+        return 1.0
     age = (now - mtime) / 86400
     if age > days:
         return 0.3
@@ -61,6 +85,13 @@ def temporal_boost(mtime: float, cutoff: float, now: float, days: int) -> float:
 
 
 def hall_boost(text: str) -> float:
+    """Hall 類型加權。呼叫端只餵 field_text()（frontmatter + H1-H3），不餵正文。
+
+    掃全文時會退化成長度加分：「決定」「選擇」是任何 2K 字以上中文文件的必然
+    詞，長文幾乎必中。加成等級與檔案長度相關，且會抵銷 BM25 自身的 length
+    normalization。改吃結構化欄位後，heading 出現「決定」是刻意標記，正文
+    散句不再誤觸。
+    """
     t = text.lower()
     if re.search(r'決定|决策|選擇|選用|採用|decided|chose|selected|adopted|locked', t):
         return 1.3
@@ -257,8 +288,9 @@ def main():
     for i, (fp, base_dir, content, mtime) in enumerate(docs):
         kw = extract_keywords(content)
         kw_overlap = len(query_kw & kw) / len(query_kw) if query_kw else 0.0
-        t_boost = temporal_boost(mtime, cutoff, now, args.days)
-        h_boost = hall_boost(content)
+        t_boost = temporal_boost(mtime, cutoff, now, args.days,
+                                 is_journal=(base_dir == memory_dir))
+        h_boost = hall_boost(field_text(content))
         c_boost = 1.0 if args.no_confidence else confidence_boost(fp, content)
 
         if use_bm25 and bm25_max > 0:

@@ -132,7 +132,11 @@ def call_m3(prompt: str, timeout: int = 120) -> str | None:
                 "anthropic-version": "2023-06-01",
             }, json=body, timeout=timeout)
             resp.raise_for_status()
-            for c in resp.json().get("content", []):
+            data = resp.json()
+            # 截斷的 skill 候選寫進 corpus 會污染後續 evolve，寧可回 None
+            if data.get("stop_reason") == "max_tokens":
+                return None
+            for c in data.get("content", []):
                 if c.get("type") == "text":
                     return c["text"]
             return None
