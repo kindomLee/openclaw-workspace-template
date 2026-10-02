@@ -513,7 +513,7 @@ def run_search_cached(query: str, days: int, top: int) -> list[dict]:
     `CACHE_TTL_SEC` seconds keyed on (query, days, top). Returns the list
     of results, or an empty list on any error (network, subprocess, JSON,
     etc.)."""
-    cache_key = f"{query}|days={days}|top={top}"
+    cache_key = f"{query}|days={days}|top={top}|graph-expand"  # flag in key so old cache entries don't collide
     query_hash = hashlib.sha1(cache_key.encode("utf-8")).hexdigest()[:16]
     cache_path = os.path.join(CACHE_DIR, f"mem-search-{query_hash}.json")
 
@@ -535,6 +535,7 @@ def run_search_cached(query: str, days: int, top: int) -> list[dict]:
                 "--days", str(days),
                 "--top", str(top),
                 "--json",
+                "--graph-expand",  # no-op without graphify-out/graph.json
             ],
             cwd=PROJECT_DIR,
             capture_output=True,

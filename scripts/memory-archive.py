@@ -201,6 +201,8 @@ def archive_timeline(
         ym = m.group(1)
         if ym >= current_ym:
             continue  # 本月或未來月份留著
+        if "_[archived" in m.group(0):
+            continue  # already a tombstone — re-archiving would overwrite the line count and append empty shells
         start = m.start()
         # End：下一個 ## 或 ### header（同層或上層），或 EOF
         rest = text[m.end():]

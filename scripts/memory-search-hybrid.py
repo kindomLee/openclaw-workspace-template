@@ -4,7 +4,7 @@ memory-search-hybrid.py — Hybrid search scoring for memory/*.md files
 Default mode: BM25(jieba 分詞) + temporal boost + hall type boost
 Fallback mode: keyword-overlap (when jieba/rank_bm25 unavailable or --no-bm25)
 
-Usage: python3 memory-search-hybrid.py "query" [--days N] [--json] [--top N] [--no-bm25]
+Usage: python3 memory-search-hybrid.py "query" [--days N] [--json] [--top N] [--no-bm25] [--graph-expand]
 """
 import argparse, re, os, json, sys
 from pathlib import Path
@@ -231,7 +231,75 @@ def collect_files(memory_dir: Path, notes_dir: Path):
     return docs
 
 
-def score_bm25(docs, query: str):
+# ---------------------------------------------------------------------------
+# Graph query expansion (--graph-expand): when the query hits a graphify
+# god-node label, add its 1-hop neighbor labels to the BM25 query. Covers
+# BM25's blind spot for "same thing, different name". No-op without a graph.
+# Rules mirror .claude/hooks/memory-search-trigger.py (deg>=4, label>=4 chars).
+GRAPH_PATH = Path(__file__).resolve().parent.parent / "graphify-out" / "graph.json"
+GRAPH_MIN_DEGREE = 4
+GRAPH_MAX_NODES = 4
+GRAPH_MAX_NEIGHBORS = 4
+GRAPH_MIN_LABEL_LEN = 4
+_GRAPH_TOKEN_SPLIT = re.compile(r"[_:.\-/\s\(\)\[\]]+")
+_GRAPH_TOKEN_STOP = frozenset({
+    "system", "concept", "model", "blog", "tool", "file", "pilot", "post",
+    "used", "with", "this", "that", "type", "core", "test", "data",
+    "code", "from", "into", "have", "your", "more", "auto", "user",
+    "memory", "archive", "notes", "journal", "skill", "agent", "claude",
+})
+
+
+def graph_expand_terms(query: str):
+    """Return (matched_labels, neighbor_labels). Missing/broken graph -> ([], [])."""
+    if not GRAPH_PATH.exists():
+        return [], []
+    try:
+        g = json.loads(GRAPH_PATH.read_text())
+    except Exception:
+        return [], []
+    nodes = {n["id"]: n for n in g.get("nodes", [])}
+    deg, adj = {}, {}
+    for e in g.get("links") or g.get("edges") or []:
+        s_, t_ = e.get("source"), e.get("target")
+        if not s_ or not t_:
+            continue
+        deg[s_] = deg.get(s_, 0) + 1
+        deg[t_] = deg.get(t_, 0) + 1
+        adj.setdefault(s_, []).append(t_)
+        adj.setdefault(t_, []).append(s_)
+
+    q = query.lower()
+    hits = {}
+    for nid, n in nodes.items():
+        if deg.get(nid, 0) < GRAPH_MIN_DEGREE:
+            continue
+        cands = set()
+        for key in ("label", "norm_label"):
+            v = (n.get(key) or "").strip().lower()
+            if len(v) >= GRAPH_MIN_LABEL_LEN:
+                cands.add(v)
+        pool = " ".join(filter(None, [nid, n.get("label") or "", n.get("norm_label") or ""]))
+        for t in (t.lower() for t in _GRAPH_TOKEN_SPLIT.split(pool) if t):
+            if len(t) >= GRAPH_MIN_LABEL_LEN and not t.isdigit() and t not in _GRAPH_TOKEN_STOP:
+                cands.add(t)
+        if any(c in q for c in cands):
+            hits[nid] = deg[nid]
+
+    # tie-break on id: set/dict order isn't stable across processes (PYTHONHASHSEED)
+    top_nodes = sorted(hits, key=lambda k: (-hits[k], k))[:GRAPH_MAX_NODES]
+    matched = [nodes[n].get("label") or n for n in top_nodes]
+    neighbors = []
+    for nid in top_nodes:
+        nb = sorted(set(adj.get(nid, [])), key=lambda k: (-deg.get(k, 0), k))[:GRAPH_MAX_NEIGHBORS]
+        for x in nb:
+            lab = (nodes.get(x, {}).get("label") or "").strip()
+            if lab and lab not in neighbors:
+                neighbors.append(lab)
+    return matched, neighbors
+
+
+def score_bm25(docs, query: str, extra_terms=(), query_weight: int = 8):
     """Return list of bm25 raw scores, aligned with docs。"""
     corpus_tokens = [tokenize_bm25(content) for _, _, content, _ in docs]
     # rank_bm25 對空 doc 會炸；過濾後重新對齊。
@@ -241,6 +309,9 @@ def score_bm25(docs, query: str):
     valid_corpus = [corpus_tokens[i] for i in valid_idx]
     bm25 = BM25Okapi(valid_corpus)
     qtok = tokenize_bm25(query)
+    if extra_terms:
+        # original query tokens repeated so they dominate; expansion is a side signal
+        qtok = qtok * query_weight + tokenize_bm25(" ".join(extra_terms))
     if not qtok:
         return [0.0] * len(docs)
     valid_scores = bm25.get_scores(qtok)
@@ -260,6 +331,10 @@ def main():
                     help="Cap each snippet to N chars (default 200). 仿 OpenClaw 4.15 bounded excerpts。")
     ap.add_argument("--no-bm25", action="store_true",
                     help="Force legacy keyword-overlap mode (skip BM25 even if available).")
+    ap.add_argument("--graph-expand", action="store_true",
+                    help="When the query hits a graphify god-node, add its 1-hop neighbor labels to the BM25 query")
+    ap.add_argument("--graph-weight", type=int, default=8,
+                    help="With --graph-expand: repeat factor for original query tokens (higher = less expansion influence)")
     ap.add_argument("--no-confidence", action="store_true",
                     help="關閉 confidence 維（除錯/對照用，回到 bm25×temporal×hall）")
     args = ap.parse_args()
@@ -281,7 +356,10 @@ def main():
 
     docs = collect_files(memory_dir, notes_dir)
 
-    bm25_raw = score_bm25(docs, query) if use_bm25 else [0.0] * len(docs)
+    graph_matched, graph_terms = graph_expand_terms(query) if args.graph_expand else ([], [])
+    if graph_terms and not args.json:
+        print(f"🕸 graph-expand: {graph_matched} → +{graph_terms}", file=sys.stderr)
+    bm25_raw = score_bm25(docs, query, graph_terms, args.graph_weight) if use_bm25 else [0.0] * len(docs)
     bm25_max = max(bm25_raw) if bm25_raw else 0.0
 
     results = []

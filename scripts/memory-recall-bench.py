@@ -42,10 +42,10 @@ def load_golden(path: Path) -> list:
     return items
 
 
-def run_search(query: str, days: int, top: int) -> list:
+def run_search(query: str, days: int, top: int, extra: list = ()) -> list:
     """Call memory-search-hybrid.py --json, return results list (score-sorted)."""
     proc = subprocess.run(
-        [sys.executable, str(SEARCH), query, "--days", str(days), "--top", str(top), "--json"],
+        [sys.executable, str(SEARCH), query, "--days", str(days), "--top", str(top), "--json", *extra],
         capture_output=True, text=True,
     )
     if proc.returncode != 0:
@@ -75,6 +75,7 @@ def main():
     ap.add_argument("--days", type=int, default=365, help="passed to search --days (default 365 neutralizes temporal penalty)")
     ap.add_argument("--top", type=int, default=10)
     ap.add_argument("--json", action="store_true", help="emit scoreboard JSON")
+    ap.add_argument("--search-args", default="", help='extra flags passed to memory-search-hybrid.py, e.g. "--graph-expand"')
     args = ap.parse_args()
 
     golden = load_golden(Path(args.golden))
@@ -84,7 +85,7 @@ def main():
 
     per_query = []
     for g in golden:
-        results = run_search(g["query"], args.days, args.top)
+        results = run_search(g["query"], args.days, args.top, args.search_args.split())
         rank = first_hit_rank(results, g["answers"])
         rr = 1.0 / rank if rank else 0.0
         top3 = [Path(r.get("path", "")).name for r in results[:3]]
@@ -101,7 +102,7 @@ def main():
     misses = [q for q in per_query if not q["rank"]]
 
     scoreboard = {
-        "golden": str(args.golden), "n": n, "days": args.days, "top": args.top,
+        "golden": str(args.golden), "n": n, "days": args.days, "top": args.top, "search_args": args.search_args,
         "mrr": round(mrr, 4),
         "recall_at": {str(k): round(v, 4) for k, v in recall.items()},
         "mean_rank_hits": round(mean_rank, 2),

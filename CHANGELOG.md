@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added / Fixed (2026-10-02 — upstream backport)
+
+- **Added** `memory-search-hybrid.py --graph-expand` (+ `--graph-weight`, default 8):
+  when the query hits a graphify god-node (degree >= 4), its 1-hop neighbor labels
+  are appended to the BM25 query to cover "same thing, different name" misses.
+  No-op when `graphify-out/graph.json` is absent. `memory-search-trigger.py` now
+  passes it by default; `memory-recall-bench.py --search-args` lets you A/B it.
+- **Fixed** `memory-archive.py --mode archive-timeline`: already-archived
+  `### YYYY-MM _[archived …]_` tombstones are skipped instead of being re-archived
+  every month (which overwrote the line count and appended empty shells).
+- **Fixed** `runtime-friction-monitor.py`: long tool inputs sharing a 200-char
+  prefix no longer collapse into one signature (false `tool_loop`); keys keep the
+  readable head plus a short sha1 of the full input.
+
 ### Added (2026-07-09 — generalizable asset backfill)
 
 - **Fixed**: `workspace.spec` now `copy_tree guides guides` — root `guides/*.md` (referenced throughout AGENTS.md/CLAUDE.md) previously never shipped to bootstrapped workspaces; plan-file-policy.md and all sibling guides now ship.

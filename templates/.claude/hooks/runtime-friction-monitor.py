@@ -19,6 +19,7 @@ Exits 0 always; silent on stdout.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -39,16 +40,29 @@ FLAG_NAME = "runtime-friction.flag"
 PRODUCER = ".claude/hooks/runtime-friction-monitor.py"
 
 
+def _bounded(text: str, limit: int = 200) -> str:
+    """Bound a signature without collapsing distinct inputs into one key.
+
+    Plain truncation made long commands sharing a prefix look identical (e.g.
+    batch-fetching 19 different URLs through the same `ssh host 'curl ...`
+    prefix read as one command repeated 19 times -> false tool_loop). Keep the
+    readable head, append a digest of the full text so keys stay distinct.
+    """
+    if len(text) <= limit:
+        return text
+    return f"{text[:limit]}#{hashlib.sha1(text.encode('utf-8')).hexdigest()[:8]}"
+
+
 def _norm_key(tool: str, ti: dict) -> str:
     if tool == "Bash":
-        cmd = re.sub(r"\s+", " ", str(ti.get("command", ""))).strip()[:200]
-        return f"Bash|{cmd}"
+        cmd = re.sub(r"\s+", " ", str(ti.get("command", ""))).strip()
+        return f"Bash|{_bounded(cmd)}"
     if tool in EDIT_TOOLS or tool == "Read":
         return f"{tool}|{ti.get('file_path', '')}"
     if tool in {"Grep", "Glob"}:
         return f"{tool}|{ti.get('pattern', ti.get('path', ''))}"
     try:
-        return f"{tool}|{json.dumps(ti, ensure_ascii=False, sort_keys=True)[:200]}"
+        return f"{tool}|{_bounded(json.dumps(ti, ensure_ascii=False, sort_keys=True))}"
     except (TypeError, ValueError):
         return f"{tool}|?"
 
