@@ -26,10 +26,14 @@ OPENCLAW_WORKSPACE=/path/to/your/workspace
 # SLACK_WEBHOOK_URL=
 # BROKEN_LINKS_THRESHOLD=5
 # NOTES_TODO_THRESHOLD=20
+# EXTERNAL_LINKS_THRESHOLD=5
+# EXTERNAL_LINKS_SKIP_HOSTS=intranet.example.com,login-only.example.org
 
 # --- flag checks (cron → flag → SessionStart hook) ---
 30 11 * * 1  $OPENCLAW_WORKSPACE/scripts/cron-broken-links-check.sh  >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
 32 11 * * 1  $OPENCLAW_WORKSPACE/scripts/cron-notes-todo-check.sh    >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
+# external URLs in notes/: network-bound, so kept separate from the wikilink check; only 404/410 count
+34 11 * * 1  python3 $OPENCLAW_WORKSPACE/scripts/check-external-links.py >> $OPENCLAW_WORKSPACE/.claude/cron.log 2>&1
 
 # --- correction capture (opt-in; needs an LLM) ---
 # The UserPromptSubmit hook (correction-capture.py) queues messages that look

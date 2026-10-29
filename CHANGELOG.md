@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added / Fixed (2026-10-29 — upstream backport)
+
+- **Changed** `memory-search-hybrid.py` — entry-level journal index: a daily
+  journal mixes several `[hall_*]` entries, so an entry-level BM25 now picks
+  *which entry* of each file matched. That entry decides the snippet / `hit_line`
+  and the age weighting; ranking itself stays file-level (scoring entries as
+  documents lets short entries dominate through length normalization).
+  Code fences are not split points.
+- **Changed** `memory-search-hybrid.py` — durable halls: when the matched entry is
+  `discoveries` / `advice` / `preferences` (needs >= 2 distinct query terms),
+  past the `--days` window it gets x0.7 instead of x0.3. Events/facts still decay.
+- **Fixed** `memory-search-hybrid.py` — only files with an event date (a
+  `YYYY-MM-DD` filename or an `archive-YYYY-MM/` parent) get the recency boost.
+  Digests such as `reflections.md` / `dreams.md` fall back to mtime, which cron
+  rewrites often, so they always looked "recent".
+- **Added** `memory-search-hybrid.py` — jieba token cache keyed on content md5 plus
+  a tokenizer-rule fingerprint (`~/.cache/memory-search/`, override with
+  `MEMORY_CACHE_DIR`). Only changed files are re-tokenized; a tokenizer change
+  invalidates everything.
+- **Fixed** graph label matching (hybrid `--graph-expand` and
+  `memory-search-trigger.py`): ASCII labels need a word boundary (`home` no longer
+  matches `homekit`); CJK stays substring.
+- **Fixed** `memory-search-trigger.py`: a search timeout no longer poses as "no
+  results"; it injects an explicit warning with the manual command, so the model
+  doesn't conclude memory has nothing.
+- **Fixed** `correction-capture.py`: harness-injected prompts (subagent
+  notifications, slash-command echoes, context-continuation summaries) are skipped.
+- **Added** `plan-resume-check.sh`: optional `expires:` field; plans past it, or
+  idle for 14 days without one, are marked EXPIRED / STALE with an
+  "extend or close out" prompt. Tracked, unmodified plans use the last commit time
+  (checkout resets mtime). Also fixed the literal `\n\n` in the injected message.
+- **Added** `scripts/check-external-links.py` (flag `broken-external-links`):
+  only 404/410 count as broken; timeouts/403/429/5xx are "unverified"; skips when
+  more than half the URLs are unreachable. Extra skip hosts via
+  `EXTERNAL_LINKS_SKIP_HOSTS`. Wired in `crontab.example`.
+- **Fixed** `smart-wikilinks-bare.sh`: an existing Related section at any heading
+  level (or `相關…`) is recognized.
+
+Not ported: the dense-embedding / cross-encoder rerank path (needs local model
+servers), the `claude -p` backend switch for the evolve/classify scripts (the
+template keeps the `LLM_API_URL` convention), and the weekly-review digest /
+LEARNINGS archive / journal-supersede pipelines, which have no consumer here yet.
+
 ### Added / Fixed (2026-10-02 — upstream backport)
 
 - **Added** `memory-search-hybrid.py --graph-expand` (+ `--graph-weight`, default 8):

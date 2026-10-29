@@ -346,6 +346,15 @@ def load_graph() -> dict | None:
     return {"nodes": nodes, "adj": adj, "deg": deg, "labels": labels}
 
 
+def label_hit(label: str, text: str) -> bool:
+    """ASCII labels must sit on a word boundary ("home" must not match
+    "homekit"); CJK labels stay substring. Same rule as label_hit() in
+    scripts/memory-search-hybrid.py."""
+    if label.isascii():
+        return re.search(rf"(?<![a-z0-9]){re.escape(label)}(?![a-z0-9])", text) is not None
+    return label in text
+
+
 def detect_graph_nodes(prompt: str) -> list[str]:
     """Return up to MAX_TRIGGER_NODES god-degree node ids whose label or
     distinctive token appears (lowercase substring) in the prompt, sorted
@@ -359,7 +368,7 @@ def detect_graph_nodes(prompt: str) -> list[str]:
     for label, nid in g["labels"]:
         if nid in seen:
             continue
-        if label and label in p:
+        if label and label_hit(label, p):
             hits.append((nid, g["deg"].get(nid, 0)))
             seen.add(nid)
     hits.sort(key=lambda x: -x[1])
@@ -508,7 +517,7 @@ def dedupe_by_category(results: list[dict], limit: int) -> list[dict]:
     return unique[:limit]
 
 
-def run_search_cached(query: str, days: int, top: int) -> list[dict]:
+def run_search_cached(query: str, days: int, top: int) -> list[dict] | None:
     """Run `memory-search-hybrid.py` (with `--json`), cache the result for
     `CACHE_TTL_SEC` seconds keyed on (query, days, top). Returns the list
     of results, or an empty list on any error (network, subprocess, JSON,
@@ -552,6 +561,8 @@ def run_search_cached(query: str, days: int, top: int) -> list[dict]:
         except Exception:
             pass
         return results
+    except subprocess.TimeoutExpired:
+        return None  # distinct from "searched, nothing found"; caller must say so
     except Exception:
         return []
 
@@ -664,6 +675,17 @@ def main() -> int:
             days=params["days"],
             top=max(top_limit * 2, 10),
         )
+
+        if raw_results is None:
+            # A timeout must not pose as "no results": the model reads an
+            # empty injection as "memory has nothing on this".
+            sections.append(
+                f"WARNING: memory-search timed out (>{SEARCH_TIMEOUT_SEC}s); nothing was "
+                "injected this turn. That does NOT mean memory has nothing. If you need "
+                "history, run it manually:\n"
+                f'python3 scripts/memory-search-hybrid.py "<keywords>" --days {params["days"]} --top 10'
+            )
+            raw_results = []
 
         prefixes = expected_prefixes(hits) if hits else []
         reranked = rerank_by_domain(raw_results, prefixes)

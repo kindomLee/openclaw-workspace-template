@@ -49,12 +49,24 @@ MID_SIGNAL_EN = [
     r"\blike i said\b", r"\bwhy (did|would) (you|it)\b", r"\bi meant\b",
 ]
 
+# Harness-injected prompts (subagent completion notices, slash-command echoes,
+# context-continuation summaries) are not the user talking; they matched
+# "should be" etc. inside tool output.
+SYSTEM_WRAPPERS = (
+    "<task-notification>", "<local-command-caveat>", "<command-name>",
+    "<command-message>", "<system-reminder>", "<agent-message",
+    "Here is a note offered by a side agent",
+    "This session is being continued from a previous conversation",
+)
+
 PENDING_REL = "cron/state/pending-corrections.jsonl"
 TAIL_BYTES = 64 * 1024
 
 
 def _gate(prompt: str):
     """Return (tier, matched) or (None, None)."""
+    if prompt.lstrip().startswith(SYSTEM_WRAPPERS):
+        return None, None
     for kw in HIGH_SIGNAL_CJK:
         if kw in prompt:
             return "high", kw

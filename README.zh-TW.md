@@ -153,6 +153,7 @@ workspace/
 │   ├── lib/              # 共用 helpers（workspace / notify / flag）
 │   ├── cron-broken-links-check.sh  # Broken wikilink > N 就寫 flag
 │   ├── cron-notes-todo-check.sh    # TODO backlog > N 就寫 flag
+│   ├── check-external-links.py     # notes/ 外部連結 404/410 > N 就寫 flag
 │   ├── memory-dream.sh    # 每週 "dreaming" — 冷記憶聯想
 │   ├── memory-reflect.sh  # 每週 rumination — 矛盾偵測
 │   ├── memory-expire.sh   # （已棄用——由 memory-archive.py 取代）

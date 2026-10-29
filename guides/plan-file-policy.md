@@ -34,6 +34,7 @@ status: active
 # Plan: <一句話任務>
 created: <YYYY-MM-DD HH:MM>
 status: in-progress
+expires: <YYYY-MM-DD>（選填；不寫時以最後修改時間 + 14 天為準）
 
 ## Stages
 - [ ] Stage 1: ...
@@ -54,6 +55,7 @@ status: in-progress
 | 中斷 | session 中止 → **保留**檔案當 recovery anchor，不刪 |
 | 完成刪除 | 所有 stage `- [x]` **且**驗證通過 → 刪檔；未驗證不准刪 |
 | Recovery | SessionStart hook `plan-resume-check.sh` 掃到含頂格 `- [ ]` 的 plan 檔 → 注入提示接續 |
+| 過期 | 超過 `expires:`，或沒寫 `expires:` 且 14 天沒更新 → hook 標 EXPIRED / STALE。先問使用者：**延期**（寫或改 `expires:`）或**收尾**（移到 `.claude/plans/archive/`，journal 記一行哪些 stage 沒做完、為什麼停）。等外部條件的 plan 檔（等配額、等使用者啟動）寫 `expires:` 標明下次檢查日 |
 
 ## 5. Plan file vs. `.claude/specs/`
 

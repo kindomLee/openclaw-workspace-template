@@ -84,6 +84,77 @@ def temporal_boost(mtime: float, cutoff: float, now: float, days: int,
     return 1.0 + 0.4 * recency
 
 
+# Durable halls: discoveries / advice / preferences don't expire with the event
+# date, so past the --days window they get DURABLE_TEMPORAL instead of 0.3.
+# events/facts keep decaying: events go stale, facts get replaced by newer ones.
+DURABLE_HALLS = frozenset({"discoveries", "advice", "preferences"})
+DURABLE_TEMPORAL = 0.7
+HALL_MIN_HITS = 2
+# ponytail: only used to pick the hit entry; STOPWORDS is single-char, so multi-char
+# filler words need their own list. Add your language's fillers here.
+_HALL_QUERY_STOP = frozenset({
+    "之前", "上次", "後來", "最後", "當時", "那次", "這次", "我們", "你們", "這個", "那個",
+    "什麼", "怎麼", "為什麼", "是不是", "有沒有", "要不要", "到底", "其實", "一下", "可以",
+    "還是", "然後", "已經", "如果", "因為", "所以", "問題", "現在", "目前", "做過",
+    "before", "last", "time", "what", "when", "how", "why", "did", "we",
+})
+_HALL_TAG_RE = re.compile(r'\[hall_(\w+)\]')
+_DAILY_RE = re.compile(r'\d{4}-\d{2}-\d{2}')
+
+
+def has_event_date(fp: Path) -> bool:
+    """Same rule as date_from_filename: only a YYYY-MM-DD filename or an
+    archive-YYYY-MM/ parent carries an event date. Everything else (reflections,
+    dreams, monthly digests) falls back to mtime, which means "last rewritten",
+    not "when it happened" — so it must not get the recency boost."""
+    return bool(_DAILY_RE.search(fp.name) or re.search(r'\d{4}-\d{2}', fp.parent.name))
+
+
+def split_entries(content: str) -> list:
+    """Split a daily journal into [(hall, text, start_line)] (1-based).
+    A line with [hall_x] starts a new entry; an untagged heading starts an
+    untyped section; other lines append to the current entry. No tags at all
+    -> one entry with hall=None."""
+    if not _HALL_TAG_RE.search(content):
+        return [(None, content, 1)]
+    out, hall, buf, start, fence = [], None, [], 1, False
+    for n, line in enumerate(content.splitlines(), 1):
+        if line.lstrip().startswith("```"):
+            fence = not fence
+        # `# comment` / `[hall_x]` literals inside a code fence are not split points
+        m = None if fence else _HALL_TAG_RE.search(line)
+        if m or (not fence and _HEADING_RE.match(line)):
+            if any(x.strip() for x in buf):
+                out.append((hall, "\n".join(buf), start))
+            hall, buf, start = (m.group(1).lower() if m else None), [], n
+        buf.append(line)
+    if any(x.strip() for x in buf):
+        out.append((hall, "\n".join(buf), start))
+    return out
+
+
+def pick_entries(entries: list, entry_scores: list, query_tokens: list) -> dict:
+    """Pick which entry of each file is the hit. entries = [(doc_idx, hall,
+    text, start_line)], entry_scores = aligned entry-level BM25. Returns
+    {doc_idx: (hall, text, start_line)}. Ranks by matched-term count first
+    (fillers removed, tag literals stripped, ASCII word boundary), then BM25,
+    since BM25 length normalization favours short entries. Fewer than
+    HALL_MIN_HITS terms -> hall None, so one stray term can't exempt a file
+    from the age penalty."""
+    # dedupe: tokenize_bm25 keeps repeats; "docker ... docker" must not fill HALL_MIN_HITS alone
+    qtoks = [t for t in dict.fromkeys(query_tokens) if t not in _HALL_QUERY_STOP]
+    top, best = {}, {}
+    for (i, h, t, ln), r in zip(entries, entry_scores):
+        if r <= 0:
+            continue
+        body = _HALL_TAG_RE.sub(" ", t.lower())
+        key = (sum(label_hit(q, body) for q in qtoks), r)
+        if key > top.get(i, (0, 0.0)):
+            top[i] = key
+            best[i] = (h if key[0] >= HALL_MIN_HITS else None, t, ln)
+    return best
+
+
 def hall_boost(text: str) -> float:
     """Hall 類型加權。呼叫端只餵 field_text()（frontmatter + H1-H3），不餵正文。
 
@@ -250,6 +321,15 @@ _GRAPH_TOKEN_STOP = frozenset({
 })
 
 
+def label_hit(label: str, text: str) -> bool:
+    """ASCII labels must sit on a word boundary ("home" must not match
+    "homekit", "guard" must not match "wireguard"); CJK has no spaces, so it
+    stays substring. The hook has a function of the same name and rule."""
+    if label.isascii():
+        return re.search(rf"(?<![a-z0-9]){re.escape(label)}(?![a-z0-9])", text) is not None
+    return label in text
+
+
 def graph_expand_terms(query: str):
     """Return (matched_labels, neighbor_labels). Missing/broken graph -> ([], [])."""
     if not GRAPH_PATH.exists():
@@ -283,7 +363,7 @@ def graph_expand_terms(query: str):
         for t in (t.lower() for t in _GRAPH_TOKEN_SPLIT.split(pool) if t):
             if len(t) >= GRAPH_MIN_LABEL_LEN and not t.isdigit() and t not in _GRAPH_TOKEN_STOP:
                 cands.add(t)
-        if any(c in q for c in cands):
+        if any(label_hit(c, q) for c in cands):
             hits[nid] = deg[nid]
 
     # tie-break on id: set/dict order isn't stable across processes (PYTHONHASHSEED)
@@ -299,9 +379,59 @@ def graph_expand_terms(query: str):
     return matched, neighbors
 
 
-def score_bm25(docs, query: str, extra_terms=(), query_weight: int = 8):
+# Token cache: jieba over the whole corpus dominates search latency (seconds on a
+# few hundred files), which eats the hook's timeout. Keyed on content md5 so only
+# changed files are re-tokenized.
+TOKEN_CACHE = Path(os.environ.get("MEMORY_CACHE_DIR")
+                   or Path.home() / ".cache" / "memory-search") / "bm25-tokens.pkl"
+ENTRY_TOKEN_CACHE = TOKEN_CACHE.with_name("bm25-entry-tokens.pkl")  # separate file so the two calls don't overwrite each other
+
+
+def _token_rules() -> str:
+    """Tokenizer fingerprint: changing tokenize_bm25 / stopwords / filter regex /
+    jieba version invalidates every cache key, otherwise a rule change keeps
+    serving old tokens and looks like it had no effect."""
+    import inspect
+    return "|".join([
+        inspect.getsource(tokenize_bm25), "".join(sorted(STOPWORDS)),
+        _TOKEN_FILTER_RE.pattern, getattr(jieba, "__version__", "?"),
+    ])
+
+
+def corpus_tokens_cached(docs, cache_path: Path = None) -> list:
+    import hashlib, pickle
+    cache_path = cache_path or TOKEN_CACHE
+    try:
+        cache = pickle.loads(cache_path.read_bytes())
+    except Exception:
+        cache = {}
+    rules = _token_rules()
+    out, fresh, dirty = [], {}, False
+    for fp, _, content, _ in docs:
+        key = str(fp)
+        h = hashlib.md5((rules + content).encode("utf-8")).hexdigest()
+        hit = cache.get(key)
+        if hit and hit[0] == h:
+            toks = hit[1]
+        else:
+            toks = tokenize_bm25(content)
+            dirty = True
+        fresh[key] = (h, toks)
+        out.append(toks)
+    if dirty or len(fresh) != len(cache):   # write back only on new/changed/deleted files
+        try:
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = cache_path.with_suffix(f".{os.getpid()}.tmp")
+            tmp.write_bytes(pickle.dumps(fresh, protocol=pickle.HIGHEST_PROTOCOL))
+            os.replace(tmp, cache_path)    # atomic: a concurrent hook never reads half a file
+        except Exception:
+            pass  # can't write -> just re-tokenize next time
+    return out
+
+
+def score_bm25(docs, query: str, extra_terms=(), query_weight: int = 8, cache_path: Path = None):
     """Return list of bm25 raw scores, aligned with docs。"""
-    corpus_tokens = [tokenize_bm25(content) for _, _, content, _ in docs]
+    corpus_tokens = corpus_tokens_cached(docs, cache_path)
     # rank_bm25 對空 doc 會炸；過濾後重新對齊。
     valid_idx = [i for i, toks in enumerate(corpus_tokens) if toks]
     if not valid_idx:
@@ -355,21 +485,39 @@ def main():
     notes_dir = project_root / "notes"
 
     docs = collect_files(memory_dir, notes_dir)
+    # Entry-level index: a daily journal mixes several halls in one day. Ranking
+    # stays file-level (scoring entries as documents lets short entries dominate
+    # via length normalization); entry-level BM25 only picks which entry of a
+    # file is the hit, which decides its age weighting (that entry's hall) and snippet.
+    entries = [(i, h, t, ln) for i, (fp, base_dir, content, _) in enumerate(docs)
+               if base_dir == memory_dir and _DAILY_RE.search(fp.name)
+               for h, t, ln in split_entries(content)]
 
     graph_matched, graph_terms = graph_expand_terms(query) if args.graph_expand else ([], [])
     if graph_terms and not args.json:
         print(f"🕸 graph-expand: {graph_matched} → +{graph_terms}", file=sys.stderr)
     bm25_raw = score_bm25(docs, query, graph_terms, args.graph_weight) if use_bm25 else [0.0] * len(docs)
+    best_entry = {}   # doc idx -> (hall, text, start_line)
+    if use_bm25 and entries:
+        # no graph expansion terms here: they are broad and would sway which entry "hit"
+        e_raw = score_bm25([(f"{docs[i][0]}#{ln}", None, t, 0) for i, _, t, ln in entries],
+                           query, cache_path=ENTRY_TOKEN_CACHE)
+        best_entry = pick_entries(entries, e_raw, tokenize_bm25(query))
     bm25_max = max(bm25_raw) if bm25_raw else 0.0
 
     results = []
-    for i, (fp, base_dir, content, mtime) in enumerate(docs):
+    for i, (fp, base_dir, file_content, mtime) in enumerate(docs):
+        hall, content, start_line = best_entry.get(i, (None, file_content, 1))
         kw = extract_keywords(content)
         kw_overlap = len(query_kw & kw) / len(query_kw) if query_kw else 0.0
+        # only files with an event date decay; digests' mtime is "last rewritten",
+        # and cron rewrites them often, so they'd always look recent
         t_boost = temporal_boost(mtime, cutoff, now, args.days,
-                                 is_journal=(base_dir == memory_dir))
-        h_boost = hall_boost(field_text(content))
-        c_boost = 1.0 if args.no_confidence else confidence_boost(fp, content)
+                                 is_journal=(base_dir == memory_dir and has_event_date(fp)))
+        if t_boost < 1.0 and hall in DURABLE_HALLS:
+            t_boost = DURABLE_TEMPORAL
+        h_boost = hall_boost(field_text(file_content))
+        c_boost = 1.0 if args.no_confidence else confidence_boost(fp, file_content)
 
         if use_bm25 and bm25_max > 0:
             # BM25 主排序：normalize 到 [0,1]，再乘 temporal/hall/confidence。
@@ -379,12 +527,13 @@ def main():
             fused = base * t_boost * h_boost * c_boost
         else:
             # Legacy fallback：keyword-overlap + size scaling。
-            size_factor = min(1.0, (len(content) / 5000) ** 0.5)
+            size_factor = min(1.0, (len(file_content) / 5000) ** 0.5)
             base = size_factor * (0.3 if kw_overlap > 0 else 0.05)
             fused = base * (1 + 0.3 * kw_overlap) * t_boost * h_boost * c_boost
 
         snip_text, snip_start, snip_line = snippet(content, query_kw)
-        full_lines = content.count('\n') + 1
+        snip_line = snip_line + start_line - 1 if snip_line else (start_line if i in best_entry else 0)
+        full_lines = file_content.count('\n') + 1
         bounded_snip = snip_text[:args.preview_chars]
         more_lines = max(0, full_lines - snip_line) if snip_line else full_lines
         truncated = len(snip_text) > args.preview_chars
@@ -396,7 +545,7 @@ def main():
             "bm25_raw": round(bm25_raw[i], 3) if use_bm25 else None,
             "kw_overlap": round(kw_overlap, 3),
             "temporal": round(t_boost, 3),
-            "hall_boost": round(h_boost, 1),
+            "hall_boost": round(h_boost, 2),  # 1 decimal shows 1.15 as 1.1
             "confidence": round(c_boost, 3),
             "date": datetime.fromtimestamp(mtime).strftime("%Y-%m-%d"),
             "age_days": round((now - mtime) / 86400, 1),

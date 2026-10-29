@@ -155,6 +155,7 @@ workspace/
 │   ├── lib/              # Shared helpers (workspace / notify / flag)
 │   ├── cron-broken-links-check.sh  # Flag when broken wikilinks > N
 │   ├── cron-notes-todo-check.sh    # Flag when TODO backlog > N
+│   ├── check-external-links.py     # Flag when notes/ external URLs 404/410 > N
 │   ├── memory-dream.sh    # Weekly "dreaming" — cold memory association
 │   ├── memory-reflect.sh  # Weekly rumination — contradiction detection
 │   ├── memory-expire.sh   # (deprecated — superseded by memory-archive.py)

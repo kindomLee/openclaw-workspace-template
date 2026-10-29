@@ -71,7 +71,9 @@ notify "my-check crossed threshold: $count"
 ```
 
 `scripts/cron-broken-links-check.sh` and `scripts/cron-notes-todo-check.sh`
-are the two checks shipped by default. Copy them as a starting point.
+are the two checks shipped by default. `scripts/check-external-links.py`
+(flag `broken-external-links`) is a third, network-bound one: only 404/410
+count as broken; timeouts, 403/429 and 5xx are listed as "unverified". Copy them as a starting point.
 
 ## Anatomy of the SessionStart hook
 

@@ -188,7 +188,7 @@ for fp in recent_files:
         continue
 
     # Mode A: 有沒有 ## Related 段
-    has_related = bool(re.search(r'^##\s+Related\s*$', content, re.MULTILINE))
+    has_related = bool(re.search(r'^#{2,}\s*(Related|相關\S*)\s*$', content, re.MULTILINE))  # any level, zh heading too
 
     if has_related:
         stats['skipped_has_related'] += 1
