@@ -182,9 +182,13 @@ fi
 # `-p` as a pure --print flag and IGNORES positional prompt arguments, so
 # passing the prompt as an arg would silently send an empty prompt. Stdin
 # works on both macOS and Linux, keeping the wrapper cross-platform.
-if "${TIMEOUT_CMD[@]}" claude -p \
+# cd: cron starts jobs in $HOME, and the prompts, CLAUDE.md and
+# .claude/settings.json all resolve from the working directory.
+# ${arr[@]+...}: macOS /bin/bash 3.2 treats an empty array as unbound under
+# `set -u`, which killed every job on Macs without coreutils.
+cd "$PROJECT_DIR"
+if ${TIMEOUT_CMD[@]+"${TIMEOUT_CMD[@]}"} claude -p \
   --allowedTools "$ALLOWED_TOOLS" \
-  -d "$PROJECT_DIR" \
   <<<"$PROMPT" \
   >> "$LOG_FILE" 2>&1; then
   EXIT_CODE=0

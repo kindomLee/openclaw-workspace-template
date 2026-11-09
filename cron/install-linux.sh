@@ -21,6 +21,14 @@ for arg in "$@"; do
   case "$arg" in
     --dry-run) DRY_RUN=true ;;
     --uninstall) UNINSTALL=true ;;
+    --help|-h)
+      sed -n '2,3p' "$0" | sed 's/^# \{0,1\}//'
+      exit 0 ;;
+    *)
+      # An unknown flag used to fall through to a real install.
+      echo "unknown option: $arg" >&2
+      echo "try: bash cron/install-linux.sh --help" >&2
+      exit 2 ;;
   esac
 done
 
@@ -45,7 +53,7 @@ generate_crontab_entries() {
     echo "WARNING: 'claude' not found in PATH — generated jobs will fail until it is installed" >&2
   fi
   python3 - "$PLIST_DIR" "$RUNNER" "$PROJECT_DIR" "$HOME" "$claude_dir" <<'PYEOF'
-import plistlib, sys, os
+import plistlib, sys, os, shlex
 
 plist_dir   = sys.argv[1]
 runner      = sys.argv[2]
@@ -94,7 +102,7 @@ for fname in sorted(os.listdir(plist_dir)):
     first = prog[0] if prog else ''
     if first.endswith('runner.sh') and len(prog) >= 2:
         stem = prog[-1]
-        cmd_tail = f"{runner} {prog[-1]}"
+        cmd_tail = f"{shlex.quote(runner)} {prog[-1]}"
     elif first in ('/bin/bash', '/bin/sh') and len(prog) >= 3 and prog[1] in ('-lc', '-c'):
         stem = fname[:-len('.plist')].rsplit('.', 1)[-1]
         cmd_tail = resolve(prog[-1])
@@ -107,7 +115,7 @@ for fname in sorted(os.listdir(plist_dir)):
     # command already manages its own.
     if '>>' not in cmd_tail and '2>&1' not in cmd_tail:
         log_path = os.path.join(project_dir, 'cron/logs', f'cron-{stem}.log')
-        cmd_tail = f"{cmd_tail} >> {log_path} 2>&1"
+        cmd_tail = f"{cmd_tail} >> {shlex.quote(log_path)} 2>&1"
 
     entries = cal if isinstance(cal, list) else [cal]
     # Deduplicate: group by (minute, hour, day) and merge weekdays
@@ -186,7 +194,7 @@ EOF
 )
 
 echo "Generated crontab entries:"
-echo "$ENTRIES" | wc -l | xargs -I{} echo "  {} jobs"
+echo "$ENTRIES" | grep -vc '^PATH=' | xargs -I{} echo "  {} jobs"
 echo ""
 
 if $DRY_RUN; then

@@ -26,6 +26,16 @@
 # notify is best-effort: curl failures are swallowed so cron jobs never
 # abort on transient network errors.
 
+# Jobs launched straight from a plist (not through cron/runner.sh) never
+# sourced cron/config.env, so their alerts silently resolved to "none".
+_NOTIFY_CONFIG="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/cron/config.env"
+if [ -f "$_NOTIFY_CONFIG" ] && [ -z "${NOTIFY_CHANNEL:-}${TG_BOT_TOKEN:-}${TELEGRAM_BOT_TOKEN:-}${SLACK_WEBHOOK_URL:-}" ]; then
+    set -a
+    # shellcheck source=/dev/null
+    . "$_NOTIFY_CONFIG"
+    set +a
+fi
+
 _resolve_notify_channel() {
     if [ -n "${NOTIFY_CHANNEL:-}" ]; then
         echo "$NOTIFY_CHANNEL"

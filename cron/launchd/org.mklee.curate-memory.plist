@@ -13,7 +13,7 @@
     <array>
         <string>/bin/bash</string>
         <string>-lc</string>
-        <string>cd __PROJECT_DIR__ &amp;&amp; bash cron/bin/curate-memory.sh &gt;&gt; __PROJECT_DIR__/cron/logs/curate-memory-launchd.log 2&gt;&amp;1</string>
+        <string>cd "__PROJECT_DIR__" &amp;&amp; bash cron/bin/curate-memory.sh &gt;&gt; "__PROJECT_DIR__/cron/logs/curate-memory-launchd.log" 2&gt;&amp;1</string>
     </array>
     <key>StartCalendarInterval</key>
     <dict>

@@ -11,7 +11,7 @@
     <array>
         <string>/bin/bash</string>
         <string>-lc</string>
-        <string>cd __PROJECT_DIR__ &amp;&amp; bash scripts/cron-graphify-check.sh monthly &gt;&gt; __PROJECT_DIR__/cron/logs/graphify-launchd.log 2&gt;&amp;1</string>
+        <string>cd "__PROJECT_DIR__" &amp;&amp; bash scripts/cron-graphify-check.sh monthly &gt;&gt; "__PROJECT_DIR__/cron/logs/graphify-launchd.log" 2&gt;&amp;1</string>
     </array>
     <key>StartCalendarInterval</key>
     <dict>
