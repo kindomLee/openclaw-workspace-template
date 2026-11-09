@@ -186,8 +186,9 @@ exist in `cron/prompts/`. Usually caused by:
 ```bash
 ls cron/launchd/org.mklee.*.plist cron/prompts/*.md | sort
 ```
-The plist label (after `org.mklee.`) must match a prompt filename
-(minus the `.md`). Either delete the orphan plist or restore the
+For plists that call `cron/runner.sh`, the label (after `org.mklee.`)
+must match a prompt filename (minus the `.md`); `/bin/bash -lc` plists
+such as `curate-memory` have no prompt. Either delete the orphan plist or restore the
 missing prompt.
 
 ### 7. SessionStart hook not injecting flags
