@@ -1,0 +1,23 @@
+name: smoke
+
+# Nobody runs this template day to day, so drift between scripts, prompts,
+# plists and docs only showed up when someone asked. This bootstraps a fresh
+# workspace and runs every job, hook and installer (shimmed) on each push.
+on:
+  push:
+  pull_request:
+
+jobs:
+  smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python3 -m pip install jieba rank_bm25
+      - run: python3 tests/smoke_test.py
