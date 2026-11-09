@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-11-09 — upstream backport: cross-repo dispatch)
+
+- **Added** `dispatch` skill (`templates/.claude/skills/dispatch/`) +
+  `guides/dispatch.md` — the workspace hands a task to another repo with
+  `claude -p` (cwd = target, so its own CLAUDE.md / skills / hooks apply) and
+  verifies the result itself. `dispatch.sh --repo <dir>` is read-only by
+  default; `--write` allows Edit/Write but keeps `git commit` / `push` (unless
+  `--allow`ed), `reset --hard` and `rm -rf` denied; `--allow 'Edit(dir/**)'`
+  scopes writes; `--src` adds a read-only dir; `--resume` continues the same
+  session. Only the target's project settings load unless `--user-settings`.
+  Warns on untrusted folders and on uncommitted changes in write mode; keeps
+  every run's JSON log; exits 1 on failure.
+
 ### Added (2026-11-09 — upstream backport: optional dense search)
 
 - **Added** `scripts/embed-server.py` + `scripts/requirements-dense.txt` +

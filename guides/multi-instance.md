@@ -44,7 +44,7 @@ to collide.
 Claude Code loads `SKILL.md` from two places on every session:
 
 1. **`<workspace>/.claude/skills/<name>/SKILL.md`** — workspace-local.
-   The template ships its default skills (`curate-memory`,
+   The template ships its default skills (`curate-memory`, `dispatch`,
    `telegram-html-reply`, `write-tmp`) to this path via `bootstrap.sh`,
    so a fresh workspace has them working immediately.
 2. **`~/.claude/skills/<name>/SKILL.md`** — global. Loaded in every

@@ -51,6 +51,7 @@ After installing:
 | **Cron → flag → hook** | `.claude/flags/`, `.claude/hooks/session-start-flags.sh` | Background checks drop flags; next session picks them up |
 | **Personality** | `SOUL.md`, `IDENTITY.md`, `USER.md` | Decision priors, name/emoji, user profile |
 | **Sub-agent patterns** | `guides/sub-agent-patterns.md` | Battle-tested delegation with delivery verification |
+| **Cross-repo dispatch** | `.claude/skills/dispatch/` | Run a task inside another repo with `claude -p` (its own CLAUDE.md / skills / hooks), read-only by default, `--resume` follow-ups, verified by the coordinator — see [guide](guides/dispatch.md) |
 | **Four defense lines** | `AGENTS.md` | create → execute → deliver → alert verification chain |
 | **Hard-trigger memory search** | `.claude/hooks/memory-search-trigger.py` | UserPromptSubmit hook forces search on keyword match |
 | **Cron system (Mac)** | `cron/install-mac.sh` | launchd plists with placeholder substitution |
@@ -155,6 +156,7 @@ workspace/
 │   ├── hooks/            # SessionStart + UserPromptSubmit hooks
 │   └── skills/           # Workspace-local skills (auto-loaded by Claude Code)
 │       ├── curate-memory/
+│       ├── dispatch/          # Run a task inside another repo via claude -p
 │       ├── telegram-html-reply/
 │       └── write-tmp/
 ├── scripts/
@@ -246,6 +248,7 @@ Before responding, the agent classifies each message:
 
 - [Self-Improvement System](guides/self-improvement.md) — Three-tier learning from mistakes
 - [Sub-agent Patterns](guides/sub-agent-patterns.md) — Delegation, verification, delivery
+- [Dispatch](guides/dispatch.md) — Running work inside another repo with `claude -p`: permissions under `-p`, stop points, verification
 - [Routine Checks](guides/routine-checks.md) — Type A/B monitoring framework
 - [Multi-instance Setup](guides/multi-instance.md) — Running multiple specialized agents
 - [Post-Install Checklist](guides/post-install-checklist.md) — Verify everything actually works after setup

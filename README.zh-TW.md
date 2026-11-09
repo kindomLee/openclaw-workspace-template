@@ -51,6 +51,7 @@
 | **Cron → flag → hook** | `.claude/flags/`、`.claude/hooks/session-start-flags.sh` | 背景檢查寫 flag，下一個 session 接手 |
 | **人格** | `SOUL.md`、`IDENTITY.md`、`USER.md` | 決策偏好、名字/emoji、使用者資料 |
 | **Sub-agent 模式** | `guides/sub-agent-patterns.md` | 實戰的委派 + delivery 驗證 |
+| **跨 repo 派工** | `.claude/skills/dispatch/` | 用 `claude -p` 在另一個 repo 裡執行任務（套用它自己的 CLAUDE.md／skill／hook），預設唯讀、`--resume` 接續、由總管端驗證，見[指南](guides/dispatch.md) |
 | **四防線** | `AGENTS.md` | create → execute → deliver → alert 驗證鏈 |
 | **硬觸發 memory search** | `.claude/hooks/memory-search-trigger.py` | UserPromptSubmit hook 碰到關鍵字就強搜 |
 | **Cron 系統 (Mac)** | `cron/install-mac.sh` | launchd plists + placeholder 替換 |
@@ -153,6 +154,7 @@ workspace/
 │   ├── hooks/            # SessionStart + UserPromptSubmit hooks
 │   └── skills/           # Workspace-local skills（Claude Code 自動載入）
 │       ├── curate-memory/
+│       ├── dispatch/          # 用 claude -p 把任務派到另一個 repo 執行
 │       ├── telegram-html-reply/
 │       └── write-tmp/
 ├── scripts/
@@ -180,6 +182,7 @@ workspace/
 └── guides/            # 參考文件
     ├── self-improvement.md
     ├── sub-agent-patterns.md
+    ├── dispatch.md
     ├── routine-checks.md
     └── multi-instance.md
 ```
@@ -248,6 +251,7 @@ Agent 會隨時間累積決策偏好，寫在 `SOUL.md`，overrides 通用 best 
 
 - [Self-Improvement System](guides/self-improvement.md) — 三級錯誤學習
 - [Sub-agent Patterns](guides/sub-agent-patterns.md) — 委派、驗證、送達
+- [Dispatch](guides/dispatch.md) — 用 `claude -p` 在另一個 repo 執行工作：`-p` 下的權限、停點、驗證
 - [Routine Checks](guides/routine-checks.md) — Type A/B 監控框架
 - [Multi-workspace Setup](guides/multi-instance.md) — 跑多個 workspace（Claude Code 模式為主，OpenClaw 作 legacy）
 - [Post-Install Checklist](guides/post-install-checklist.md) — 裝完驗證每個東西真的能跑
