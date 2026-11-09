@@ -81,10 +81,10 @@ git clone https://github.com/kindomLee/openclaw-workspace-template.git
 cd openclaw-workspace-template
 ```
 
-3. Run the bootstrap script (installs into the current directory by default):
+3. Run the bootstrap script into a separate directory (keep your workspace out of this clone, so `git pull` stays clean for upgrades):
 ```bash
-./bootstrap.sh
-# or: ./bootstrap.sh --path ~/my-workspace --yes
+./bootstrap.sh --path ~/my-workspace
+# no --path: it prompts, and defaults to the current directory
 ```
 
 4. Run the health check:
@@ -93,7 +93,7 @@ cd <your-workspace>
 bash scripts/health-check.sh
 ```
 
-5. Edit the template files to personalize:
+5. Personalize. Easiest path: run `claude` inside the workspace and type `hi` — a first-run flag makes the agent walk you through the files below one question at a time (each question is skippable). Or edit them by hand:
    - `IDENTITY.md` — Name, emoji, personality
    - `USER.md` — Your info so the agent knows you
    - `SOUL.md` — Agent personality and decision priors

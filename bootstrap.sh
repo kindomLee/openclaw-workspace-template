@@ -292,7 +292,7 @@ Walk the user through personalizing the core profile files — they are still at
 HOW TO RUN THIS (important):
 Use the AskUserQuestion tool to ask ONE field at a time instead of dumping a wall of questions. Keep each question narrow and skippable (offer a "skip / decide later" option). After collecting each answer, write it to the right file immediately with Edit, then move on to the next field.
 
-Language: ask all questions in 繁體中文 (Traditional Chinese) by default. The file contents you write can stay in whatever language the user answers in.
+Language: match the language the user writes in. If their first message is only a short greeting such as "hi", make the first question which language they prefer. The file contents you write can stay in whatever language the user answers in.
 
 Suggested order and fields:
   1. USER.md       → name, pronouns, timezone, primary channel (Telegram / Discord / email)

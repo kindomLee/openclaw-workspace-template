@@ -81,10 +81,10 @@ git clone https://github.com/kindomLee/openclaw-workspace-template.git
 cd openclaw-workspace-template
 ```
 
-3. 跑 bootstrap script（預設裝到當前目錄）：
+3. 跑 bootstrap script，裝到另一個目錄（workspace 別放在這份 clone 裡，之後 `git pull` 升級才乾淨）：
 ```bash
-./bootstrap.sh
-# 或：./bootstrap.sh --path ~/my-workspace --yes
+./bootstrap.sh --path ~/my-workspace
+# 不給 --path 會先詢問，預設是當前目錄
 ```
 
 4. 跑 health check：
@@ -93,7 +93,7 @@ cd <your-workspace>
 bash scripts/health-check.sh
 ```
 
-5. 編輯 template 檔個人化：
+5. 個人化。最省事的做法：在 workspace 裡跑 `claude`、打 `hi`，首次啟動的 flag 會讓 agent 一次問一題、帶你填完下面這幾個檔（每題都能跳過）。也可以自己手動改：
    - `IDENTITY.md` — 名字、emoji、人格
    - `USER.md` — 你的資料讓 agent 認識你
    - `SOUL.md` — Agent 人格與決策偏好

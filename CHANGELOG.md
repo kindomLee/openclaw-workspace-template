@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (2026-11-09 — first-run onboarding)
+
+- **Fixed** a fresh workspace tripping `sessionstart-budget.flag` on its very
+  first session: the shipped `AGENTS.md` / `CLAUDE.md` / `SOUL.md` were over
+  `budget-flag-guard.py`'s caps. Caps now sit ~10% above the shipped files.
+- **Fixed** the welcome flag always asking in 繁體中文: it now follows the
+  user's language, and asks which language first when the opener is just "hi".
+- **Docs** README Quick Start (both languages): bootstrap into a separate
+  `--path` instead of the clone itself, and point to the guided `claude` →
+  `hi` setup in step 5.
+- **Fixed** `scripts/lib/cron-state.sh` committed without the exec bit, so
+  bootstrapping into the clone left a tracked file modified.
+
 ### Added (2026-11-09 — upstream backport: cross-repo dispatch)
 
 - **Added** `dispatch` skill (`templates/.claude/skills/dispatch/`) +

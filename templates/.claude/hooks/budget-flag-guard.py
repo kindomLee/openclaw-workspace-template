@@ -31,10 +31,12 @@ SPEC_FILES = ["CLAUDE.md", "SOUL.md", "AGENTS.md", "USER.md", "MEMORY.md"]
 # Per-file role caps (estimated tokens). Each file plays a different context
 # role; a per-file breach is alerted before the legacy total budget. Calibrate
 # these against your own content — leave ~10% headroom over irreducible size.
+# Defaults sit ~10% above the files the template ships, so a fresh workspace
+# starts quiet; lower them once you have trimmed your own copies.
 PER_FILE_CAPS = {
-    "CLAUDE.md": 1800,
-    "SOUL.md": 900,
-    "AGENTS.md": 1700,
+    "CLAUDE.md": 2500,
+    "SOUL.md": 1300,
+    "AGENTS.md": 6000,
     "USER.md": 600,
     "MEMORY.md": 4000,
     "~/.claude/CLAUDE.md": 800,
