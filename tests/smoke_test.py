@@ -113,7 +113,10 @@ def main():
 
     print("bootstrap")
     r = run(["bash", str(REPO / "bootstrap.sh"), "--path", str(WS), "--yes"], cwd=TMP)
-    check(r.returncode == 0, f"bootstrap exits 0 ({r.stderr.strip()[-200:]})")
+    check(r.returncode == 0, "bootstrap exits 0")
+    if r.returncode:
+        print(r.stdout[-1500:], r.stderr[-1500:], sep="\n")
+        return 1
     check((WS / ".claude/flags/welcome-profile-setup.flag").exists(), "fresh workspace gets the welcome flag")
     check((WS / "MEMORY_COMPACT.md").exists(), "MEMORY_COMPACT.md generated (CLAUDE.md wake-up reads it)")
     seed()
