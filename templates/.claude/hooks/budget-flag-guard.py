@@ -41,7 +41,7 @@ PER_FILE_CAPS = {
     "MEMORY.md": 4000,
     "~/.claude/CLAUDE.md": 800,
 }
-BUDGET_TOKENS = 12000  # legacy total alert line
+BUDGET_TOKENS = 16000  # legacy total alert line; keep >= sum of PER_FILE_CAPS so per-file breaches fire first
 
 FLAG_NAME = "sessionstart-budget.flag"
 PRODUCER = ".claude/hooks/budget-flag-guard.py"
