@@ -55,6 +55,9 @@ After installing:
 | **Cron system (Mac)** | `cron/install-mac.sh` | launchd plists with placeholder substitution |
 | **Cron system (Linux)** | `cron/install-linux.sh` | Auto-converts plists → user crontab |
 | **Network-wait wrapper** | `cron/runner.sh` | Waits for network readiness on wake-from-sleep before `claude -p` |
+| **Weekly review** | `cron/bin/weekly-review.sh` | One checklist + flag for correction candidates, unreviewed reflections, LEARNINGS promote/archive |
+| **Memory retirement** | `cron/bin/memory-retire-candidates.sh` | Monthly merge/demote candidates for feedback memories — report only, never deletes |
+| **Graph maintenance** | `scripts/cron-graphify-check.sh` | Optional [graphify](https://pypi.org/project/graphifyy/) graph for `--graph-expand`: change / version / monthly-refresh flags |
 
 ## Quick Start
 
@@ -143,6 +146,7 @@ workspace/
 │   ├── install-mac.sh     # macOS launchd installer
 │   ├── install-linux.sh   # Linux crontab installer
 │   ├── prompts/           # Job prompts (Markdown)
+│   ├── bin/               # Shell jobs (weekly-review, memory-retire-candidates, *-bare.sh)
 │   └── launchd/           # Schedule definitions (plist)
 ├── .claude/
 │   ├── flags/            # Pending-work flags (cron drops them here)
@@ -156,6 +160,11 @@ workspace/
 │   ├── cron-broken-links-check.sh  # Flag when broken wikilinks > N
 │   ├── cron-notes-todo-check.sh    # Flag when TODO backlog > N
 │   ├── check-external-links.py     # Flag when notes/ external URLs 404/410 > N
+│   ├── cron-graphify-check.sh      # Flag a graph rebuild when memory/ changed (optional graphify)
+│   ├── cron-graphify-version-check.sh  # Flag when a newer graphifyy is out
+│   ├── graphify-warm-cache.sh      # Pre-fill graphify's extraction cache via claude -p
+│   ├── weekly-review-digest.py     # Weekly review checklist (corrections / reflections / LEARNINGS)
+│   ├── learnings-archive.py        # Move resolved / stale LEARNINGS entries to memory/archive/
 │   ├── memory-dream.sh    # Weekly "dreaming" — cold memory association
 │   ├── memory-reflect.sh  # Weekly rumination — contradiction detection
 │   ├── memory-expire.sh   # (deprecated — superseded by memory-archive.py)

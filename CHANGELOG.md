@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-11-09 — upstream backport: review & graph jobs)
+
+- **Added** `cron/bin/weekly-review.sh` + `scripts/weekly-review-digest.py`
+  (launchd `weekly-review`, Sun 09:30) — classifies the correction queue,
+  archives resolved LEARNINGS entries, and merges correction candidates,
+  unreviewed `memory/reflections.md` sections and LEARNINGS promote/archive
+  candidates into `cron/state/weekly-review-<YYYY-Www>.md` +
+  `weekly-review.flag`. A reflection drops off the list once its heading
+  carries `✅ 已覆審 YYYY-MM-DD`.
+- **Added** `scripts/learnings-archive.py` — moves resolved / superseded /
+  wontfix (or `--ids`, or `--ids stale`) LEARNINGS entries into
+  `memory/archive/learnings-archive.md`; dry-run by default, `--restore`
+  moves them back.
+- **Added** `cron/bin/memory-retire-candidates.sh` (launchd, 1st 09:20) —
+  zero-LLM monthly report on the Claude Code auto-memory dir: inventory,
+  merge hints (token Jaccard), demote hints (overlap with CLAUDE.md / SOUL.md
+  / AGENTS.md / USER.md), dead evidence paths, LEARNINGS growth. Writes
+  `retire-review.flag` once per month; never edits memory.
+- **Added** optional graphify maintenance — `scripts/cron-graphify-check.sh`
+  (weekly change flag, auto-clears; monthly refresh flag),
+  `scripts/cron-graphify-version-check.sh` (flags a newer `graphifyy`,
+  self-clears), `scripts/graphify-warm-cache.sh` (pre-fills the extraction
+  cache through `claude -p`). All three are silent no-ops until graphify is
+  installed.
+
 ### Added / Fixed (2026-10-29 — upstream backport)
 
 - **Changed** `memory-search-hybrid.py` — entry-level journal index: a daily

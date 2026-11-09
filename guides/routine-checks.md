@@ -152,6 +152,11 @@ view below adds the script-vs-LLM classification:
 | 09:10 1st of month | memory-archive-timeline | 1 | MEMORY.md timeline rollup (pure shell) |
 | 10:00 1st of month | monthly-review | 3 | Monthly highlights + stale-content review + old-archive cleanup suggestions |
 | 21:30 Sat | self-improvement | 2 | Promote `.learnings/*` entries with `recurring_count ≥ 3` |
+| 09:30 Sun | weekly-review | 2 | Classify corrections (`LLM_API_KEY`, skipped if unset), archive resolved LEARNINGS, write the weekly checklist + flag |
+| 21:30 Sun | graphify-check-weekly | 1 | Flag a graph rebuild when `memory/` changed (no-op without graphify) |
+| 21:32 Sun | graphify-version-check | 1 | Flag when a newer `graphifyy` is on PyPI; self-clears |
+| 09:20 1st of month | memory-retire-candidates | 1 | Retirement-candidate report for feedback memories → `retire-review.flag` |
+| 22:00 1st of month | graphify-check-monthly | 1 | Monthly full graph refresh reminder |
 | Mon 11:30 | cron-broken-links-check | 1 | Flag when broken wikilinks ≥ 5 — `templates/crontab.example` (OpenClaw mode), no launchd plist |
 | Mon 11:32 | cron-notes-todo-check | 1 | Flag when TODO backlog ≥ 20 — `templates/crontab.example` (OpenClaw mode), no launchd plist |
 

@@ -42,6 +42,11 @@ Default schedule:
 | 03:03 Sun (weekly) | memory-dream | Cross-domain association |
 | 09:10 1st (monthly) | memory-archive-timeline | MEMORY.md timeline rollup (pure shell, no LLM) |
 | 10:00 1st (monthly) | monthly-review | Monthly highlights + stale-content review + old-archive cleanup suggestions |
+| 09:30 Sun (weekly) | weekly-review | Weekly review checklist: corrections, unreviewed reflections, LEARNINGS promote/archive → `weekly-review.flag` |
+| 21:30 Sun (weekly) | graphify-check-weekly | Flag a graph rebuild when `memory/` changed (no-op without graphify) |
+| 21:32 Sun (weekly) | graphify-version-check | Flag when a newer `graphifyy` is on PyPI; self-clears (no-op without graphify) |
+| 09:20 1st (monthly) | memory-retire-candidates | Retirement-candidate report for feedback memories (zero LLM) → `retire-review.flag` |
+| 22:00 1st (monthly) | graphify-check-monthly | Monthly full graph refresh reminder (no-op without graphify) |
 
 Retired jobs: `memory-expire` (daily rotate made its monthly 60-day scan a
 permanent no-op; surviving duties moved into monthly-review) and

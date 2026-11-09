@@ -55,6 +55,9 @@
 | **Cron 系統 (Mac)** | `cron/install-mac.sh` | launchd plists + placeholder 替換 |
 | **Cron 系統 (Linux)** | `cron/install-linux.sh` | 自動把 plist 轉成 user crontab |
 | **網路就緒等待** | `cron/runner.sh` | `claude -p` 執行前等待睡眠喚醒後的網路就緒 |
+| **每週覆審** | `cron/bin/weekly-review.sh` | 糾正候選、未覆審反思、LEARNINGS 升級／歸檔合成一份清單＋flag |
+| **記憶退役** | `cron/bin/memory-retire-candidates.sh` | 每月列出 feedback 記憶的 merge／demote 候選，只出報告不刪檔 |
+| **知識圖譜維護** | `scripts/cron-graphify-check.sh` | 選配 [graphify](https://pypi.org/project/graphifyy/) 圖譜（給 `--graph-expand`）：變動／新版／月度更新 flag |
 
 ## Quick Start
 
@@ -141,6 +144,7 @@ workspace/
 │   ├── install-mac.sh     # macOS launchd 安裝
 │   ├── install-linux.sh   # Linux crontab 安裝
 │   ├── prompts/           # Job prompt（Markdown）
+│   ├── bin/               # Shell job（weekly-review、memory-retire-candidates、*-bare.sh）
 │   └── launchd/           # 排程定義（plist）
 ├── .claude/
 │   ├── flags/            # Pending-work flags（cron 寫到這裡）
@@ -154,6 +158,11 @@ workspace/
 │   ├── cron-broken-links-check.sh  # Broken wikilink > N 就寫 flag
 │   ├── cron-notes-todo-check.sh    # TODO backlog > N 就寫 flag
 │   ├── check-external-links.py     # notes/ 外部連結 404/410 > N 就寫 flag
+│   ├── cron-graphify-check.sh      # memory/ 有變動就寫 graph rebuild flag（graphify 選配）
+│   ├── cron-graphify-version-check.sh  # graphifyy 有新版就寫 flag
+│   ├── graphify-warm-cache.sh      # 用 claude -p 先暖 graphify 抽取 cache
+│   ├── weekly-review-digest.py     # 每週覆審清單（糾正／反思／LEARNINGS）
+│   ├── learnings-archive.py        # 把已解決／stale 的 LEARNINGS 條目移到 memory/archive/
 │   ├── memory-dream.sh    # 每週 "dreaming" — 冷記憶聯想
 │   ├── memory-reflect.sh  # 每週 rumination — 矛盾偵測
 │   ├── memory-expire.sh   # （已棄用——由 memory-archive.py 取代）
