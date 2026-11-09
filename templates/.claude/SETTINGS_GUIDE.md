@@ -4,6 +4,11 @@
 hand-edit the `permissions.allow` list in the JSON file — your change will
 be clobbered the next time someone regenerates it. Edit the TOML instead.
 
+> **In a workspace** (where bootstrap copied this file) nothing regenerates
+> `settings.json`: the generator `tools/build-settings.py` lives only in the
+> template repo. Edit `settings.json` directly there; the TOML is a readable
+> reference. The workflow below is for maintaining the template itself.
+
 ## Why generate?
 
 Inspired by the OpenAI Agents SDK's "Capabilities" concept: a flat

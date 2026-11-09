@@ -28,9 +28,10 @@ PATH), and runs the matching set of checks:
 | File ownership | no root-owned files in the top two levels |
 | Skill symlinks | dangerous (root-owned) symlinks flagged |
 
-**Exit code**: `0` on pass, `0` on warnings-only (`.learnings` missing
-etc.), `1` on errors (missing core file, broken settings.json, no
-cron jobs loaded).
+**Exit code**: `0` on pass, `0` on warnings-only (missing core file,
+`.learnings` missing, no cron jobs loaded, etc.), `1` on errors
+(`memory/` or `scripts/` missing, broken settings.json, `claude` /
+`openclaw` CLI not found).
 
 Override the mode manually if auto-detection picks wrong:
 

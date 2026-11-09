@@ -8,24 +8,26 @@ description: >
   Triggers on "curate memory", "organize memory", "archive this", "where should
   this go", "/curate-memory", and proactively after non-trivial technical
   decisions, infrastructure changes, or problem solutions.
-  Complements the global save-memory skill: save-memory is a fast append-one-line
-  shortcut for the journal, curate-memory is the full classify-and-merge workflow.
+  Complements the quick path of appending one line to the journal (by hand, or via
+  a save-memory skill if you have one installed); curate-memory is the full
+  classify-and-merge workflow.
 user-invocable: true
 ---
 
 # Curate Memory Skill
 
-> **Relationship to `save-memory`** (the global skill with a similar trigger surface):
-> - `save-memory` — fast path. Appends a single line to `memory/YYYY-MM-DD.md` and exits.
+> **Relationship to the quick-append path** (this template does not ship a
+> `save-memory` skill; add one globally if you want a shortcut):
+> - Fast path — append a single line to `memory/YYYY-MM-DD.md` and stop.
 >   Use when the user says "remember X" and X is already a well-formed journal entry.
 > - `curate-memory` (this skill) — full curator flow. Reviews the conversation,
 >   dedups against MEMORY.md and notes/, classifies via the Context Tree, and
 >   writes to the right layer (journal vs long-term index vs topic notes vs
 >   learnings). Higher latency, makes real classification decisions.
 >
-> This skill lives under `.claude/skills/curate-memory/`. The directory name must
-> differ from the global `save-memory` skill to avoid a frontmatter `name:`
-> collision. When a conversation produces a single one-liner, prefer `save-memory`.
+> This skill lives under `.claude/skills/curate-memory/`. If you add a global
+> `save-memory` skill, keep its directory and frontmatter `name:` distinct from
+> this one. When a conversation produces a single one-liner, prefer the fast path.
 > When it produces a chunk of new knowledge that needs to land in the right place,
 > prefer this skill.
 
@@ -88,16 +90,19 @@ LEARNINGS.md                      ← Learnings (claim/evidence fields, parsed b
 
 Each SessionStart-loaded file has its own role and **its own token cap**. Don't let one file eat the entire budget — when a cap is exceeded, consolidate **that file**, not the total.
 
+The caps below mirror `PER_FILE_CAPS` / `BUDGET_TOKENS` in `.claude/hooks/budget-flag-guard.py`, which is the source of truth: it writes `.claude/flags/sessionstart-budget.flag` on a breach. If you retune the hook, the hook's numbers win.
+
 | File | Cap (token) | Role | Over-budget action |
 |------|-------------|------|-------------------|
 | `MEMORY.md` | **≤ 4000** | Long-term index (wikilink + hard facts) | Consolidate Events Timeline → details to `notes/` |
-| `CLAUDE.md` | ≤ 1500 | Workspace entrypoint + bootstrap | Move on-demand playbooks (e.g. graphify) to notes/skills |
-| `AGENTS.md` | ≤ 1200 | Operations manual | Converge with `CLAUDE.md` to avoid dual-canonical drift |
-| `SOUL.md` + `USER.md` | ≤ 1200 combined | Persona + long-term user prefs | Persona is non-compressible; executable rules → `spec/` |
-| `MEMORY_COMPACT.md` | ≤ 500 | AAAK machine-quickload version | If overlaps with `CLAUDE.md` L0/L1, pick one as canonical |
-| **All combined** | **≤ 10000** (hygiene target) | — | Any single file over cap triggers consolidation, don't wait for total |
+| `CLAUDE.md` | ≤ 2500 | Workspace entrypoint + bootstrap | Move on-demand playbooks (e.g. graphify) to notes/skills |
+| `AGENTS.md` | ≤ 6000 | Operations manual | Converge with `CLAUDE.md` to avoid dual-canonical drift |
+| `SOUL.md` / `USER.md` | ≤ 1300 / ≤ 600 | Persona + long-term user prefs | Persona is non-compressible; executable rules → `spec/` |
+| `~/.claude/CLAUDE.md` | ≤ 800 | Personal cross-workspace prefs | Move workspace-specific rules into the workspace files |
+| `MEMORY_COMPACT.md` | ≤ 500 (convention; not measured by the hook) | AAAK machine-quickload version | If overlaps with `CLAUDE.md` L0/L1, pick one as canonical |
+| **All combined** | **≤ 16000** | — | Any single file over cap triggers consolidation, don't wait for total |
 
-> The old "12000 single threshold" is reframed as a hygiene target; real alerts fire on per-file caps. Source: codex review 2026-05-23.
+> Per-file caps fire first; the total (`BUDGET_TOKENS`) is a backstop kept ≥ the sum of the per-file caps. Estimates are `chars // 3`.
 
 ### Hard conditions for upgrading to MEMORY.md (default: NO)
 
@@ -174,8 +179,9 @@ python3 scripts/learnings-promotion-check.py --cluster --json \
 
 **Overlap rule of thumb**: extract 5-10 keywords from the new claim and compare
 against existing entries' keyword sets. **Jaccard ≥ 0.3** → same family, prefer
-+1 over creating. The `--cluster` mode in `learnings-promotion-check.py` uses
-this threshold by default.
++1 over creating. The `--cluster` mode in `learnings-promotion-check.py`
+defaults to a looser Jaccard ≥ 0.05 (it includes weak matches for you to
+filter); pass `--cluster-threshold 0.3` to apply this rule directly.
 
 ### 4. Report
 List: what was recorded (summary), where it was stored, what priority level.

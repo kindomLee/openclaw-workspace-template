@@ -153,7 +153,7 @@ workspace/
 │   ├── install-mac.sh     # macOS launchd installer
 │   ├── install-linux.sh   # Linux crontab installer
 │   ├── prompts/           # Job prompts (Markdown)
-│   ├── bin/               # Shell jobs (weekly-review, memory-retire-candidates, *-bare.sh)
+│   ├── bin/               # Shell jobs (curate-memory, weekly-review, memory-retire-candidates, *-bare.sh)
 │   ├── launchd/           # Schedule definitions (plist)
 │   └── optional/          # Opt-in services, not installed by install-mac.sh (embed-server)
 ├── .claude/
@@ -178,7 +178,7 @@ workspace/
 │   ├── memory-reflect.sh  # Weekly rumination — contradiction detection
 │   ├── memory-expire.sh   # (deprecated — superseded by memory-archive.py)
 │   ├── memory-compress.py # Long-term memory compression (MEMORY.md + archive)
-│   ├── memory-search-hybrid.py   # BM25 (jieba) × temporal × hall scoring (legacy fallback)
+│   ├── memory-search-hybrid.py   # Main memory search (BM25 × temporal × hall), called by the search hook
 │   ├── embed-server.py           # Optional dense/rerank server for hybrid search (requirements-dense.txt)
 │   ├── hall-tagger.sh             # Backfill hall_* tags on journal bullets
 │   ├── compact-update.py          # Generate MEMORY_COMPACT.md from markers
@@ -281,8 +281,8 @@ bash scripts/template-diff.sh /your/workspace      # shows what changed
 This template is a starting point. After running for a week, your agent will naturally evolve:
 - `SOUL.md` accumulates decision priors from corrections
 - `MEMORY.md` fills with your infrastructure and preferences
-- `.learnings/` captures patterns specific to your workflow
-- New skills can be added to `skills/` as needed
+- `LEARNINGS.md` captures patterns specific to your workflow
+- New skills can be added to `.claude/skills/` as needed
 
 ## License
 

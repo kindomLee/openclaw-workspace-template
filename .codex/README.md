@@ -55,9 +55,10 @@ In your **first prompt** to Codex, say:
 > `MEMORY.md` unless I explicitly point you at a specific file.
 
 This deliberately avoids the Claude Code wake-up protocol (which loads
-`SOUL.md`, `USER.md`, full `MEMORY.md`, today + yesterday journal). For
-Claude Code those files load via a SessionStart hook with full context
-isolation; Codex has no such layer.
+`SOUL.md`, `USER.md`, full `MEMORY.md`, today + yesterday journal). No
+hook loads those files: `CLAUDE.md` / `AGENTS.md` instruct the agent to
+read them at session start, and Codex reads `AGENTS.md` too — so the
+explicit first prompt above is what keeps Codex on the compact layer.
 
 ## Opt-in deep priming (when you need it)
 

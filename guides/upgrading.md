@@ -10,13 +10,16 @@ existing workspace up to date.
 cd /path/to/openclaw-workspace-template
 git pull
 
-# 2. Add new files (existing files are preserved)
+# 2. Read the **Upgrading** notes in CHANGELOG.md for every entry since
+#    your last upgrade — some changes need manual steps
+
+# 3. Add new files (existing files are preserved)
 bash bootstrap.sh --path /your/workspace --yes
 
-# 3. See what changed in template vs your workspace
+# 4. See what changed in template vs your workspace
 bash scripts/template-diff.sh /your/workspace
 
-# 4. Manually merge the diffs you want to keep
+# 5. Manually merge the diffs you want to keep
 ```
 
 ## Why re-running bootstrap isn't enough
@@ -50,6 +53,12 @@ git pull
 git log --oneline HEAD@{1}..HEAD  # see what changed
 ```
 
+Then read the **Upgrading** notes in `CHANGELOG.md` for every entry since
+your last upgrade. Breaking changes — e.g. the launchd label rename
+`org.oracle.*` → `org.mklee.*`, or `LEARNINGS.md` moving from `.learnings/`
+to the workspace root — need manual steps that neither bootstrap nor
+`template-diff.sh` will do for you.
+
 ### 2. Re-run bootstrap
 
 ```bash
@@ -69,6 +78,12 @@ This compares every template file against your workspace copy and shows
 which files have diffs. For each differing file, it prints a one-line
 summary. Pass `--full` to see the actual diff content.
 
+It only walks files the template currently ships (under `templates/`,
+`scripts/` and `cron/`), so it can't report files the template has since
+removed or renamed — e.g. old `cron/launchd/org.oracle.*.plist`,
+`cron/prompts/curate-memory.md`, `.learnings/LEARNINGS.md`. Those stay in
+your workspace; delete them as the CHANGELOG notes say.
+
 Alternatively, manually diff specific files:
 
 ```bash
@@ -83,24 +98,30 @@ diff templates/.claude/hooks/session-start-flags.sh /your/workspace/.claude/hook
 For each file with changes you want:
 
 ```bash
-# Option A: Accept the template version entirely
+# Option A: Accept the template version entirely — the normal path for
+# scripts/, cron/ and .claude/hooks/ files you haven't customized
+# (they're template-owned)
 cp templates/CLAUDE.md /your/workspace/CLAUDE.md
+cp scripts/health-check.sh /your/workspace/scripts/health-check.sh
 
 # Option B: Manual merge (recommended for files you've customized)
 # Open both files side-by-side and pick the sections you want
 ```
 
-### 5. Regenerate settings.json (if using capability TOML)
+### 5. Merge settings.json
 
-If your workspace uses the capability-grouped permission system:
+The template ships `templates/.claude/settings.json` already generated from
+`settings.capabilities.toml`; nothing in your workspace reads the TOML.
+Merge new `permissions` / `hooks` entries from the template's JSON into
+yours, keeping your own additions:
 
 ```bash
-# Update the TOML source from template
-cp templates/.claude/settings.capabilities.toml /your/workspace/.claude/settings.capabilities.toml
-
-# Regenerate settings.json (preserves your hooks)
-python3 tools/build-settings.py
+diff templates/.claude/settings.json /your/workspace/.claude/settings.json
 ```
+
+`tools/build-settings.py` only regenerates the template's own
+`templates/.claude/settings.json` (and `tools/` is not copied into
+workspaces) — run it in the template clone only if you edit the TOML there.
 
 ## Common upgrade scenarios
 
@@ -127,4 +148,5 @@ if `.claude/settings.json` needs a new entry in the `hooks` block. The
 
 Same process — `git pull` gets you to latest, `bootstrap.sh` adds all
 missing files, `template-diff.sh` shows all accumulated diffs. No
-incremental upgrade needed.
+incremental upgrade needed — but do read the CHANGELOG **Upgrading** notes
+for every entry you skipped.

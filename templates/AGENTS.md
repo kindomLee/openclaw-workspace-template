@@ -55,7 +55,7 @@ Both subsystems use the **same "≥ 3 similar occurrences → promote"** rule bu
 |---|---|---|---|
 | **Agent interaction style / decision bias / tone** | `memory/soul-proposals.md` | `SOUL.md` (Decision Priors) | "don't ask, just do it" / "too verbose" / "stop summarizing" |
 | **External facts / tools / APIs / infra knowledge** | `LEARNINGS.md` type=`correction` | `MEMORY.md` (Patterns / Learnings) | "that API endpoint is deprecated" / "we use X not Y" |
-| **Recurring bug / env regression** | `.learnings/ERRORS.md` type=`error`/`regression` | `MEMORY.md` (Agent Cases) | "cron job silently aborts on sleep wake" |
+| **Recurring bug / env regression** | `.learnings/ERRORS.md` type=`error`/`regression` | `MEMORY.md` (Cases) | "cron job silently aborts on sleep wake" |
 | **Can't decide** | Both (dup-safe) | Whichever hits ≥ 3 first | — |
 
 **Rule of thumb:** if the fix is "change how the agent behaves," it's SOUL. If the fix is "change what the agent knows," it's LEARNINGS. The routing is intentional — SOUL.md stays short and behavioral; MEMORY.md absorbs factual patterns.
@@ -137,7 +137,7 @@ Full architecture and how to add new flag types: `guides/flag-system.md`.
 
 ## Self-Improvement
 - Factual correction / knowledge gap / recurring error → `LEARNINGS.md` or `.learnings/ERRORS.md`
-- recurring_count ≥ 3 → promote to MEMORY.md (Patterns / Learnings / Agent Cases)
+- recurring_count ≥ 3 → promote to MEMORY.md (Patterns / Learnings / Cases)
 - **Behavioral** corrections route to `memory/soul-proposals.md` instead — see **Correction Routing** table above
 - Detailed categories → `guides/self-improvement.md`
 

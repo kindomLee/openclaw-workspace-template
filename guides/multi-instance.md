@@ -16,7 +16,7 @@ Different jobs want different minds:
 
 In Claude Code the unit of separation is a **workspace directory** —
 one directory with its own `AGENTS.md`, `SOUL.md`, `USER.md`,
-`MEMORY.md`, `memory/`, `.learnings/`, `.claude/`, and `cron/`. Claude
+`MEMORY.md`, `memory/`, `LEARNINGS.md`, `.learnings/`, `.claude/`, and `cron/`. Claude
 Code is one-shot per invocation (each `claude` call reads the workspace
 and exits when the session ends), so there are no long-running daemons
 to collide.
@@ -28,7 +28,7 @@ to collide.
 | `SOUL.md` / `IDENTITY.md` / `USER.md` | ✅ | — | The persona is the workspace |
 | `AGENTS.md` / `BOOTSTRAP.md` / `HEARTBEAT.md` | ✅ | — | Operating manual is per-persona |
 | `MEMORY.md` + `memory/` journal | ✅ | — | Never cross-link memories between workspaces |
-| `.learnings/` | ✅ | — | Each persona learns from its own mistakes |
+| `LEARNINGS.md` + `.learnings/` | ✅ | — | Each persona learns from its own mistakes |
 | `notes/` | ✅ | — | Topic knowledge stays with the persona that collected it |
 | `.claude/settings.json` (workspace) | ✅ | — | Per-workspace hook config |
 | `.claude/settings.local.json` | ✅ | — | Developer's local tweaks, gitignored |
@@ -72,8 +72,8 @@ no access to the "personal" journal-writing skill).
 
 This is the gotcha to watch out for.
 
-`cron/install-mac.sh` copies every `cron/launchd/org.mklee.*.plist`
-into `~/Library/LaunchAgents/org.mklee.*.plist`. If you run it twice
+`cron/install-mac.sh` copies every `cron/launchd/*.plist` (all named
+`org.mklee.*`) into `~/Library/LaunchAgents/` under the same names. If you run it twice
 — once for workspace A, once for workspace B — **the second run
 overwrites the first**, because both workspaces ship plists with the
 same label (`org.mklee.memory-janitor`, `org.mklee.curate-memory`,
@@ -92,8 +92,8 @@ done
 # <string>org.work.X</string>. A quick sed will do it:
 sed -i.bak 's|org\.mklee\.|org.work.|g' org.work.*.plist && rm *.bak
 
-# Then re-install
-bash cron/install-mac.sh
+# Then re-install from the workspace root
+cd ../.. && bash cron/install-mac.sh
 ```
 
 Now workspace A's jobs are `org.work.memory-janitor` etc. and

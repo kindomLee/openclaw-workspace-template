@@ -148,5 +148,6 @@ and `AGENTS.md § Pending Flags`.
 | Tool cheat sheet | `TOOLS.md` |
 | Cron schedule | `HEARTBEAT.md` |
 | Task classification | `BOOTSTRAP.md` |
-| Learnings / errors / feature requests | `.learnings/*.md` |
+| Learnings | `LEARNINGS.md` |
+| Errors / feature requests | `.learnings/*.md` |
 | Guides (sub-agents, flags, context tree) | `guides/*.md` |

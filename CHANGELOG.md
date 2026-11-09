@@ -7,6 +7,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (2026-11-10 — found by running every job end to end)
+
+- **Added** `tests/smoke_test.py` and a GitHub Actions workflow (Ubuntu + macOS)
+  that bootstrap a fresh workspace into a path with a space, seed it, and run
+  all 17 jobs, the 6 hooks and both installers with `claude` / `launchctl` /
+  `crontab` / `osascript` shimmed. Against the previous `main` it reports 23
+  failures; every fix below has a check there.
+- **Fixed** `cron/runner.sh` died on `TIMEOUT_CMD[@]: unbound variable` under
+  macOS `/bin/bash` 3.2 when neither `timeout` nor `gtimeout` is installed, and
+  exited 0, so all five prompt jobs silently never ran on a Mac without
+  coreutils. It also passed `-d "$PROJECT_DIR"` to `claude`, which is
+  `--debug <filter>`, not a directory; under Linux cron (cwd = `$HOME`) the
+  prompt jobs ran in the home directory. The runner now `cd`s into the workspace.
+- **Fixed** the 11 `bash -lc` plists left `__PROJECT_DIR__` unquoted, so every
+  one of them failed when the workspace path contains a space;
+  `install-linux.sh` quotes the runner and log paths too.
+- **Fixed** `install-linux.sh` ignored unknown arguments, so
+  `install-linux.sh --help` installed the crontab. It now prints usage, rejects
+  unknown options, and no longer counts the `PATH=` line as a job.
+- **Fixed** jobs started straight from their plist (broken-links, notes-todo,
+  external-links, graphify, …) never read `cron/config.env`, so their Telegram /
+  Slack alerts went nowhere. `scripts/lib/notify.sh` loads it.
+- **Fixed** the daily rotation moves journals older than 5 days into
+  `memory/archive-YYYY-MM/`, but several readers only looked in `memory/`:
+  the curate-memory backlog dropped days that had been rotated away (and the
+  skill then marked them curated), the monthly review saw ~5 of 30 days, and
+  the janitor / self-improvement "last 7 days" missed two. The weekly reflect
+  job read only today and yesterday. All now include the archive.
+- **Fixed** the memory-dream prompt matched `2026-*.md` and would have found no
+  journals from 2027-01-01.
+- **Fixed** `MEMORY_COMPACT.md` is read at every wake-up but nothing created it:
+  bootstrap generates it, and the janitor regenerates it with
+  `scripts/compact-update.py` instead of hand-editing the generated file.
+- **Fixed** re-running bootstrap to upgrade (as `guides/upgrading.md` says)
+  re-created the welcome flag the user had already resolved, restarting the
+  profile interview. It is now written only into a fresh workspace.
+- **Fixed** without `LLM_API_KEY`, captured corrections queued forever while the
+  weekly review reported "0". The digest now lists unclassified ones.
+- **Fixed** `learnings-promotion-check.py` counted the next top-level field as
+  evidence (3 lines read as 5) and labelled the distinct-date count `span`.
+- **Fixed** the self-improvement prompt promoted everything to a non-existent
+  "Agent Cases" section; it now follows the AGENTS.md routing (`## Learnings`,
+  `## Agent Patterns`, `## Cases`).
+- **Fixed** `memory-retire-candidates.sh` only counted five LEARNINGS types;
+  graphify checks skipped forever after `uv tool install graphifyy` (they now
+  read the interpreter from the `graphify` CLI); the `classify-corrections.py`
+  line in `crontab.example` lacked `python3` (the file isn't executable);
+  `config.env.example` shipped live placeholder Telegram values.
+- **Fixed** `health-check.sh` counted only `runner.sh` crontab lines (6 of 17
+  jobs) and any `org.mklee.*` agent on the Mac; it now counts the jobs that
+  point at this workspace.
+- **Docs**: `guides/upgrading.md` now points at these **Upgrading** notes and
+  explains that removed/renamed files stay behind; the curate-memory skill's
+  token caps match the budget hook; `flag-system.md` lists every flag that is
+  actually written and the Claude Code install path; `cron/README.md` counts,
+  both READMEs, `multi-instance.md`, `post-install-checklist.md`,
+  `.codex/README.md` and `SETTINGS_GUIDE.md` corrected where they contradicted
+  the code.
+- **Changed** `BUDGET_TOKENS` 12000 → 16000 (9b5aca1, previously unlisted) so
+  the total stays ≥ the sum of the per-file caps and per-file breaches fire first.
+  **Upgrading**: these are all template-owned files (`cron/`, `scripts/`,
+  `bootstrap.sh`); copy them over unless you customized them, then re-run the
+  cron installer so the re-quoted plists are loaded.
+
 ### Fixed (2026-11-09 — LEARNINGS.md location and format)
 
 - **Fixed** `LEARNINGS.md` shipped under `.learnings/` in a free-form layout,
@@ -24,7 +88,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   parses. `health-check.sh` warns while `.learnings/LEARNINGS.md` still exists.
   **Upgrading**: copy `templates/LEARNINGS.md` to the workspace root, rewrite
   any real entries from `.learnings/LEARNINGS.md` into the new fields, then
-  delete the old file.
+  delete the old file. Bootstrap keeps your existing `AGENTS.md`, `CLAUDE.md`,
+  `.claude/skills/curate-memory/SKILL.md` and `cron/prompts/self-improvement.md`,
+  which still say `.learnings/LEARNINGS.md`; update those references too, or the
+  agent recreates the old file.
 
 ### Changed (2026-11-09 — launchd label prefix; guided setup covers search deps and cron)
 

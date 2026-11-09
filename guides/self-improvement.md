@@ -74,8 +74,9 @@ AI Agent 在長期運行過程中會遇到各種問題：
 
 ### 提升規則
 當 `recurring_count ≥ 3` 時，該問題應該提升到 `MEMORY.md` 的相關區塊：
-- **Agent Cases** - 重複出現的問題模式
-- **Patterns** - 常見的行為模式
+- **Cases** - 重複出現的問題模式（error／regression）
+- **Agent Patterns** - 常見的行為模式（best_practice／manual_repeat）
+- **Learnings** - 事實與工具知識（correction／knowledge_gap）
 - **Learnings** - 重要的知識點
 
 ### 計數原則
@@ -150,7 +151,7 @@ AI Agent 在長期運行過程中會遇到各種問題：
 ### 格式
 `LEARNINGS.md`：依該檔開頭的 claim／evidence 欄位；`.learnings/*.md`：`## [TYPE-YYYYMMDD-XXX] 標題` + Summary + Details + Suggested Action
 - **必填欄位：** `recurring_count`（同一模組/問題出現幾次，首次為 1）
-- **提升規則：** recurring_count ≥ 3 → 提升到 MEMORY.md 的 Agent Cases/Patterns
+- **提升規則：** recurring_count ≥ 3 → 依 AGENTS.md「Correction Routing」提升到 MEMORY.md 的 Learnings／Agent Patterns／Cases
 - **不要記的：** 一次性小錯、已知限制、使用者自己的操作失誤
 
 **原則：** 立即記、要具體、附重現步驟、建議具體修法

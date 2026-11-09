@@ -5,7 +5,7 @@
 # Phase 1: evolve_skill.py 用 M3 產 evolved 候選 + eval 分數
 # Phase 2: skill_evolve_apply.py 決策 AUTO_APPLY / FLAG / REVERT
 #   - content-loss guard（硬擋）+ delta 門檻 + M3 信度
-#   - M3 信度不足 → 寫 .claude/flags/skill-evolve-review.flag 等互動式覆審
+#   - M3 信度不足 → 寫 .claude/flags/skill-evolve-review-<slug>.flag 等互動式覆審
 #
 # 預設 dry-run（不寫 skill 檔，只決策 + telemetry + flag）。
 # 真要自動套用：傳 --auto-apply（謹慎，建議先累積 telemetry 觀察採納率）。

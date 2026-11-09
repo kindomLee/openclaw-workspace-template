@@ -1,8 +1,9 @@
 # Cron System (Claude Code mode)
 
-Scheduled jobs driven by `claude -p`. Each job is a Markdown prompt
-(`prompts/<job>.md`) executed by `runner.sh` under launchd (macOS) or
-user crontab (Linux).
+Scheduled jobs under launchd (macOS) or user crontab (Linux). The LLM
+jobs are Markdown prompts (`prompts/<job>.md`) that `runner.sh` feeds to
+`claude -p`; the rest are zero-LLM shell / Python scripts the scheduler
+runs directly.
 
 > **If you're running the OpenClaw agent instead of Claude Code**, use
 > the alternative pipeline under `scripts/memory-*.sh` + `scripts/
@@ -70,8 +71,8 @@ bash cron/install-linux.sh
 # Uninstall
 bash cron/install-linux.sh --uninstall
 
-# Verify
-crontab -l | grep runner
+# Verify (all jobs live in the marker block)
+crontab -l | sed -n '/>>> mklee cron BEGIN/,/<<< mklee cron END/p'
 ```
 
 ## Configuration
@@ -194,13 +195,17 @@ cron/
 ├── install-linux.sh       ← Linux crontab installer (reads plists via plistlib)
 ├── config.env             ← Secrets — gitignored
 ├── config.env.example     ← Config template
-├── prompts/               ← Per-job Markdown prompts (7 shipped — see templates/HEARTBEAT.md)
-├── launchd/               ← macOS plist schedule definitions (9 shipped: 7 prompt
-│   │                        jobs + 2 direct-shell memory-archive jobs)
+├── prompts/               ← Per-job Markdown prompts (6 shipped — see templates/HEARTBEAT.md)
+├── launchd/               ← macOS plist schedule definitions (17 shipped: 6 via
+│   │                        runner.sh — 5 claude -p prompt jobs + smart-wikilinks
+│   │                        via its -bare.sh — and 11 direct-shell jobs)
 │   └── org.mklee.<job-name>.plist
 ├── state/locks/           ← Per-job reentrancy locks (managed by runner.sh)
 ├── logs/                  ← Per-job execution logs (auto-cleaned after 30 days)
 └── bin/
+    ├── curate-memory.sh           ← Hourly zero-LLM check, flags uncurated closed-day journals
+    ├── memory-retire-candidates.sh ← Monthly retire-review report + flag
+    ├── weekly-review.sh           ← Weekly review checklist + flag
     ├── mono_seconds.py            ← CLOCK_UPTIME_RAW reader for active-time measurement
     ├── smart-wikilinks-bare.sh    ← Zero-LLM implementation (overrides the prompt)
     ├── skill-evolve-mm.sh         ← Manual RSI tool (not scheduled by default)

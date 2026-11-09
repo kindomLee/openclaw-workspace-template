@@ -30,7 +30,7 @@
 
 - 🔍 **Agent 找東西更快** — Hybrid memory search（`scripts/memory-search-hybrid.py`）用 **BM25（jieba 中文分詞）× 時間新鮮度 × hall 類型加權** 對 `memory/` 和 `notes/` 評分。沒裝 `jieba` / `rank_bm25` 時自動 fallback 到 keyword overlap 模式（也可用 `--no-bm25` 強制）。MemPalace 啟發的 hall taxonomy（`hall_facts` / `hall_events` / `hall_discoveries` / `hall_preferences` / `hall_advice`）把 journal entry 標類型強化檢索，搭配 UserPromptSubmit hook 在偵測到硬觸發關鍵字時**強制搜尋** —— 「要不要搜記憶」不再是判斷題。
 
-- 🚩 **Agent 有待辦收件匣** — **cron → flag → SessionStart hook** pipeline 把固定邏輯的背景檢查（broken wikilinks、TODO backlog、stale cache）變成 `.claude/flags/` 下的 flag 檔。Cron 只做偵測，下一次 Claude session 會透過 SessionStart hook 接住處理。Cron 不直接叫 LLM —— 「hard trigger, soft action」。詳見 [flag-system 指南](guides/flag-system.md)。
+- 🚩 **Agent 有待辦收件匣** — **cron → flag → SessionStart hook** pipeline 把固定邏輯的背景檢查（broken wikilinks、TODO backlog、stale cache）變成 `.claude/flags/` 下的 flag 檔。Cron 只做偵測，下一次 Claude session 會透過 SessionStart hook 接住處理。flag pipeline 本身不叫 LLM —— 「hard trigger, soft action」（[cron/](cron/README.md) 底下的 LLM 排程工作是另一條路徑，會依排程跑 `claude -p`）。詳見 [flag-system 指南](guides/flag-system.md)。
 
 ## 功能一覽
 
@@ -151,7 +151,7 @@ workspace/
 │   ├── install-mac.sh     # macOS launchd 安裝
 │   ├── install-linux.sh   # Linux crontab 安裝
 │   ├── prompts/           # Job prompt（Markdown）
-│   ├── bin/               # Shell job（weekly-review、memory-retire-candidates、*-bare.sh）
+│   ├── bin/               # Shell job（curate-memory、weekly-review、memory-retire-candidates、*-bare.sh）
 │   ├── launchd/           # 排程定義（plist）
 │   └── optional/          # 選配服務，install-mac.sh 不會裝（embed-server）
 ├── .claude/
@@ -176,7 +176,7 @@ workspace/
 │   ├── memory-reflect.sh  # 每週 rumination — 矛盾偵測
 │   ├── memory-expire.sh   # （已棄用——由 memory-archive.py 取代）
 │   ├── memory-compress.py # 長期記憶壓縮（MEMORY.md + archive）
-│   ├── memory-search-hybrid.py   # BM25（jieba）× 時間 × hall 評分（legacy fallback）
+│   ├── memory-search-hybrid.py   # 主要記憶搜尋（BM25 × 時間 × hall），搜尋 hook 直接呼叫
 │   ├── embed-server.py           # 選配的 dense／rerank 服務（requirements-dense.txt）
 │   ├── hall-tagger.sh             # 回補 journal bullet 的 hall_* tag
 │   ├── compact-update.py          # 從 marker 生成 MEMORY_COMPACT.md
@@ -284,7 +284,7 @@ bash scripts/template-diff.sh /your/workspace      # 顯示哪些檔案有差異
 這份 template 是起點。跑一週之後 agent 會自然演化：
 - `SOUL.md` 從糾正累積決策偏好
 - `MEMORY.md` 填入你的基礎設施跟偏好
-- `.learnings/` 記錄你工作流程特有的 pattern
+- `LEARNINGS.md` 記錄你工作流程特有的 pattern
 - 新 skills 可以加到 `.claude/skills/`
 
 ## License

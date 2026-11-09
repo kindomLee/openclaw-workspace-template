@@ -89,10 +89,17 @@ Scheduled flag producers in `cron/launchd/`:
 
 The graphify producers stay silent until `graphifyy` is installed.
 
-Unscheduled: `search-deps-missing` is written by `scripts/memory-search-hybrid.py`
-itself the first time it runs without `jieba` / `rank_bm25` (from a hook or a
-cron job, so the fallback to keyword mode doesn't stay silent). You clear it
-after reinstalling.
+Unscheduled flag producers (hooks, bootstrap, manual tools):
+
+| Flag | Producer | Clears |
+|------|----------|--------|
+| `search-deps-missing` | `scripts/memory-search-hybrid.py`, when it runs without `jieba` / `rank_bm25` (from a hook or a cron job, so the fallback to keyword mode doesn't stay silent) | you, after reinstalling |
+| `sessionstart-budget` | `.claude/hooks/budget-flag-guard.py` (SessionStart hook) | auto-clears once every spec file is back under its cap |
+| `runtime-friction` | `.claude/hooks/runtime-friction-monitor.py` (PostToolUse hook, observe-only) | you, after deciding whether you were actually stuck |
+| `correction-candidates` | `scripts/classify-corrections.py` (opt-in, needs `LLM_API_KEY`; run by hand or from your own crontab) | you, after reviewing `cron/state/observations.jsonl`; `weekly-review.sh` runs the classifier and removes this flag at once, since the `weekly-review` flag covers it |
+| `skill-evolve-review-<slug>` | `scripts/skill_evolve_apply.py` via `cron/bin/skill-evolve-mm.sh` (manual) | you, after reviewing the evolved diff |
+| `skill-genesis-<slug>` | `scripts/skill_genesis_mine.py` via `cron/bin/skill-genesis-mm.sh` (manual) | you, after adopting or discarding the draft skill |
+| `welcome-profile-setup` | `bootstrap.sh` (fresh workspace only) | Claude, after the guided first-run setup |
 
 ## Anatomy of the SessionStart hook
 
@@ -106,6 +113,17 @@ No changes needed when you add new flag types — the hook picks up any
 
 ## Installing the cron jobs
 
+**Claude Code** — the flag checks are part of the `cron/launchd/` schedule,
+installed with the rest of the jobs:
+
+```bash
+bash cron/install-mac.sh     # macOS (launchd)
+bash cron/install-linux.sh   # Linux (crontab)
+```
+
+**OpenClaw** — use the crontab snippet instead (don't run both, or every
+check is scheduled twice):
+
 ```bash
 bash scripts/install-cron.sh             # prints the snippet
 bash scripts/install-cron.sh --install   # appends with confirmation
@@ -118,7 +136,7 @@ you want to add new checks or change the schedule.
 
 Flag writes are silent by default. To get pinged when a flag fires, set
 environment variables — canonical home is `cron/config.env` (loaded by
-`cron/runner.sh`; source it manually in non-runner cron scripts too):
+`scripts/lib/notify.sh` itself, so runner and direct-shell jobs both see it):
 
 ```
 TG_BOT_TOKEN=...
