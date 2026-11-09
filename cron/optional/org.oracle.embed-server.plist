@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>org.oracle.embed-server</string>
+    <!--
+      OPTIONAL resident embedding server for the dense search leg
+      (scripts/embed-server.py). NOT installed by cron/install-mac.sh — this
+      directory is outside cron/launchd/ on purpose. Install by hand, see
+      guides/dense-search.md. Add EMBED_RERANK=1 under EnvironmentVariables
+      to also load the cross-encoder reranker (+2 GB download).
+    -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>__HOME__/.local/share/oracle-embed/venv/bin/python</string>
+        <string>-u</string>
+        <string>__PROJECT_DIR__/scripts/embed-server.py</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <dict>
+        <key>Crashed</key>
+        <true/>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>__PROJECT_DIR__/cron/logs/embed-server.log</string>
+    <key>StandardErrorPath</key>
+    <string>__PROJECT_DIR__/cron/logs/embed-server.log</string>
+    <key>WorkingDirectory</key>
+    <string>__PROJECT_DIR__</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>__HOME__</string>
+        <key>TOKENIZERS_PARALLELISM</key>
+        <string>false</string>
+        <!-- cap the MPS memory pool; tuned on a 16 GB Mac -->
+        <key>PYTORCH_MPS_HIGH_WATERMARK_RATIO</key>
+        <string>0.45</string>
+        <key>PYTORCH_MPS_LOW_WATERMARK_RATIO</key>
+        <string>0.35</string>
+    </dict>
+</dict>
+</plist>

@@ -545,6 +545,8 @@ def run_search_cached(query: str, days: int, top: int) -> list[dict] | None:
                 "--top", str(top),
                 "--json",
                 "--graph-expand",  # no-op without graphify-out/graph.json
+                # leave the optional dense/rerank leg only the time this hook can wait
+                "--budget", str(SEARCH_TIMEOUT_SEC - 1),
             ],
             cwd=PROJECT_DIR,
             capture_output=True,

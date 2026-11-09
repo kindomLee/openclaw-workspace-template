@@ -41,6 +41,7 @@ After installing:
 | **AAAK compact** | `MEMORY_COMPACT.md` | Lossless ~200-token snapshot loaded on every session |
 | **Knowledge base** | `notes/01-Projects/` – `notes/04-Archive/` (PARA) | Topic-organized notes that complement journal entries |
 | **Hybrid search** | `scripts/memory-search-hybrid.py` | BM25 (jieba CJK) × temporal recency × hall-type boost; falls back to keyword overlap |
+| **Dense search (optional)** | `scripts/embed-server.py` | Local EmbeddingGemma 2 ranking fused into hybrid search, optional cross-encoder rerank; off until you run the server — see [guide](guides/dense-search.md) |
 | **Hall-type tags** | `[hall_facts]` `[hall_events]` `[hall_discoveries]` `[hall_preferences]` `[hall_advice]` | Categorize journal entries for boosted retrieval |
 | **Self-improvement** | `.learnings/`, `LEARNINGS.md` | Track corrections / errors / gaps; auto-promote when recurring ≥ 3 |
 | **Memory dreaming** | `cron/prompts/memory-dream.md` | Weekly cross-domain association of unrelated memories |
@@ -147,7 +148,8 @@ workspace/
 │   ├── install-linux.sh   # Linux crontab installer
 │   ├── prompts/           # Job prompts (Markdown)
 │   ├── bin/               # Shell jobs (weekly-review, memory-retire-candidates, *-bare.sh)
-│   └── launchd/           # Schedule definitions (plist)
+│   ├── launchd/           # Schedule definitions (plist)
+│   └── optional/          # Opt-in services, not installed by install-mac.sh (embed-server)
 ├── .claude/
 │   ├── flags/            # Pending-work flags (cron drops them here)
 │   ├── hooks/            # SessionStart + UserPromptSubmit hooks
@@ -170,6 +172,7 @@ workspace/
 │   ├── memory-expire.sh   # (deprecated — superseded by memory-archive.py)
 │   ├── memory-compress.py # Long-term memory compression (MEMORY.md + archive)
 │   ├── memory-search-hybrid.py   # BM25 (jieba) × temporal × hall scoring (legacy fallback)
+│   ├── embed-server.py           # Optional dense/rerank server for hybrid search (requirements-dense.txt)
 │   ├── hall-tagger.sh             # Backfill hall_* tags on journal bullets
 │   ├── compact-update.py          # Generate MEMORY_COMPACT.md from markers
 │   ├── check-broken-wikilinks.py  # Standalone broken-link scanner
@@ -250,6 +253,7 @@ Before responding, the agent classifies each message:
 - [Flag System](guides/flag-system.md) — `cron → flag → SessionStart hook` for background work triage
 - [Plan File Policy](guides/plan-file-policy.md) — Hard triggers for when to open a `.claude/plans/` plan file, plus a SessionStart resume hook for unfinished plans
 - [Smart Wikilinks (optional)](guides/smart-wikilinks.md) — Recipe for embedding-based related-note suggestions
+- [Dense Search (optional)](guides/dense-search.md) — Local embedding server + cross-encoder rerank for hybrid search
 - [Upgrading](guides/upgrading.md) — How to update an existing workspace when the template releases a new version
 
 ## Upgrading

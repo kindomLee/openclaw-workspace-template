@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-11-09 — upstream backport: optional dense search)
+
+- **Added** `scripts/embed-server.py` + `scripts/requirements-dense.txt` +
+  `cron/optional/org.oracle.embed-server.plist` — optional resident
+  EmbeddingGemma 2 server (127.0.0.1:8766) with an optional
+  `BAAI/bge-reranker-v2-m3` cross-encoder (`EMBED_RERANK=1`). The plist sits
+  outside `cron/launchd/`, so `install-mac.sh` never installs it. See
+  `guides/dense-search.md`.
+- **Changed** `memory-search-hybrid.py` — when a server for *this* workspace
+  answers, its ranking is fused in by weighted RRF (dense ×3, reorder only,
+  scores keep their distribution) and the top 10 can be cross-encoder
+  reranked (1:1 RRF). A dominant BM25 hit that dense misses is pinned to
+  rank 0. New flags `--no-dense`, `--no-rerank`, `--budget`; `mode=` shows
+  `bm25+dense[+rerank]`. The server reports its corpus `root` and the client
+  ignores a server for another workspace, so several workspaces on one
+  machine never mix corpora. No server → unchanged BM25 behaviour.
+- **Changed** `memory-search-trigger.py` hook passes `--budget 5` (its
+  subprocess timeout is 6 s) so a slow rerank degrades to the fused order
+  instead of a hook timeout.
+
 ### Added (2026-11-09 — upstream backport: review & graph jobs)
 
 - **Added** `cron/bin/weekly-review.sh` + `scripts/weekly-review-digest.py`

@@ -1,0 +1,6 @@
+# Optional dense search leg (scripts/embed-server.py) — see guides/dense-search.md.
+# Install into its own venv, not the interpreter the cron/hook scripts use.
+# Tested with torch 2.14.1, sentence-transformers 6.1.0, numpy 2.5.3 (Python 3.12, macOS arm64).
+torch>=2.14
+sentence-transformers>=6.1
+numpy>=2.5

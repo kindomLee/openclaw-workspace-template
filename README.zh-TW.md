@@ -41,6 +41,7 @@
 | **AAAK compact** | `MEMORY_COMPACT.md` | 每個 session 必載的 ~200 token 壓縮快照 |
 | **知識庫** | `notes/01-Projects/`–`notes/04-Archive/`（PARA） | 主題化筆記，補足 journal 的碎片感 |
 | **Hybrid search** | `scripts/memory-search-hybrid.py` | BM25（jieba 中文分詞）× 時間 × hall 類型綜合評分；無依賴時 fallback 為 keyword overlap |
+| **語意搜尋（選配）** | `scripts/embed-server.py` | 本機 EmbeddingGemma 2 語意排名併入 hybrid search，可再加 cross-encoder 重排；沒開 server 就不作用，見[指南](guides/dense-search.md) |
 | **Hall-type tags** | `[hall_facts]` `[hall_events]` `[hall_discoveries]` `[hall_preferences]` `[hall_advice]` | 分類 journal entry 強化檢索 |
 | **Self-improvement** | `.learnings/`、`LEARNINGS.md` | 追蹤 correction / error / gap，≥ 3 次自動 promote |
 | **Memory dreaming** | `cron/prompts/memory-dream.md` | 每週跨領域記憶關聯 |
@@ -145,7 +146,8 @@ workspace/
 │   ├── install-linux.sh   # Linux crontab 安裝
 │   ├── prompts/           # Job prompt（Markdown）
 │   ├── bin/               # Shell job（weekly-review、memory-retire-candidates、*-bare.sh）
-│   └── launchd/           # 排程定義（plist）
+│   ├── launchd/           # 排程定義（plist）
+│   └── optional/          # 選配服務，install-mac.sh 不會裝（embed-server）
 ├── .claude/
 │   ├── flags/            # Pending-work flags（cron 寫到這裡）
 │   ├── hooks/            # SessionStart + UserPromptSubmit hooks
@@ -168,6 +170,7 @@ workspace/
 │   ├── memory-expire.sh   # （已棄用——由 memory-archive.py 取代）
 │   ├── memory-compress.py # 長期記憶壓縮（MEMORY.md + archive）
 │   ├── memory-search-hybrid.py   # BM25（jieba）× 時間 × hall 評分（legacy fallback）
+│   ├── embed-server.py           # 選配的 dense／rerank 服務（requirements-dense.txt）
 │   ├── hall-tagger.sh             # 回補 journal bullet 的 hall_* tag
 │   ├── compact-update.py          # 從 marker 生成 MEMORY_COMPACT.md
 │   ├── check-broken-wikilinks.py  # 獨立 broken-link 掃描
@@ -251,6 +254,7 @@ Agent 會隨時間累積決策偏好，寫在 `SOUL.md`，overrides 通用 best 
 - [Flag System](guides/flag-system.md) — `cron → flag → SessionStart hook` 背景工作 triage
 - [Plan File Policy](guides/plan-file-policy.md) — 何時該建 `.claude/plans/` plan 檔的硬觸發清單，加上偵測未完成 plan 的 SessionStart 接續 hook
 - [Smart Wikilinks (選用)](guides/smart-wikilinks.md) — Embedding-based 相關筆記推薦配方
+- [Dense Search (選用)](guides/dense-search.md) — 本機 embedding server＋cross-encoder 重排，接進 hybrid search
 - [Context Tree](guides/context-tree.md) — 兩層記憶架構（journal + knowledge）
 - [升級指南](guides/upgrading.md) — 當 template 發新版時如何更新既有 workspace
 

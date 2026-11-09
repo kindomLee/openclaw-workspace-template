@@ -3,10 +3,16 @@
 memory-search-hybrid.py — Hybrid search scoring for memory/*.md files
 Default mode: BM25(jieba 分詞) + temporal boost + hall type boost
 Fallback mode: keyword-overlap (when jieba/rank_bm25 unavailable or --no-bm25)
+Optional dense leg: when scripts/embed-server.py is running for this workspace,
+its semantic ranking is fused in (and, with EMBED_RERANK=1, the top 10 are
+cross-encoder reranked). No server → plain BM25, nothing to configure.
 
 Usage: python3 memory-search-hybrid.py "query" [--days N] [--json] [--top N] [--no-bm25] [--graph-expand]
+                                       [--no-dense] [--no-rerank]
 """
-import argparse, re, os, json, sys
+import argparse, math, re, os, json, sys, time
+_T0 = time.monotonic()   # --budget counts from here (before the jieba/rank_bm25 imports)
+import urllib.parse, urllib.request
 from pathlib import Path
 from datetime import datetime
 
@@ -451,6 +457,112 @@ def score_bm25(docs, query: str, extra_terms=(), query_weight: int = 8, cache_pa
     return scores
 
 
+# Dense leg (optional): scripts/embed-server.py (EmbeddingGemma 2) returns a
+# semantic ranking that is fused with the final BM25 ranking by weighted RRF —
+# it only reorders. In the author's evaluation equal-weight RRF lost to pure
+# dense and dense×3 won on both query sets. RRF scores are flat, so they are
+# never used as a base for further boosts (that measurably hurt MRR).
+# No server, a timeout, or a server for another workspace → None → plain BM25.
+DENSE_URL = os.environ.get("EMBED_URL", "http://127.0.0.1:8766")
+DENSE_WEIGHT = 3
+DENSE_TIMEOUT_SEC = 1  # queries take ~40–110 ms when the server is up
+RRF_K = 60
+RRF_POOL = 200
+# Protect an overwhelming BM25 hit: RRF only sees ranks, so a rare proper noun
+# that dense misses can be pushed out of the top 10 by dense×3. Only when the
+# top BM25 hit is not in dense's top PIN_DENSE_MISS_RANK and its raw score is
+# >= PIN_RATIO × every other hit, it is pinned back to rank 0.
+PIN_RATIO = 1.5
+PIN_DENSE_MISS_RANK = 50
+
+
+def dense_search(query: str, root: Path):
+    """Ask embed-server for a relpath ranking; None on any failure or when the
+    server indexes a different workspace (its results would not line up)."""
+    if not DENSE_URL:
+        return None
+    try:
+        url = f"{DENSE_URL}/search?" + urllib.parse.urlencode({"q": query, "k": RRF_POOL})
+        with urllib.request.urlopen(url, timeout=DENSE_TIMEOUT_SEC) as r:
+            body = json.load(r)
+        if Path(body.get("root") or "/nonexistent").resolve() != root.resolve():
+            return None
+        return [p for p, _ in body["results"]]
+    except Exception:
+        return None
+
+
+RERANK_K = 10
+RERANK_TIMEOUT_SEC = 2.5   # ~1.45 s median on Apple-silicon MPS
+RERANK_MIN_SEC = 1.0       # less time left than this → don't send: the server keeps working after a client timeout
+
+
+def rerank_order(scores: list) -> list:
+    """New order (index list) from a 1:1 RRF (k=60) of the original rank and
+    the cross-encoder rank; ties keep the original order. Pure cross-encoder
+    order hurt long, instruction-style prompts; 1:1 fusion lost on neither."""
+    ce_pos = {i: r for r, i in enumerate(sorted(range(len(scores)), key=lambda i: -scores[i]))}
+    return sorted(range(len(scores)), key=lambda i: -(1 / (RRF_K + 1 + i) + 1 / (RRF_K + 1 + ce_pos[i])))
+
+
+def rerank_top(query: str, results: list, root: Path, timeout: float = RERANK_TIMEOUT_SEC):
+    """Send the top RERANK_K to embed-server /rerank and reorder them, each rank
+    keeping its old score. Any failure, timeout, malformed reply or all-unreadable
+    → None (keep the order; mode is not tagged rerank). A hit pinned by
+    fuse_dense stays at rank 0."""
+    if not DENSE_URL or not results or timeout < RERANK_MIN_SEC:
+        return None
+    fixed = 1 if results[0].get("_pinned") else 0
+    head = results[fixed:RERANK_K]
+    if len(head) < 2:
+        return None
+    try:
+        rels = [str(Path(r["path"]).relative_to(root)) for r in head]
+        req = urllib.request.Request(f"{DENSE_URL}/rerank", method="POST",
+                                     data=json.dumps({"q": query, "paths": rels}).encode(),
+                                     headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            scores = json.load(r)["scores"]
+    except Exception:
+        return None
+    if not (isinstance(scores, list) and len(scores) == len(head)
+            and all(s is None or (type(s) in (int, float) and math.isfinite(s)) for s in scores)):
+        return None
+    if all(s is None for s in scores):
+        return None
+    scores = [float("-inf") if s is None else s for s in scores]   # unreadable files sink
+    old = [r["score"] for r in head]
+    new = [dict(head[i], score=old[k]) for k, i in enumerate(rerank_order(scores))]
+    return results[:fixed] + new + results[RERANK_K:]
+
+
+def fuse_dense(results: list, rel_paths: list, dense: list) -> list:
+    """results are sorted by the BM25 formula; reorder by RRF(original rank,
+    dense×DENSE_WEIGHT). Scores keep the original distribution (rank k gets the
+    k-th highest old score), so downstream thresholds (the recall hook) still hold."""
+    pos = {p: r for r, p in enumerate(dense)}
+    rel = dict(zip((r["path"] for r in results), rel_paths))
+    def rrf(rank, r):
+        s = 1 / (RRF_K + rank + 1) if rank < RRF_POOL else 0.0
+        d = pos.get(rel[r["path"]])
+        return s + (DENSE_WEIGHT / (RRF_K + d + 1) if d is not None else 0.0)
+    keyed = [(rrf(k, r), -k, r) for k, r in enumerate(results)]
+    keyed.sort(key=lambda x: (x[0], x[1]), reverse=True)
+    old_scores = [r["score"] for r in results]
+    fused = [r for _, _, r in keyed]
+    top = results[0] if results else None
+    top_raw = (top or {}).get("bm25_raw") or 0
+    others = max(((r.get("bm25_raw") or 0) for r in results[1:]), default=0)
+    dense_missed = pos.get(rel[top["path"]], PIN_DENSE_MISS_RANK) >= PIN_DENSE_MISS_RANK if top else False
+    if top_raw > 0 and dense_missed and top_raw >= PIN_RATIO * others:
+        fused.remove(top)
+        fused.insert(0, top)
+        top["_pinned"] = True   # rerank_top must not move it
+    for r, s in zip(fused, old_scores):
+        r["score"] = s
+    return fused
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("query", nargs="?", default="")
@@ -465,6 +577,12 @@ def main():
                     help="When the query hits a graphify god-node, add its 1-hop neighbor labels to the BM25 query")
     ap.add_argument("--graph-weight", type=int, default=8,
                     help="With --graph-expand: repeat factor for original query tokens (higher = less expansion influence)")
+    ap.add_argument("--no-dense", action="store_true",
+                    help="Don't ask embed-server; BM25 only (for comparison)")
+    ap.add_argument("--no-rerank", action="store_true", help="Skip cross-encoder rerank (for comparison)")
+    ap.add_argument("--budget", type=float, default=0,
+                    help="Time budget in seconds for the whole search (the recall hook passes one); "
+                         "the rerank only uses what is left. 0 = no limit")
     ap.add_argument("--no-confidence", action="store_true",
                     help="關閉 confidence 維（除錯/對照用，回到 bm25×temporal×hall）")
     args = ap.parse_args()
@@ -504,6 +622,7 @@ def main():
                            query, cache_path=ENTRY_TOKEN_CACHE)
         best_entry = pick_entries(entries, e_raw, tokenize_bm25(query))
     bm25_max = max(bm25_raw) if bm25_raw else 0.0
+    dense = None if (args.no_dense or not use_bm25) else dense_search(query, project_root)
 
     results = []
     for i, (fp, base_dir, file_content, mtime) in enumerate(docs):
@@ -557,15 +676,25 @@ def main():
         })
 
     results.sort(key=lambda x: x["score"], reverse=True)
+    if dense:
+        results = fuse_dense(results, [str(Path(r["path"]).relative_to(project_root)) for r in results], dense)
+    reranked = None
+    if dense and not args.no_rerank:
+        left = args.budget - (time.monotonic() - _T0) if args.budget else RERANK_TIMEOUT_SEC
+        reranked = rerank_top(query, results, project_root, min(RERANK_TIMEOUT_SEC, left))
+    results = reranked or results
     top = results[:args.top]
 
     if args.json:
         print(json.dumps(
-            {"query": query, "mode": "bm25" if use_bm25 else "legacy", "results": top},
+            {"query": query, "mode": (("bm25+dense+rerank" if reranked else "bm25+dense") if dense else "bm25")
+                                     if use_bm25 else "legacy",
+             "results": top},
             ensure_ascii=False, indent=2,
         ))
     else:
-        mode_tag = "BM25+jieba" if use_bm25 else "legacy keyword"
+        mode_tag = (("BM25+jieba+dense+rerank" if reranked else "BM25+jieba+dense") if dense else "BM25+jieba") \
+            if use_bm25 else "legacy keyword"
         print(f"🔍 Query: {query}  [mode={mode_tag}]")
         print(f"📂 Days back: {args.days} | Top: {args.top} | Keywords: {', '.join(sorted(query_kw))}")
         print()
