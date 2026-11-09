@@ -2,9 +2,9 @@
 # bootstrap.sh — Claude Code / OpenClaw Workspace Template Bootstrap
 #
 # Usage:
-#   ./bootstrap.sh                          # Interactive install into .
+#   ./bootstrap.sh                          # Interactive (default: ~/my-workspace from inside this clone, else .)
 #   ./bootstrap.sh --path ~/my-workspace    # Non-interactive path
-#   ./bootstrap.sh --path . --yes           # Fully non-interactive
+#   ./bootstrap.sh --path ~/my-workspace --yes  # Fully non-interactive
 #   ./bootstrap.sh --dry-run                # Preview only, no writes
 #   ./bootstrap.sh --skip-claude-check      # Codex-only users (no Claude CLI)
 #   ./bootstrap.sh --help                   # Show help
@@ -48,7 +48,7 @@ Options:
 Examples:
   ./bootstrap.sh
   ./bootstrap.sh --path ~/my-workspace
-  ./bootstrap.sh --path . --yes
+  ./bootstrap.sh --path ~/my-workspace --yes
   ./bootstrap.sh --dry-run --path /tmp/preview --yes
   ./bootstrap.sh --skip-claude-check --path ~/codex-only-workspace
 EOF
@@ -274,6 +274,11 @@ process_workspace_spec() {
   done < "$spec"
 }
 
+# Upgrades re-run bootstrap over an existing workspace; the welcome flag is
+# only for a brand-new one, so remember which case this is before copying.
+FRESH_WORKSPACE=0
+[ -f "$WORKSPACE_PATH/USER.md" ] || FRESH_WORKSPACE=1
+
 process_workspace_spec
 
 # ---- Permissions ------------------------------------------------------
@@ -283,6 +288,10 @@ if [ "$DRY_RUN" -eq 0 ]; then
   find "$WORKSPACE_PATH" -maxdepth 1 -name "*.md" -exec chmod 644 {} \; 2>/dev/null || true
   find "$WORKSPACE_PATH/scripts" -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
   find "$WORKSPACE_PATH/cron" -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
+  # CLAUDE.md's wake-up order reads MEMORY_COMPACT.md; generate it now
+  # (memory-janitor keeps it in sync afterwards).
+  [ -f "$WORKSPACE_PATH/MEMORY_COMPACT.md" ] || \
+    python3 "$WORKSPACE_PATH/scripts/compact-update.py" --workspace "$WORKSPACE_PATH" >/dev/null || true
 fi
 
 # ---- First-run profile setup flag -------------------------------------
@@ -294,10 +303,10 @@ fi
 # template defaults. Claude removes the flag after guiding the user
 # through setup (per the .claude/flags/ convention).
 #
-# Skip if a flag already exists (rerunning bootstrap shouldn't resurrect
-# a flag the user has already resolved).
+# Only for a fresh workspace: the user deletes the flag once setup is done,
+# so "flag missing" can't tell a new install from an upgrade re-run.
 WELCOME_FLAG="$WORKSPACE_PATH/.claude/flags/welcome-profile-setup.flag"
-if [ "$DRY_RUN" -eq 0 ] && [ ! -f "$WELCOME_FLAG" ]; then
+if [ "$DRY_RUN" -eq 0 ] && [ "$FRESH_WORKSPACE" -eq 1 ] && [ ! -f "$WELCOME_FLAG" ]; then
   mkdir -p "$(dirname "$WELCOME_FLAG")"
   cat > "$WELCOME_FLAG" <<'FLAG'
 First-run profile setup required

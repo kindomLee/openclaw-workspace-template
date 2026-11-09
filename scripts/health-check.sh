@@ -188,19 +188,24 @@ echo "--- Cron jobs ---"
 if [ "$MODE" = "claude" ]; then
     # Claude Code: prefer launchd on macOS, crontab on Linux.
     if [ "$(uname -s)" = "Darwin" ]; then
-        CRON_JOBS=$(launchctl list 2>/dev/null | awk '$3 ~ /^org\.mklee\./ {print $3}')
+        # Count only loaded jobs whose installed plist points at THIS workspace
+        # (another workspace on the same Mac uses the same labels).
+        CRON_JOBS=$(launchctl list 2>/dev/null | awk '$3 ~ /^org\.mklee\./ {print $3}' | while read -r label; do
+            grep -qF "$WORKSPACE/cron/" "$HOME/Library/LaunchAgents/$label.plist" 2>/dev/null && echo "$label"
+        done)
         if [ -z "$CRON_JOBS" ]; then
-            warn "no org.mklee.* launchd jobs loaded (run: bash cron/install-mac.sh)"
+            warn "no org.mklee.* launchd jobs loaded for this workspace (run: bash cron/install-mac.sh)"
         else
             JOB_COUNT=$(printf '%s\n' "$CRON_JOBS" | wc -l | tr -d ' ')
-            pass "$JOB_COUNT org.mklee.* launchd jobs loaded"
+            pass "$JOB_COUNT org.mklee.* launchd jobs loaded for this workspace"
         fi
     else
-        CRON_JOBS=$(crontab -l 2>/dev/null | grep -c 'cron/runner.sh' || true)
+        # Runner jobs and direct-shell jobs both reference <workspace>/cron/.
+        CRON_JOBS=$(crontab -l 2>/dev/null | grep -cF "$WORKSPACE/cron/" || true)
         if [ "$CRON_JOBS" -eq 0 ]; then
-            warn "no cron/runner.sh entries in crontab (run: bash cron/install-linux.sh)"
+            warn "no crontab entries for this workspace (run: bash cron/install-linux.sh)"
         else
-            pass "$CRON_JOBS cron/runner.sh crontab entries"
+            pass "$CRON_JOBS crontab entries for this workspace"
         fi
     fi
 else
@@ -222,7 +227,7 @@ if [ -f "$WORKSPACE/memory/$TODAY.md" ]; then
     size=$(wc -c < "$WORKSPACE/memory/$TODAY.md" | tr -d ' ')
     pass "today ($TODAY): $size bytes"
 else
-    warn "no journal for today ($TODAY) — is memory-sync / curate-memory running?"
+    warn "no journal for today ($TODAY) — fine if no session has logged anything yet (OpenClaw: is memory-sync running?)"
 fi
 if [ -n "$YESTERDAY" ] && [ -f "$WORKSPACE/memory/$YESTERDAY.md" ]; then
     size=$(wc -c < "$WORKSPACE/memory/$YESTERDAY.md" | tr -d ' ')

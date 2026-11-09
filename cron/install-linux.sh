@@ -219,4 +219,4 @@ fi
 
 echo "$NEW" | crontab -
 echo "Done. mklee cron installed to user crontab."
-echo "Verify with: crontab -l | grep runner"
+echo "Verify with: crontab -l | sed -n '/mklee cron BEGIN/,/mklee cron END/p'"
