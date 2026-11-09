@@ -114,7 +114,7 @@ def main():
         print(json.dumps(scoreboard, ensure_ascii=False, indent=2))
         return
 
-    print(f"=== Memory Recall Benchmark ===")
+    print("=== Memory Recall Benchmark ===")
     print(f"golden={args.golden}  n={n}  days={args.days}  top={args.top}")
     print(f"MRR            : {mrr:.4f}")
     for k in K_VALUES:

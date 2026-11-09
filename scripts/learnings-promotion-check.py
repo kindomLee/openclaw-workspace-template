@@ -62,7 +62,9 @@ def parse_entries(text: str) -> list[dict]:
             if m:
                 entry[field] = m.group(1).strip()
         # evidence count = number of lines starting with "  - YYYY-..." in evidence section
-        ev_match = re.search(r'\*\*evidence\*\*:\s*\n((?:\s*-\s.+\n?)+)', body)
+        # Indented sub-bullets only: `\s*-` also swallowed the next top-level
+        # field (`- **suggested_action**`) and inflated the count.
+        ev_match = re.search(r'\*\*evidence\*\*:[ \t]*\n((?:[ \t]+-\s.+\n?)+)', body)
         if ev_match:
             ev_lines = [l for l in ev_match.group(1).strip().split('\n') if l.strip().startswith('-')]
             entry["evidence_count"] = len(ev_lines)
@@ -269,7 +271,7 @@ def main():
         for e in sorted(candidates, key=lambda x: -x["promotion_score"]):
             print(f"   [{e['id']}] score={e['promotion_score']:.2f} "
                   f"(conf={e['confidence']:.2f}, rc={e.get('recurring_count', '?')}, "
-                  f"ev={e['evidence_count']}, span={len(e['evidence_dates'])}日)")
+                  f"ev={e['evidence_count']}, dates={len(e['evidence_dates'])})")
             print(f"      {e['title'][:90]}")
         print()
 

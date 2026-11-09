@@ -46,6 +46,23 @@ def corrections() -> list[str]:
     return out
 
 
+def unclassified() -> list[str]:
+    """Captured corrections the classifier never saw. Without LLM_API_KEY it
+    skips every week, so the queue would otherwise grow with nobody told."""
+    path = STATE / "pending-corrections.jsonl"
+    if not path.exists():
+        return []
+    out = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        try:
+            d = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if d.get("status") == "pending":
+            out.append(f"{d.get('ts', '')[:10]}: {d.get('user_msg', '').replace(chr(10), ' ')[:100]}")
+    return out
+
+
 def reflections() -> list[str]:
     if not REFLECTIONS.exists():
         return []
@@ -74,9 +91,9 @@ def section(title: str, items: list[str], action: str, cap: int = 15) -> str:
 
 
 def main() -> int:
-    corr, refl = corrections(), reflections()
+    corr, refl, raw = corrections(), reflections(), unclassified()
     promote, stale = learnings()
-    total = len(corr) + len(refl) + len(promote) + len(stale)
+    total = len(corr) + len(refl) + len(promote) + len(stale) + len(raw)
 
     week = date.today().strftime("%G-W%V")
     STATE.mkdir(parents=True, exist_ok=True)
@@ -89,6 +106,10 @@ def main() -> int:
         section("Correction candidates", corr,
                 "curate the ones worth keeping into feedback memory or LEARNINGS.md; "
                 "set `status: rejected` in cron/state/observations.jsonl for the rest"),
+        section("Captured corrections not classified", raw,
+                "classification needs LLM_API_KEY in cron/config.env; without it, read these yourself, "
+                "keep the real ones in LEARNINGS.md, then set `status: discarded` on each line of "
+                "cron/state/pending-corrections.jsonl"),
         section("Reflections not yet reviewed", refl,
                 f"read the matching section in memory/reflections.md, apply what you accept, "
                 f"then append \"{REVIEWED} YYYY-MM-DD\" to that section's heading "
@@ -103,14 +124,14 @@ def main() -> int:
     if total:
         FLAG.parent.mkdir(parents=True, exist_ok=True)
         FLAG.write_text("\n".join([
-            f"Weekly review {week}: corrections {len(corr)}, reflections {len(refl)}, "
+            f"Weekly review {week}: corrections {len(corr)}, unclassified {len(raw)}, reflections {len(refl)}, "
             f"LEARNINGS promote {len(promote)}, archivable {len(stale)}",
             f"Read {report.relative_to(REPO)} and work through each section.",
             "When done: rm .claude/flags/weekly-review.flag",
         ]) + "\n", encoding="utf-8")
     else:
         FLAG.unlink(missing_ok=True)
-    print(f"{report.relative_to(REPO)}: {total} item(s) (corrections {len(corr)}, reflections {len(refl)}, "
+    print(f"{report.relative_to(REPO)}: {total} item(s) (corrections {len(corr)}, unclassified {len(raw)}, reflections {len(refl)}, "
           f"promote {len(promote)}, archivable {len(stale)})")
     return 0
 

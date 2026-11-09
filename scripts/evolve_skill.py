@@ -47,7 +47,6 @@ RETRY_DELAY = 5
 
 def call_llm(prompt: str, max_tokens: int = 4000, timeout: int = 90) -> str:
     """Call MiniMax with retry on timeout/transient errors."""
-    last_err = None
     for attempt in range(MAX_RETRIES + 1):
         try:
             resp = httpx.post(
@@ -80,8 +79,7 @@ def call_llm(prompt: str, max_tokens: int = 4000, timeout: int = 90) -> str:
                         return c.get("thinking", "")
             raise RuntimeError(f"No text in response: {json.dumps(data)[:200]}")
 
-        except (httpx.ReadTimeout, httpx.ConnectTimeout, httpx.RemoteProtocolError) as e:
-            last_err = e
+        except (httpx.ReadTimeout, httpx.ConnectTimeout, httpx.RemoteProtocolError):
             if attempt < MAX_RETRIES:
                 wait = RETRY_DELAY * (attempt + 1)
                 print(f"    ⏳ Timeout (attempt {attempt+1}/{MAX_RETRIES+1}), retry in {wait}s...")
@@ -90,7 +88,6 @@ def call_llm(prompt: str, max_tokens: int = 4000, timeout: int = 90) -> str:
                 raise
         except httpx.HTTPStatusError as e:
             if e.response.status_code in (429, 500, 502, 503, 504):
-                last_err = e
                 if attempt < MAX_RETRIES:
                     # Respect Retry-After if present
                     retry_after = int(e.response.headers.get("retry-after", RETRY_DELAY * (attempt + 1)))
