@@ -19,5 +19,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - if: runner.os == 'macOS'
+        run: brew install coreutils   # bootstrap requires timeout/gtimeout
       - run: python3 -m pip install jieba rank_bm25
       - run: python3 tests/smoke_test.py

@@ -14,10 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   all 17 jobs, the 6 hooks and both installers with `claude` / `launchctl` /
   `crontab` / `osascript` shimmed. Against the previous `main` it reports 23
   failures; every fix below has a check there.
-- **Fixed** `cron/runner.sh` died on `TIMEOUT_CMD[@]: unbound variable` under
-  macOS `/bin/bash` 3.2 when neither `timeout` nor `gtimeout` is installed, and
-  exited 0, so all five prompt jobs silently never ran on a Mac without
-  coreutils. It also passed `-d "$PROJECT_DIR"` to `claude`, which is
+- **Fixed** `cron/runner.sh`'s documented "no timeout available" fallback died
+  on `TIMEOUT_CMD[@]: unbound variable` under macOS `/bin/bash` 3.2 and exited
+  0, so the prompt jobs silently never ran whenever the job's fixed PATH can't
+  see `timeout` / `gtimeout` (bootstrap requires coreutils, but e.g. a MacPorts
+  `/opt/local/bin` isn't on the plist PATH). It also passed `-d "$PROJECT_DIR"` to `claude`, which is
   `--debug <filter>`, not a directory; under Linux cron (cwd = `$HOME`) the
   prompt jobs ran in the home directory. The runner now `cd`s into the workspace.
 - **Fixed** the 11 `bash -lc` plists left `__PROJECT_DIR__` unquoted, so every
