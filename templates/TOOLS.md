@@ -32,7 +32,7 @@ crontab -l                           # Linux
 
 # Run a job on demand (for debugging)
 bash cron/runner.sh memory-janitor
-bash cron/runner.sh curate-memory
+bash cron/bin/curate-memory.sh
 
 # Tail the latest log for a job
 tail -f cron/logs/memory-janitor-*.log

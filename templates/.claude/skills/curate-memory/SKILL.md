@@ -40,10 +40,16 @@ user-invocable: true
 - User preference/requirement changes
 - **Compaction test:** Would this info be lost on compaction? Yes → record it
 
+**From the flag:** `curate-memory.flag` (raised hourly by `cron/bin/curate-memory.sh`,
+no LLM) lists closed-day journals that haven't been curated yet. Run the workflow
+on those files, then finish with step 5.
+
 ## Workflow
 
 ### 1. Scan Conversation
 Review all conversation from last memory write to now. Identify new decisions/settings/preferences.
+When run from `curate-memory.flag`, the material is the journal files the flag lists:
+read each one and treat its entries as what to classify.
 
 ### 2. Duplicate Check (mandatory before writing)
 
@@ -173,6 +179,29 @@ this threshold by default.
 ### 4. Report
 List: what was recorded (summary), where it was stored, what priority level.
 Nothing to record → `✅ No unrecorded important information`
+
+### 5. Wrap-up (when `curate-memory.flag` exists)
+
+`cron/bin/curate-memory.sh` points here. After every write is done, advance the
+state **first**, then remove the flag:
+
+```bash
+python3 - cron/state/curate-memory.json <<'PY'
+import datetime, json, sys
+p = sys.argv[1]
+try:
+    s = json.load(open(p))
+except Exception:
+    s = {}
+s["last_curated_date"] = str(datetime.date.today() - datetime.timedelta(days=1))
+s["notified_identity"] = None
+json.dump(s, open(p, "w"), ensure_ascii=False, indent=2)
+PY
+rm -f .claude/flags/curate-memory.flag
+```
+
+Removing only the flag doesn't finish the job: the next hourly check sees the
+same backlog and raises it again.
 
 ## Condensation Principles
 

@@ -4,10 +4,16 @@
 <dict>
     <key>Label</key>
     <string>org.mklee.curate-memory</string>
+    <!--
+      Hourly closed-day backlog check (pure bash, no LLM): raises
+      curate-memory.flag for the next session's /curate-memory. Does NOT
+      route through cron/runner.sh.
+    -->
     <key>ProgramArguments</key>
     <array>
-        <string>__PROJECT_DIR__/cron/runner.sh</string>
-        <string>curate-memory</string>
+        <string>/bin/bash</string>
+        <string>-lc</string>
+        <string>cd __PROJECT_DIR__ &amp;&amp; bash cron/bin/curate-memory.sh &gt;&gt; __PROJECT_DIR__/cron/logs/curate-memory-launchd.log 2&gt;&amp;1</string>
     </array>
     <key>StartCalendarInterval</key>
     <dict>

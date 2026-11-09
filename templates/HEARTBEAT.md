@@ -33,7 +33,7 @@ Default schedule:
 
 | Time | Job | Purpose |
 |------|-----|---------|
-| `:02` hourly | curate-memory | Early-return curate (journal → MEMORY.md/notes/LEARNINGS.md) |
+| `:02` hourly | curate-memory | Closed-day journals not yet curated → `curate-memory.flag` for `/curate-memory` (zero LLM) |
 | 09:05 daily | memory-archive-rotate | Journal >5 days → `archive-YYYY-MM/` (pure shell, no LLM) |
 | 20:07 daily | memory-janitor | Hall tag backfill + dup detection + notes QA |
 | 21:07 daily | smart-wikilinks | Wikilink/Related suggestions (zero-LLM bare script) |
@@ -47,6 +47,9 @@ Default schedule:
 | 21:32 Sun (weekly) | graphify-version-check | Flag when a newer `graphifyy` is on PyPI; self-clears (no-op without graphify) |
 | 09:20 1st (monthly) | memory-retire-candidates | Retirement-candidate report for feedback memories (zero LLM) → `retire-review.flag` |
 | 22:00 1st (monthly) | graphify-check-monthly | Monthly full graph refresh reminder (no-op without graphify) |
+| 11:30 Mon (weekly) | broken-links-check | Broken `[[wikilinks]]` in notes/ ≥ threshold → `broken-links.flag` (zero LLM) |
+| 11:32 Mon (weekly) | notes-todo-check | TODO backlog in notes/ ≥ threshold → `notes-todo.flag` (zero LLM) |
+| 11:34 Mon (weekly) | external-links-check | External links returning 404/410 ≥ 5 → `broken-external-links.flag` (zero LLM, network) |
 
 Retired jobs: `memory-expire` (daily rotate made its monthly 60-day scan a
 permanent no-op; surviving duties moved into monthly-review) and

@@ -143,7 +143,7 @@ view below adds the script-vs-LLM classification:
 
 | Time | Job | Layer | Purpose |
 |------|-----|-------|---------|
-| `:02` hourly | curate-memory | 2 | Early-return wrapper; when new journal entries exist, promote to MEMORY.md / notes/ / LEARNINGS.md |
+| `:02` hourly | curate-memory | 1 | Closed-day journals not yet curated → `curate-memory.flag`; the next session's `/curate-memory` does the promotion |
 | 09:05 daily | memory-archive-rotate | 1 | Journal >5 days → archive-YYYY-MM/ (pure shell) |
 | 20:07 daily | memory-janitor | 2 | Hall-tag backfill + duplicate detection + notes QA |
 | 21:07 daily | smart-wikilinks | 1 | Zero-LLM bare script: wikilink/Related suggestions |
@@ -157,8 +157,9 @@ view below adds the script-vs-LLM classification:
 | 21:32 Sun | graphify-version-check | 1 | Flag when a newer `graphifyy` is on PyPI; self-clears |
 | 09:20 1st of month | memory-retire-candidates | 1 | Retirement-candidate report for feedback memories → `retire-review.flag` |
 | 22:00 1st of month | graphify-check-monthly | 1 | Monthly full graph refresh reminder |
-| Mon 11:30 | cron-broken-links-check | 1 | Flag when broken wikilinks ≥ 5 — `templates/crontab.example` (OpenClaw mode), no launchd plist |
-| Mon 11:32 | cron-notes-todo-check | 1 | Flag when TODO backlog ≥ 20 — `templates/crontab.example` (OpenClaw mode), no launchd plist |
+| 11:30 Mon | broken-links-check | 1 | Flag when broken wikilinks ≥ 5 |
+| 11:32 Mon | notes-todo-check | 1 | Flag when TODO backlog ≥ 20 |
+| 11:34 Mon | external-links-check | 1 | Flag when external links return 404/410 ≥ 5 (network-bound) |
 
 Install: `bash cron/install-mac.sh` (macOS) or `bash cron/install-linux.sh` (Linux). See `cron/README.md` for details.
 

@@ -210,7 +210,7 @@ Inspired by research on [how biological sleep consolidates memory](https://x.com
 
 | Mechanism | Script | Schedule | What It Does |
 |-----------|--------|----------|-------------|
-| **Curate** | `cron/prompts/curate-memory.md` | Hourly (:02) | Early-return wrapper; when new journal entries exist, promote to MEMORY.md / notes/ / LEARNINGS.md |
+| **Curate** | `cron/bin/curate-memory.sh` + `/curate-memory` | Hourly check (:02) | Zero-LLM check flags closed-day journals not yet curated; the next session's `/curate-memory` promotes them to MEMORY.md / notes/ / LEARNINGS.md |
 | **Dreaming** | `memory-dream.sh` | Weekly (Sun 3am) | Random cross-domain memory association for unexpected insights |
 | **Rumination** | `memory-reflect.sh` | Weekly (Wed 9pm) | Compare recent vs long-term memory, detect contradictions |
 | **Forgetting** | `scripts/memory-archive.py` | Daily (09:05) | Rotate journal >5 days into `archive-YYYY-MM/` |

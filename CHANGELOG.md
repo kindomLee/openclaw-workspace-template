@@ -40,6 +40,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `~/my-workspace` instead of `.`, and warns when the target is the clone itself.
 - **Docs** `guides/multi-instance.md`: `scripts/install-cron.sh --install`
   appends without a marker block (the guide said it used one).
+- **Changed** `curate-memory` no longer starts `claude -p` every hour. The new
+  `cron/bin/curate-memory.sh` (pure bash, still hourly :02) flags closed-day
+  journals that haven't been curated (`curate-memory.flag`, with an identity so
+  the same backlog isn't re-flagged or re-notified, auto-cleared when there's
+  none), and the next session runs `/curate-memory` on them. The skill gained a
+  step 5 wrap-up that advances `cron/state/curate-memory.json` before removing
+  the flag. Upstream measured the old pattern at about $2 per empty run
+  (cache write + start-up), roughly half of all cron spend. `cron/prompts/curate-memory.md`
+  is removed. **Upgrading**: copy `cron/bin/curate-memory.sh`,
+  `cron/launchd/org.mklee.curate-memory.plist` and
+  `.claude/skills/curate-memory/SKILL.md` from the template, delete
+  `cron/prompts/curate-memory.md`, re-run the installer. The first run starts
+  from yesterday, so older journals aren't flagged.
+- **Added** launchd plists for the Monday flag checks that only existed in
+  `templates/crontab.example`: `broken-links-check` (11:30),
+  `notes-todo-check` (11:32), `external-links-check` (11:34). In Claude Code
+  mode their flags never fired before. `check-schedule-drift.py` is now
+  warning-free.
 
 ### Fixed (2026-11-09 — first-run onboarding)
 

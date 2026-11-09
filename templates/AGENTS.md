@@ -283,5 +283,5 @@ Changes to scoring / ranking / dedup / thresholds systematically affect large am
 **Lost:** Intermediate reasoning, file contents read earlier, tool call history, verbal preferences
 
 - **Written to disk = persistent**, verbal = temporary.
-- The hourly `curate-memory` cron promotes raw journal entries up to MEMORY.md / notes/ — run it (or `/curate-memory`) before `/compact` if you know a key decision is still only in the current turn.
+- The hourly `curate-memory` check flags closed-day journals for `/curate-memory`, which promotes them to MEMORY.md / notes/ — run `/curate-memory` before `/compact` if you know a key decision is still only in the current turn.
 - In long conversations: proactively trim — don't re-reference completed intermediate results.

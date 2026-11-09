@@ -213,7 +213,7 @@ Reference (reference/*.md)
 
 | 機制 | Script | 排程 | 做什麼 |
 |------|--------|------|--------|
-| **Curate** | `cron/prompts/curate-memory.md` | 每小時 (:02) | Early-return wrapper；有新 journal entry 就 promote 到 MEMORY.md / notes/ / LEARNINGS.md |
+| **Curate** | `cron/bin/curate-memory.sh` + `/curate-memory` | 每小時檢查 (:02) | 不用 LLM 的檢查：昨天以前還沒整理的 journal 就寫 flag，下個 session 跑 `/curate-memory` promote 到 MEMORY.md / notes/ / LEARNINGS.md |
 | **Dreaming** | `memory-dream.sh` | 每週日 3am | 隨機跨領域記憶聯想找意外洞見 |
 | **Rumination** | `memory-reflect.sh` | 每週三 9pm | 比對近期 vs 長期記憶找矛盾 |
 | **Forgetting** | `scripts/memory-archive.py` | 每日 09:05 | 5 天以上 journal rotate 進 `archive-YYYY-MM/` |

@@ -73,12 +73,15 @@ notify "my-check crossed threshold: $count"
 `scripts/cron-broken-links-check.sh` and `scripts/cron-notes-todo-check.sh`
 are the two checks shipped by default. `scripts/check-external-links.py`
 (flag `broken-external-links`) is a third, network-bound one: only 404/410
-count as broken; timeouts, 403/429 and 5xx are listed as "unverified". Copy them as a starting point.
+count as broken; timeouts, 403/429 and 5xx are listed as "unverified". All
+three run Mondays from `cron/launchd/`. Copy them as a starting point.
 
 Scheduled flag producers in `cron/launchd/`:
 
 | Flag | Producer | Clears |
 |------|----------|--------|
+| `curate-memory` | `cron/bin/curate-memory.sh` (hourly :02) | `/curate-memory` wrap-up advances `cron/state/curate-memory.json`; auto-clears when no closed-day backlog |
+| `broken-links` / `notes-todo` / `broken-external-links` | `broken-links-check` / `notes-todo-check` / `external-links-check` (Mon 11:30 / 11:32 / 11:34) | you, after fixing; the checks clear them when back under threshold |
 | `weekly-review` | `cron/bin/weekly-review.sh` (Sun 09:30) | you, after working through `cron/state/weekly-review-<week>.md`; also removed when nothing is pending |
 | `retire-review` | `cron/bin/memory-retire-candidates.sh` (1st, 09:20) | you, after the review; one flag per month (`identity: retire:YYYY-MM`) |
 | `graphify` | `scripts/cron-graphify-check.sh` (Sun 21:30 / 1st 22:00) | auto-clears when a weekly check sees no changes |

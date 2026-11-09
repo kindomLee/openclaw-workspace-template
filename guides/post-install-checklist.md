@@ -68,7 +68,7 @@ ls -la memory/$(date +%Y-%m-%d).md memory/$(date -v-1d +%Y-%m-%d 2>/dev/null || 
 ```
 
 If today's file is zero bytes after 24 hours of Claude Code activity,
-`curate-memory` isn't running. See FAQ #5.
+nothing is writing the journal. See FAQ #5.
 
 ---
 
@@ -163,9 +163,9 @@ since an old date.
 
 **Fix**:
 - Job not loaded: `bash cron/install-mac.sh` to re-install
-- Job loaded but silent exit every hour: that's normal if your
-  journal is already up-to-date. `curate-memory` does aggressive
-  early-return. It's only meant to push stragglers.
+- Job loaded and the log says "no backlog" every hour: that's normal.
+  The hourly check only flags closed-day journals for `/curate-memory`;
+  it never writes the journal itself.
 - `save-memory` skill never wrote anything: the journal is populated
   manually during interactive sessions via `/save-memory`; cron is a
   safety net, not the primary writer. Make sure you actually use
