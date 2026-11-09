@@ -26,6 +26,20 @@ except ImportError:
     print("⚠️ jieba/rank_bm25 不可用，降級 legacy keyword 模式（召回品質會明顯變差，"
           "且偏袒大檔）。請對執行此 script 的 interpreter 裝 deps：pip install jieba rank_bm25",
           file=sys.stderr)
+    # The warning above goes nowhere when a hook or cron job runs us, so also
+    # raise a flag for the next session. Typical cause: Homebrew moved python3
+    # to a new minor version and the packages stayed with the old one.
+    _flag = Path(__file__).resolve().parent.parent / ".claude" / "flags" / "search-deps-missing.flag"
+    if _flag.parent.is_dir() and not _flag.exists():
+        try:
+            _flag.write_text(
+                "Memory search fell back to keyword mode: jieba / rank_bm25 missing\n"
+                f"Seen in {sys.executable} (Python {sys.version.split()[0]}). After a Python upgrade the "
+                "packages stay with the old version. Run `bash scripts/health-check.sh`, offer the install "
+                "command it prints for each interpreter, re-run it to confirm, then: "
+                "rm .claude/flags/search-deps-missing.flag\n")
+        except OSError:
+            pass
 
 STOPWORDS = frozenset(
     "的了是在和有你他她它這那也就都不會能要以被從到或與等著過把讓向對為就還可但而如則"

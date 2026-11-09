@@ -86,6 +86,11 @@ Scheduled flag producers in `cron/launchd/`:
 
 The graphify producers stay silent until `graphifyy` is installed.
 
+Unscheduled: `search-deps-missing` is written by `scripts/memory-search-hybrid.py`
+itself the first time it runs without `jieba` / `rank_bm25` (from a hook or a
+cron job, so the fallback to keyword mode doesn't stay silent). You clear it
+after reinstalling.
+
 ## Anatomy of the SessionStart hook
 
 `.claude/hooks/session-start-flags.sh` runs whenever a Claude Code session

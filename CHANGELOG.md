@@ -27,6 +27,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the hooks use and the one on the cron PATH. When they're missing it prints the
   install command, adding `--break-system-packages` for PEP 668 interpreters
   such as Homebrew Python. `bootstrap.sh` lists them as recommended.
+- **Added** `memory-search-hybrid.py` writes `.claude/flags/search-deps-missing.flag`
+  the first time it falls back to keyword mode, so a Python upgrade that
+  strands the packages (Homebrew moving `python3` to a new minor version)
+  surfaces at the next session instead of degrading recall silently.
 - **Changed** welcome flag: after the profile files, steps 5–6 offer the search
   dependencies and the scheduled jobs (plus Telegram alerts). Bootstrap's "Next
   steps" leads with that guided setup and lists the manual commands below it.
