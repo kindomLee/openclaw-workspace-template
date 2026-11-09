@@ -157,25 +157,41 @@ for script in memory-search-hybrid.py hall-tagger.sh compact-update.py memory-co
     fi
 done
 
+# Search deps: hooks run the python3 on this shell's PATH, cron jobs the one
+# on the plist PATH (often a different interpreter). Without jieba + rank_bm25
+# memory search silently drops to a much weaker keyword mode.
+CRON_PY=$(env -i PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin" sh -c 'command -v python3' || true)
+while IFS= read -r py; do
+    if "$py" -c "import jieba, rank_bm25" >/dev/null 2>&1; then
+        pass "search deps (jieba, rank_bm25) in $py"
+        continue
+    fi
+    cmd="$py -m pip install --user jieba rank_bm25"
+    # PEP 668 interpreters (Homebrew Python) refuse --user installs without this flag.
+    "$py" -c "import os, sys, sysconfig; sys.exit(not os.path.exists(os.path.join(sysconfig.get_path('stdlib'), 'EXTERNALLY-MANAGED')))" 2>/dev/null \
+        && cmd="$cmd --break-system-packages"
+    warn "jieba / rank_bm25 missing in $py — memory search falls back to keyword mode. Install: $cmd"
+done < <(printf '%s\n' "$(command -v python3 || true)" "$CRON_PY" | awk 'NF && !seen[$0]++')
+
 # ---- 6. Cron wiring ---------------------------------------------------
 echo
 echo "--- Cron jobs ---"
 if [ "$MODE" = "claude" ]; then
     # Claude Code: prefer launchd on macOS, crontab on Linux.
     if [ "$(uname -s)" = "Darwin" ]; then
-        ORACLE_JOBS=$(launchctl list 2>/dev/null | awk '$3 ~ /^org\.oracle\./ {print $3}')
-        if [ -z "$ORACLE_JOBS" ]; then
-            warn "no org.oracle.* launchd jobs loaded (run: bash cron/install-mac.sh)"
+        CRON_JOBS=$(launchctl list 2>/dev/null | awk '$3 ~ /^org\.mklee\./ {print $3}')
+        if [ -z "$CRON_JOBS" ]; then
+            warn "no org.mklee.* launchd jobs loaded (run: bash cron/install-mac.sh)"
         else
-            JOB_COUNT=$(printf '%s\n' "$ORACLE_JOBS" | wc -l | tr -d ' ')
-            pass "$JOB_COUNT org.oracle.* launchd jobs loaded"
+            JOB_COUNT=$(printf '%s\n' "$CRON_JOBS" | wc -l | tr -d ' ')
+            pass "$JOB_COUNT org.mklee.* launchd jobs loaded"
         fi
     else
-        ORACLE_JOBS=$(crontab -l 2>/dev/null | grep -c 'cron/runner.sh' || true)
-        if [ "$ORACLE_JOBS" -eq 0 ]; then
+        CRON_JOBS=$(crontab -l 2>/dev/null | grep -c 'cron/runner.sh' || true)
+        if [ "$CRON_JOBS" -eq 0 ]; then
             warn "no cron/runner.sh entries in crontab (run: bash cron/install-linux.sh)"
         else
-            pass "$ORACLE_JOBS cron/runner.sh crontab entries"
+            pass "$CRON_JOBS cron/runner.sh crontab entries"
         fi
     fi
 else

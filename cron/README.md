@@ -55,7 +55,7 @@ bash cron/install-mac.sh
 bash cron/install-mac.sh --uninstall
 
 # Verify
-launchctl list | grep oracle
+launchctl list | grep org.mklee
 ```
 
 ### Linux (crontab)
@@ -180,7 +180,7 @@ cat cron/logs/memory-reflect-*.log
 ## Adding a New Job
 
 1. Create `prompts/<job-name>.md` — the prompt Claude will execute
-2. Create `launchd/org.oracle.<job-name>.plist` — schedule definition
+2. Create `launchd/org.mklee.<job-name>.plist` — schedule definition
 3. Re-install:
    - macOS: `bash cron/install-mac.sh`
    - Linux: `bash cron/install-linux.sh`
@@ -197,7 +197,7 @@ cron/
 ├── prompts/               ← Per-job Markdown prompts (7 shipped — see templates/HEARTBEAT.md)
 ├── launchd/               ← macOS plist schedule definitions (9 shipped: 7 prompt
 │   │                        jobs + 2 direct-shell memory-archive jobs)
-│   └── org.oracle.<job-name>.plist
+│   └── org.mklee.<job-name>.plist
 ├── state/locks/           ← Per-job reentrancy locks (managed by runner.sh)
 ├── logs/                  ← Per-job execution logs (auto-cleaned after 30 days)
 └── bin/

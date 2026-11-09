@@ -114,9 +114,9 @@ Use `cron/runner.sh <job-name>` which:
 **Example — memory-janitor (daily):**
 
 ```xml
-<!-- cron/launchd/org.oracle.memory-janitor.plist -->
+<!-- cron/launchd/org.mklee.memory-janitor.plist -->
 <dict>
-  <key>Label</key><string>org.oracle.memory-janitor</string>
+  <key>Label</key><string>org.mklee.memory-janitor</string>
   <key>ProgramArguments</key>
   <array>
     <string>__PROJECT_DIR__/cron/runner.sh</string>
@@ -165,7 +165,7 @@ Install: `bash cron/install-mac.sh` (macOS) or `bash cron/install-linux.sh` (Lin
 ### Writing a new routine check (Claude Code mode)
 
 1. **Detection is deterministic** → write a shell script in `scripts/cron-*.sh` that drops a flag file. No prompt needed.
-2. **Detection needs LLM** → write `cron/prompts/<job>.md` + `cron/launchd/org.oracle.<job>.plist`, then re-run `cron/install-mac.sh`.
+2. **Detection needs LLM** → write `cron/prompts/<job>.md` + `cron/launchd/org.mklee.<job>.plist`, then re-run `cron/install-mac.sh`.
 3. Every new prompt should have a `<!-- allowed_tools: Bash,Read,Grep,... -->` first line — keeps the blast radius small.
 4. Every prompt must **always** report back (Telegram / flag / log), even on "nothing to do" — silent success violates the fourth defense line.
 

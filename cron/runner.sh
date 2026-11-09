@@ -126,7 +126,7 @@ if [ "$WAITED" -gt 0 ]; then
 fi
 
 # Desktop notification (macOS only, silently skip on Linux)
-osascript -e "display notification \"$JOB started\" with title \"Oracle Cron\"" 2>/dev/null || true
+osascript -e "display notification \"$JOB started\" with title \"mklee cron\"" 2>/dev/null || true
 
 # Per-job allowed_tools:
 # Prompt files may declare their tool scope on the first line, e.g.:
@@ -212,11 +212,11 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] Job $JOB finished with exit code $EXIT_CODE
 
 # Desktop notification (macOS only)
 if [ "$EXIT_CODE" -eq 0 ]; then
-  osascript -e "display notification \"$JOB done (${ACTIVE}s)\" with title \"Oracle Cron\" sound name \"Glass\"" 2>/dev/null || true
+  osascript -e "display notification \"$JOB done (${ACTIVE}s)\" with title \"mklee cron\" sound name \"Glass\"" 2>/dev/null || true
 elif [ "$TIMED_OUT" -eq 1 ]; then
-  osascript -e "display notification \"$JOB TIMEOUT (${JOB_TIMEOUT}s)\" with title \"Oracle Cron\" sound name \"Basso\"" 2>/dev/null || true
+  osascript -e "display notification \"$JOB TIMEOUT (${JOB_TIMEOUT}s)\" with title \"mklee cron\" sound name \"Basso\"" 2>/dev/null || true
 else
-  osascript -e "display notification \"$JOB failed (exit $EXIT_CODE)\" with title \"Oracle Cron\" sound name \"Basso\"" 2>/dev/null || true
+  osascript -e "display notification \"$JOB failed (exit $EXIT_CODE)\" with title \"mklee cron\" sound name \"Basso\"" 2>/dev/null || true
 fi
 
 # Failure alerting via scripts/lib/notify.sh (never fail silently — the

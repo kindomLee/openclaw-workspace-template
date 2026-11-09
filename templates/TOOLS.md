@@ -27,7 +27,7 @@ bash cron/install-linux.sh       # Linux
 bash cron/install-mac.sh --uninstall
 
 # Inspect loaded jobs
-launchctl list | grep org.oracle    # macOS
+launchctl list | grep org.mklee     # macOS
 crontab -l                           # Linux
 
 # Run a job on demand (for debugging)

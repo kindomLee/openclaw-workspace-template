@@ -80,11 +80,12 @@ curl -fsSL https://openclaw.ai/install.sh | bash
 git clone https://github.com/kindomLee/openclaw-workspace-template.git
 cd openclaw-workspace-template
 ```
+也可以直接在這裡跑 `claude`、打 `hi`，agent 會先問 workspace 要放哪，再替你做第 3 步。
 
 3. 跑 bootstrap script，裝到另一個目錄（workspace 別放在這份 clone 裡，之後 `git pull` 升級才乾淨）：
 ```bash
 ./bootstrap.sh --path ~/my-workspace
-# 不給 --path 會先詢問，預設是當前目錄
+# 不給 --path 會先詢問；在這份 clone 裡執行時，預設是 ~/my-workspace
 ```
 
 4. 跑 health check：
@@ -93,16 +94,20 @@ cd <your-workspace>
 bash scripts/health-check.sh
 ```
 
-5. 個人化。最省事的做法：在 workspace 裡跑 `claude`、打 `hi`，首次啟動的 flag 會讓 agent 一次問一題、帶你填完下面這幾個檔（每題都能跳過）。也可以自己手動改：
+5. 個人化。最省事的做法：在 workspace 裡跑 `claude`、打 `hi`，首次啟動的 flag 會讓 agent 一次問一題、帶你填完下面這幾個檔，接著問要不要安裝搜尋元件和第 6 步的 cron jobs（每題都能跳過）。也可以自己手動改：
    - `IDENTITY.md` — 名字、emoji、人格
    - `USER.md` — 你的資料讓 agent 認識你
    - `SOUL.md` — Agent 人格與決策偏好
    - `TOOLS.md` — 你常用的工具與連線
    - `cron/config.env` — 從 `cron/config.env.example` 複製後填 `TG_BOT_TOKEN` / `TG_CHAT_ID` 才會發 Telegram 通知
 
-6. 設定 cron jobs：
+6. 安裝搜尋元件與 cron jobs（第 5 步已經裝過的就跳過）：
 
 ```bash
+# 記憶搜尋：BM25 + jieba（沒裝會退回 keyword 模式）。
+# health-check 會針對 hook 和 cron 各自用的 python3 印出確切的安裝指令。
+python3 -m pip install --user jieba rank_bm25
+
 # Claude Code 模式（預設）— macOS
 bash cron/install-mac.sh
 

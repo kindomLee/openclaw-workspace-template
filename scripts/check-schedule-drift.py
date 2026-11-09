@@ -218,7 +218,7 @@ def load_plist_schedule(plist_dir: Path) -> dict:
             # Direct-shell plists (/bin/bash -lc "<long cmd>"): taking the
             # last ProgramArguments element would yield the whole command
             # string — derive the job name from the filename instead
-            # (org.oracle.<job>.plist → <job>), mirroring install-linux.sh.
+            # (org.mklee.<job>.plist → <job>), mirroring install-linux.sh.
             job_name = fname[:-len(".plist")].rsplit(".", 1)[-1]
         sched = plist_to_schedule(d)
         if sched is None:

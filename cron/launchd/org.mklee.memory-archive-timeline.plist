@@ -3,34 +3,34 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>org.oracle.graphify-version-check</string>
+    <string>org.mklee.memory-archive-timeline</string>
     <!--
-      Flags when a newer graphifyy is on PyPI; clears itself once up to date.
-      Silent no-op until graphifyy is installed. Pure shell job.
+      Monthly Events Timeline rollover. On day 1 of each month, moves any
+      MEMORY.md ### YYYY-MM section earlier than the current month into
+      memory/timeline-archive.md (handles overdue catch-up automatically
+      — not just "last month"). Pure shell job; no LLM, no runner.sh.
     -->
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
         <string>-lc</string>
-        <string>cd __PROJECT_DIR__ &amp;&amp; bash scripts/cron-graphify-version-check.sh &gt;&gt; __PROJECT_DIR__/cron/logs/graphify-launchd.log 2&gt;&amp;1</string>
+        <string>cd __PROJECT_DIR__ &amp;&amp; bash scripts/cron-memory-archive.sh timeline &gt;&gt; __PROJECT_DIR__/cron/logs/memory-archive-launchd.log 2&gt;&amp;1</string>
     </array>
     <key>StartCalendarInterval</key>
     <dict>
-        <key>Weekday</key>
-        <integer>0</integer>
+        <key>Day</key>
+        <integer>1</integer>
         <key>Hour</key>
-        <integer>21</integer>
+        <integer>9</integer>
         <key>Minute</key>
-        <integer>32</integer>
+        <integer>10</integer>
     </dict>
     <key>RunAtLoad</key>
     <false/>
     <key>StandardOutPath</key>
-    <string>__PROJECT_DIR__/cron/logs/graphify-launchd.log</string>
+    <string>__PROJECT_DIR__/cron/logs/memory-archive-launchd.log</string>
     <key>StandardErrorPath</key>
-    <string>__PROJECT_DIR__/cron/logs/graphify-launchd.log</string>
-    <key>WorkingDirectory</key>
-    <string>__PROJECT_DIR__</string>
+    <string>__PROJECT_DIR__/cron/logs/memory-archive-launchd.log</string>
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>

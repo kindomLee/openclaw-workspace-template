@@ -3,23 +3,21 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>org.oracle.memory-janitor</string>
+    <string>org.mklee.curate-memory</string>
     <key>ProgramArguments</key>
     <array>
         <string>__PROJECT_DIR__/cron/runner.sh</string>
-        <string>memory-janitor</string>
+        <string>curate-memory</string>
     </array>
     <key>StartCalendarInterval</key>
     <dict>
-        <key>Hour</key>
-        <integer>20</integer>
         <key>Minute</key>
-        <integer>7</integer>
+        <integer>2</integer>
     </dict>
     <key>StandardOutPath</key>
-    <string>__PROJECT_DIR__/cron/logs/memory-janitor-launchd.log</string>
+    <string>__PROJECT_DIR__/cron/logs/curate-memory-launchd.log</string>
     <key>StandardErrorPath</key>
-    <string>__PROJECT_DIR__/cron/logs/memory-janitor-launchd.log</string>
+    <string>__PROJECT_DIR__/cron/logs/curate-memory-launchd.log</string>
     <key>WorkingDirectory</key>
     <string>__PROJECT_DIR__</string>
     <key>EnvironmentVariables</key>

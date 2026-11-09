@@ -7,8 +7,12 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PLIST_DIR="$SCRIPT_DIR/launchd"
 RUNNER="$SCRIPT_DIR/runner.sh"
-MARKER_BEGIN="# >>> Oracle Cron BEGIN >>>"
-MARKER_END="# <<< Oracle Cron END <<<"
+MARKER_BEGIN="# >>> mklee cron BEGIN >>>"
+MARKER_END="# <<< mklee cron END <<<"
+# Marker used before the rename. Its block is dropped on install/uninstall,
+# but only when it points at this workspace.
+LEGACY_BEGIN="# >>> Oracle Cron BEGIN >>>"
+LEGACY_END="# <<< Oracle Cron END <<<"
 
 DRY_RUN=false
 UNINSTALL=false
@@ -132,9 +136,21 @@ for fname in sorted(os.listdir(plist_dir)):
 PYEOF
 }
 
+# Drop the pre-rename block from stdin when it belongs to this workspace.
+strip_legacy_block() {
+  local current
+  current=$(cat)
+  if echo "$current" | sed -n "/$LEGACY_BEGIN/,/$LEGACY_END/p" | grep -qF "$PROJECT_DIR/cron/"; then
+    echo "$current" | sed "/$LEGACY_BEGIN/,/$LEGACY_END/d"
+  else
+    echo "$current"
+  fi
+}
+
 if $UNINSTALL; then
-  echo "Removing Oracle Cron entries from user crontab..."
-  CURRENT=$(crontab -l 2>/dev/null || true)
+  echo "Removing mklee cron entries from user crontab..."
+  RAW=$(crontab -l 2>/dev/null || true)
+  CURRENT=$(echo "$RAW" | strip_legacy_block)
   if echo "$CURRENT" | grep -q "$MARKER_BEGIN"; then
     NEW=$(echo "$CURRENT" | sed "/$MARKER_BEGIN/,/$MARKER_END/d")
     if $DRY_RUN; then
@@ -142,10 +158,18 @@ if $UNINSTALL; then
       echo "$NEW"
     else
       echo "$NEW" | crontab -
-      echo "Done. Oracle Cron entries removed."
+      echo "Done. mklee cron entries removed."
+    fi
+  elif [ "$CURRENT" != "$RAW" ]; then
+    if $DRY_RUN; then
+      echo "[dry-run] Would update crontab to:"
+      echo "$CURRENT"
+    else
+      echo "$CURRENT" | crontab -
+      echo "Done. Old 'Oracle Cron' entries for this workspace removed."
     fi
   else
-    echo "No Oracle Cron entries found in crontab."
+    echo "No mklee cron entries found in crontab."
   fi
   exit 0
 fi
@@ -174,8 +198,8 @@ fi
 # Generated entries redirect into cron/logs — make sure it exists.
 mkdir -p "$PROJECT_DIR/cron/logs"
 
-# Get current crontab, remove old Oracle block, add new one
-CURRENT=$(crontab -l 2>/dev/null || true)
+# Get current crontab, remove this workspace's old blocks, add new one
+CURRENT=$(crontab -l 2>/dev/null | strip_legacy_block || true)
 if echo "$CURRENT" | grep -q "$MARKER_BEGIN"; then
   CLEANED=$(echo "$CURRENT" | sed "/$MARKER_BEGIN/,/$MARKER_END/d")
   NEW="${CLEANED}
@@ -186,5 +210,5 @@ ${BLOCK}"
 fi
 
 echo "$NEW" | crontab -
-echo "Done. Oracle Cron installed to user crontab."
+echo "Done. mklee cron installed to user crontab."
 echo "Verify with: crontab -l | grep runner"

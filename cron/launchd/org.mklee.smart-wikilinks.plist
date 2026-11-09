@@ -3,21 +3,23 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>org.oracle.curate-memory</string>
+    <string>org.mklee.smart-wikilinks</string>
     <key>ProgramArguments</key>
     <array>
         <string>__PROJECT_DIR__/cron/runner.sh</string>
-        <string>curate-memory</string>
+        <string>smart-wikilinks</string>
     </array>
     <key>StartCalendarInterval</key>
     <dict>
+        <key>Hour</key>
+        <integer>21</integer>
         <key>Minute</key>
-        <integer>2</integer>
+        <integer>7</integer>
     </dict>
     <key>StandardOutPath</key>
-    <string>__PROJECT_DIR__/cron/logs/curate-memory-launchd.log</string>
+    <string>__PROJECT_DIR__/cron/logs/smart-wikilinks-launchd.log</string>
     <key>StandardErrorPath</key>
-    <string>__PROJECT_DIR__/cron/logs/curate-memory-launchd.log</string>
+    <string>__PROJECT_DIR__/cron/logs/smart-wikilinks-launchd.log</string>
     <key>WorkingDirectory</key>
     <string>__PROJECT_DIR__</string>
     <key>EnvironmentVariables</key>

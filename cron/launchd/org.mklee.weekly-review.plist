@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>org.oracle.weekly-review</string>
+    <string>org.mklee.weekly-review</string>
     <!--
       Weekly review checklist: classify corrections (LLM_API_KEY, optional),
       archive resolved LEARNINGS, write digest + flag. Does NOT route

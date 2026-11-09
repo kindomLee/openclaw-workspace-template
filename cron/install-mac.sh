@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install-mac.sh — Install/update/remove Oracle Cron launchd jobs on macOS.
+# install-mac.sh — Install/update/remove this workspace's org.mklee.* launchd jobs on macOS.
 #
 # Usage:
 #   bash cron/install-mac.sh                # install or re-install
@@ -43,12 +43,50 @@ if [ "$DRY_RUN" = "false" ]; then
   mkdir -p "$LAUNCH_AGENTS_DIR"
 fi
 
+# Labels this run manages. Jobs were org.oracle.* before the rename to
+# org.mklee.*; when an upgraded workspace still carries an old copy next to
+# the new file, only the new one is installed.
+LABELS=()
+for plist in "$PLIST_DIR"/*.plist; do
+  [ -f "$plist" ] || continue
+  LABEL=$(basename "$plist" .plist)
+  case "$LABEL" in
+    org.oracle.*)
+      if [ -f "$PLIST_DIR/org.mklee.${LABEL#org.oracle.}.plist" ]; then
+        echo "  skip $LABEL (old name of org.mklee.${LABEL#org.oracle.}; delete cron/launchd/$LABEL.plist)"
+        continue
+      fi ;;
+  esac
+  LABELS+=("$LABEL")
+done
+
+# Stale-job sweep: an installed org.oracle.* / org.mklee.* agent whose plist
+# points at THIS workspace but is not in LABELS was renamed or retired, and
+# would otherwise keep firing. Matching on this workspace's cron/ path leaves
+# other workspaces and unrelated org.oracle.* agents alone. Resident services
+# from cron/optional/ are installed by hand, so they are left alone too.
+sweep_stale_jobs() {
+  local installed label
+  for installed in "$LAUNCH_AGENTS_DIR"/org.oracle.*.plist "$LAUNCH_AGENTS_DIR"/org.mklee.*.plist; do
+    [ -f "$installed" ] || continue
+    grep -qF "$PROJECT_DIR/cron/" "$installed" || continue
+    label=$(basename "$installed" .plist)
+    case " ${LABELS[*]-} " in *" $label "*) continue ;; esac
+    ls "$SCRIPT_DIR"/optional/*."${label#org.*.}".plist >/dev/null 2>&1 && continue
+    if [ "$DRY_RUN" = "true" ]; then
+      echo "  [dry-run] would remove stale job $label"
+    else
+      launchctl bootout "gui/$(id -u)/$label" 2>/dev/null || true
+      rm -f "$installed"
+      echo "  - Removed stale job $label"
+    fi
+  done
+}
+
 # --- Uninstall path ----------------------------------------------------
 if [ "$UNINSTALL" = "true" ]; then
-  echo "Uninstalling Oracle Cron jobs..."
-  for plist in "$PLIST_DIR"/*.plist; do
-    [ -f "$plist" ] || continue
-    LABEL=$(basename "$plist" .plist)
+  echo "Uninstalling org.mklee.* launchd jobs for $PROJECT_DIR..."
+  for LABEL in ${LABELS[@]+"${LABELS[@]}"}; do
     if [ "$DRY_RUN" = "true" ]; then
       echo "  [dry-run] would bootout $LABEL and remove $LAUNCH_AGENTS_DIR/$LABEL.plist"
     else
@@ -57,12 +95,13 @@ if [ "$UNINSTALL" = "true" ]; then
       echo "  - Removed $LABEL"
     fi
   done
+  sweep_stale_jobs
   echo "Done."
   exit 0
 fi
 
 # --- Install path ------------------------------------------------------
-echo "Installing Oracle Cron jobs..."
+echo "Installing org.mklee.* launchd jobs..."
 echo "  Project: $PROJECT_DIR"
 echo "  Home:    $HOME"
 [ "$DRY_RUN" = "true" ] && echo "  [dry-run — no files will be written and launchctl will not be called]"
@@ -85,9 +124,8 @@ else
   echo "  WARNING: 'claude' not found in PATH — launchd jobs will fail until it is installed" >&2
 fi
 
-for plist in "$PLIST_DIR"/*.plist; do
-  [ -f "$plist" ] || continue
-  LABEL=$(basename "$plist" .plist)
+for LABEL in ${LABELS[@]+"${LABELS[@]}"}; do
+  plist="$PLIST_DIR/$LABEL.plist"
   DEST="$LAUNCH_AGENTS_DIR/$LABEL.plist"
 
   if [ "$DRY_RUN" = "true" ]; then
@@ -105,29 +143,11 @@ for plist in "$PLIST_DIR"/*.plist; do
   echo "  + Installed $LABEL"
 done
 
-# Retired-job sweep: jobs this template used to ship but has since removed
-# would otherwise keep firing against deleted prompts on existing installs.
-# Deliberately an explicit list — NOT a generic "anything org.oracle.* we
-# don't know" sweep, because users may run other org.oracle.* LaunchAgents
-# that have nothing to do with this template.
-RETIRED_JOBS=(
-  org.oracle.memory-expire
-  org.oracle.weekly-memory-hygiene
-)
-for LABEL in "${RETIRED_JOBS[@]}"; do
-  installed="$LAUNCH_AGENTS_DIR/$LABEL.plist"
-  [ -f "$installed" ] || continue
-  if [ "$DRY_RUN" = "true" ]; then
-    echo "  [dry-run] would remove retired job $LABEL"
-  else
-    launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
-    rm -f "$installed"
-    echo "  - Removed retired job $LABEL"
-  fi
-done
+# Covers renamed jobs and retired ones (memory-expire, weekly-memory-hygiene).
+sweep_stale_jobs
 
 if [ "$DRY_RUN" = "true" ]; then
   echo "Dry run complete. Re-run without --dry-run to actually install."
 else
-  echo "Done. Verify with: launchctl list | grep oracle"
+  echo "Done. Verify with: launchctl list | grep org.mklee"
 fi

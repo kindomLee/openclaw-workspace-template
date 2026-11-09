@@ -3,25 +3,25 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>org.oracle.monthly-review</string>
+    <string>org.mklee.self-improvement</string>
     <key>ProgramArguments</key>
     <array>
         <string>__PROJECT_DIR__/cron/runner.sh</string>
-        <string>monthly-review</string>
+        <string>self-improvement</string>
     </array>
     <key>StartCalendarInterval</key>
     <dict>
-        <key>Day</key>
-        <integer>1</integer>
         <key>Hour</key>
-        <integer>10</integer>
+        <integer>21</integer>
         <key>Minute</key>
-        <integer>0</integer>
+        <integer>30</integer>
+        <key>Weekday</key>
+        <integer>6</integer>
     </dict>
     <key>StandardOutPath</key>
-    <string>__PROJECT_DIR__/cron/logs/monthly-review-launchd.log</string>
+    <string>__PROJECT_DIR__/cron/logs/self-improvement-launchd.log</string>
     <key>StandardErrorPath</key>
-    <string>__PROJECT_DIR__/cron/logs/monthly-review-launchd.log</string>
+    <string>__PROJECT_DIR__/cron/logs/self-improvement-launchd.log</string>
     <key>WorkingDirectory</key>
     <string>__PROJECT_DIR__</string>
     <key>EnvironmentVariables</key>

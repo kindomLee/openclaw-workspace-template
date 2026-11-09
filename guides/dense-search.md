@@ -51,13 +51,13 @@ in `cron/optional/`, which `cron/install-mac.sh` does **not** install:
 
 ```bash
 sed -e "s|__PROJECT_DIR__|$PWD|g" -e "s|__HOME__|$HOME|g" \
-    cron/optional/org.oracle.embed-server.plist > ~/Library/LaunchAgents/org.oracle.embed-server.plist
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/org.oracle.embed-server.plist
+    cron/optional/org.mklee.embed-server.plist > ~/Library/LaunchAgents/org.mklee.embed-server.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/org.mklee.embed-server.plist
 tail -f cron/logs/embed-server.log     # wait for "[ready] …"
 ```
 
 Reranker: add `<key>EMBED_RERANK</key><string>1</string>` to the plist's
-`EnvironmentVariables`, then `launchctl bootout gui/$(id -u)/org.oracle.embed-server`
+`EnvironmentVariables`, then `launchctl bootout gui/$(id -u)/org.mklee.embed-server`
 and bootstrap again.
 
 Linux: `install-linux.sh` only writes crontab lines and can't express a
@@ -83,7 +83,7 @@ Give a second launchd copy its own `Label` and set `EMBED_PORT` +
 ## Turning it off
 
 `--no-dense` / `--no-rerank` per query (useful for comparing), or stop the
-service: `launchctl bootout gui/$(id -u)/org.oracle.embed-server`. With no
+service: `launchctl bootout gui/$(id -u)/org.mklee.embed-server`. With no
 server the search is plain BM25 and connection-refused costs nothing.
 
 ## Time budget

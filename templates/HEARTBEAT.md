@@ -69,7 +69,7 @@ Install: `bash scripts/install-cron.sh --install`
 
 ### Claude Code mode
 1. Create `cron/prompts/<job>.md`
-2. Create `cron/launchd/org.oracle.<job>.plist`
+2. Create `cron/launchd/org.mklee.<job>.plist`
 3. Re-install: `bash cron/install-mac.sh` or `bash cron/install-linux.sh`
 
 ### OpenClaw mode

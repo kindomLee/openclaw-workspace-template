@@ -18,7 +18,13 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 # Defaults
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEFAULT_WORKSPACE="."
+# Run from inside the template clone, "." would put the workspace into the
+# git checkout and make `git pull` upgrades conflict — default elsewhere.
+if [ "$(pwd -P)" = "$(cd "$SCRIPT_DIR" && pwd -P)" ]; then
+  DEFAULT_WORKSPACE="$HOME/my-workspace"
+fi
 WORKSPACE_PATH=""
 ASSUME_YES=0
 DRY_RUN=0
@@ -31,7 +37,8 @@ Claude Code / OpenClaw Workspace Template Bootstrap
 Usage: bootstrap.sh [OPTIONS]
 
 Options:
-  --path DIR             Target workspace directory (default: prompt, then ".")
+  --path DIR             Target workspace directory (default: prompt, then "."
+                         — or ~/my-workspace when run from inside this clone)
   --yes, -y              Skip confirmation prompts (for CI / automation)
   --dry-run              Show what would happen without writing any files
   --skip-claude-check    Don't require the Claude Code CLI (Codex-only setup;
@@ -87,6 +94,12 @@ fi
 if ! command -v jq >/dev/null 2>&1; then
   RECOMMENDED_MISSING+=("jq (macOS: brew install jq — hook falls back to python3 if absent)")
 fi
+# Memory search falls back to a much weaker keyword mode without these. The
+# first `claude` session offers to install them (health-check also covers the
+# python3 that cron jobs use, which can be a different interpreter).
+if command -v python3 >/dev/null 2>&1 && ! python3 -c "import jieba, rank_bm25" >/dev/null 2>&1; then
+  RECOMMENDED_MISSING+=("jieba + rank_bm25 for memory search (python3 -m pip install --user jieba rank_bm25 — the first claude session offers to do it)")
+fi
 if [ ${#MISSING[@]} -gt 0 ]; then
   echo -e "${RED}Missing required tools:${NC}"
   printf '  - %s\n' "${MISSING[@]}"
@@ -106,7 +119,7 @@ if [ -z "$WORKSPACE_PATH" ]; then
     WORKSPACE_PATH="$DEFAULT_WORKSPACE"
   else
     echo -e "${YELLOW}Workspace directory (default: ${DEFAULT_WORKSPACE}):${NC}"
-    echo -e "  - For Claude Code:  \".\" (current dir) or a path like \"~/my-workspace\""
+    echo -e "  - For Claude Code:  a directory outside this template clone, like \"~/my-workspace\""
     echo -e "  - For OpenClaw:     \"./clawd\" (traditional)"
     read -r WORKSPACE_PATH
     WORKSPACE_PATH="${WORKSPACE_PATH:-$DEFAULT_WORKSPACE}"
@@ -125,6 +138,9 @@ if [ -d "$WORKSPACE_PATH" ]; then
 fi
 
 echo -e "${BLUE}Target workspace: ${WORKSPACE_PATH}${NC}"
+if [ "$WORKSPACE_PATH" = "$SCRIPT_DIR" ]; then
+  echo -e "${YELLOW}Note: this is the template clone itself — workspace files will mix with the git checkout and \`git pull\` upgrades will conflict. Prefer --path ~/my-workspace.${NC}"
+fi
 [ "$DRY_RUN" -eq 1 ] && echo -e "${YELLOW}[DRY RUN — no files will be written]${NC}"
 echo
 
@@ -143,8 +159,6 @@ if [ -d "$WORKSPACE_PATH" ] && [ "$(ls -A "$WORKSPACE_PATH" 2>/dev/null)" ]; the
 fi
 
 # ---- Copy helpers ------------------------------------------------------
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 if [ ! -d "$SCRIPT_DIR/templates" ]; then
   echo -e "${RED}Error: templates/ not found in $SCRIPT_DIR${NC}" >&2
   exit 1
@@ -287,7 +301,7 @@ if [ "$DRY_RUN" -eq 0 ] && [ ! -f "$WELCOME_FLAG" ]; then
   mkdir -p "$(dirname "$WELCOME_FLAG")"
   cat > "$WELCOME_FLAG" <<'FLAG'
 First-run profile setup required
-Walk the user through personalizing the core profile files — they are still at template defaults and the memory system depends on them.
+Walk the user through personalizing the core profile files — they are still at template defaults and the memory system depends on them — then offer to install the search dependencies and the scheduled jobs.
 
 HOW TO RUN THIS (important):
 Use the AskUserQuestion tool to ask ONE field at a time instead of dumping a wall of questions. Keep each question narrow and skippable (offer a "skip / decide later" option). After collecting each answer, write it to the right file immediately with Edit, then move on to the next field.
@@ -299,13 +313,15 @@ Suggested order and fields:
   2. IDENTITY.md   → agent name, self-positioning, default tone
   3. SOUL.md       → preferred language, response style, hard rules / no-go zones
   4. TOOLS.md      → which external services are wired up (cron, Telegram, GitHub, etc.) — connection details can be deferred
+  5. Search dependencies → run `bash scripts/health-check.sh` and read its "search deps" lines (it checks both the python3 the hooks use and the one cron jobs use). If jieba / rank_bm25 are missing, explain that memory search otherwise falls back to a much weaker keyword mode, and ask whether to install them now with the exact command health-check printed. If that command has `--break-system-packages` (Homebrew Python), say that together with `--user` it only writes to the user's own site-packages, and get a yes before running it. Re-run health-check to confirm. Then just mention the optional extras, without installing: dense + rerank search (guides/dense-search.md, multi-GB download) and graphify for --graph-expand (`uv tool install graphifyy`).
+  6. Scheduled jobs → if health-check shows none installed, explain that they maintain memory in the background (journal archive, dream / reflect, weekly review) and that the LLM jobs run `claude -p` on the user's plan. Ask whether to install them now: macOS `bash cron/install-mac.sh`, Linux `bash cron/install-linux.sh` (offer `--dry-run` first if they want to see the job list). Then ask whether they want Telegram alerts: copy cron/config.env.example to cron/config.env and fill TG_BOT_TOKEN / TG_CHAT_ID.
 
 Rules:
   - Ask, write, confirm, then move on. Do NOT batch all questions at once.
   - If the user says "skip" / "later" / "not sure", leave the field as a clear TODO comment (e.g. `<!-- TODO: fill in -->`) and continue.
   - At the end, summarize what was filled and what was deferred.
 
-When every file has been personalized (or the user has explicitly deferred every remaining field), remove this flag:
+When steps 1–6 are done (or the user has explicitly deferred what remains), remove this flag:
   rm .claude/flags/welcome-profile-setup.flag
 FLAG
   echo -e "${GREEN}Welcome flag written: .claude/flags/welcome-profile-setup.flag${NC}"
@@ -342,10 +358,10 @@ echo
 if [ "$SKIP_CLAUDE_CHECK" -eq 0 ]; then
   echo -e "${BLUE}[Claude Code — default]${NC}"
   echo -e "  1. ${YELLOW}cd $WORKSPACE_PATH${NC}"
-  echo -e "  2. ${YELLOW}cp cron/config.env.example cron/config.env${NC} and fill TG_BOT_TOKEN / TG_CHAT_ID (optional, for Telegram alerts)"
-  echo -e "  3. Install cron: ${YELLOW}bash cron/install-mac.sh${NC}  (macOS)  or  ${YELLOW}bash cron/install-linux.sh${NC}  (Linux)"
-  echo -e "  4. Run ${YELLOW}claude${NC} and type ${YELLOW}hi${NC} — the agent will guide you through"
-  echo -e "     personalizing IDENTITY.md / USER.md / SOUL.md / TOOLS.md step by step"
+  echo -e "  2. Run ${YELLOW}claude${NC} and type ${YELLOW}hi${NC} — the agent walks you through IDENTITY.md / USER.md /"
+  echo -e "     SOUL.md / TOOLS.md, then offers the search dependencies and the cron jobs (all skippable)"
+  echo -e "  Manual instead: ${YELLOW}bash cron/install-mac.sh${NC} (macOS) or ${YELLOW}bash cron/install-linux.sh${NC} (Linux);"
+  echo -e "  ${YELLOW}cp cron/config.env.example cron/config.env${NC} for Telegram alerts"
   echo
 fi
 

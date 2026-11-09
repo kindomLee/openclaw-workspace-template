@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed (2026-11-09 — launchd label prefix; guided setup covers search deps and cron)
+
+- **Changed** launchd labels `org.oracle.*` → `org.mklee.*` (plist filenames and
+  `Label`), the Linux crontab marker `# >>> Oracle Cron BEGIN >>>` →
+  `# >>> mklee cron BEGIN >>>`, and the macOS notification title.
+  **Upgrading an existing workspace**: copy `cron/launchd/`, `cron/install-mac.sh`
+  / `cron/install-linux.sh` and `scripts/health-check.sh` from the template,
+  delete the old `cron/launchd/org.oracle.*.plist`, then re-run the installer.
+  `install-mac.sh` now removes installed `org.oracle.*` / `org.mklee.*` agents
+  whose plist points at this workspace's `cron/` but which it no longer ships.
+  This replaces the hard-coded retired-jobs list, which matched by label alone
+  and could remove another workspace's jobs. If an old `org.oracle.X.plist` still
+  sits next to `org.mklee.X.plist`, only the new one is installed. Agents from
+  `cron/optional/` (embed-server) are left running under their old label.
+  `install-linux.sh` drops the old marker block only when it points at this
+  workspace.
+- **Added** `health-check.sh` checks `jieba` + `rank_bm25` in both the `python3`
+  the hooks use and the one on the cron PATH. When they're missing it prints the
+  install command, adding `--break-system-packages` for PEP 668 interpreters
+  such as Homebrew Python. `bootstrap.sh` lists them as recommended.
+- **Changed** welcome flag: after the profile files, steps 5–6 offer the search
+  dependencies and the scheduled jobs (plus Telegram alerts). Bootstrap's "Next
+  steps" leads with that guided setup and lists the manual commands below it.
+- **Added** root `CLAUDE.md` for the template checkout: running `claude` → `hi`
+  in a fresh clone asks where to create the workspace and runs bootstrap there.
+- **Changed** `bootstrap.sh` run from inside the clone defaults to
+  `~/my-workspace` instead of `.`, and warns when the target is the clone itself.
+- **Docs** `guides/multi-instance.md`: `scripts/install-cron.sh --install`
+  appends without a marker block (the guide said it used one).
+
 ### Fixed (2026-11-09 — first-run onboarding)
 
 - **Fixed** a fresh workspace tripping `sessionstart-budget.flag` on its very

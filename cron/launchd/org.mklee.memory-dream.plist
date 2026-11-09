@@ -3,25 +3,25 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>org.oracle.self-improvement</string>
+    <string>org.mklee.memory-dream</string>
     <key>ProgramArguments</key>
     <array>
         <string>__PROJECT_DIR__/cron/runner.sh</string>
-        <string>self-improvement</string>
+        <string>memory-dream</string>
     </array>
     <key>StartCalendarInterval</key>
     <dict>
         <key>Hour</key>
-        <integer>21</integer>
+        <integer>3</integer>
         <key>Minute</key>
-        <integer>30</integer>
+        <integer>3</integer>
         <key>Weekday</key>
-        <integer>6</integer>
+        <integer>0</integer>
     </dict>
     <key>StandardOutPath</key>
-    <string>__PROJECT_DIR__/cron/logs/self-improvement-launchd.log</string>
+    <string>__PROJECT_DIR__/cron/logs/memory-dream-launchd.log</string>
     <key>StandardErrorPath</key>
-    <string>__PROJECT_DIR__/cron/logs/self-improvement-launchd.log</string>
+    <string>__PROJECT_DIR__/cron/logs/memory-dream-launchd.log</string>
     <key>WorkingDirectory</key>
     <string>__PROJECT_DIR__</string>
     <key>EnvironmentVariables</key>

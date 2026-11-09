@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>org.oracle.embed-server</string>
+    <string>org.mklee.embed-server</string>
     <!--
       OPTIONAL resident embedding server for the dense search leg
       (scripts/embed-server.py). NOT installed by cron/install-mac.sh — this

@@ -23,7 +23,7 @@ PATH), and runs the matching set of checks:
 | Claude Code integration | `claude` CLI in PATH; `.claude/settings.json` is valid JSON; hooks exist |
 | OpenClaw integration | `openclaw` CLI available (only in `--mode openclaw`) |
 | Memory scripts | `memory-search-hybrid.py` / `hall-tagger.sh` / `compact-update.py` / `memory-compress.py` |
-| Cron jobs | macOS: `launchctl list \| grep org.oracle` — count ≥ 1. Linux: matching crontab entries |
+| Cron jobs | macOS: `launchctl list \| grep org.mklee` — count ≥ 1. Linux: matching crontab entries |
 | Memory journal | today's + yesterday's journal exist + their size |
 | File ownership | no root-owned files in the top two levels |
 | Skill symlinks | dangerous (root-owned) symlinks flagged |
@@ -184,9 +184,9 @@ exist in `cron/prompts/`. Usually caused by:
 
 **Fix**:
 ```bash
-ls cron/launchd/org.oracle.*.plist cron/prompts/*.md | sort
+ls cron/launchd/org.mklee.*.plist cron/prompts/*.md | sort
 ```
-The plist label (after `org.oracle.`) must match a prompt filename
+The plist label (after `org.mklee.`) must match a prompt filename
 (minus the `.md`). Either delete the orphan plist or restore the
 missing prompt.
 
@@ -228,12 +228,12 @@ on modern Homebrew.
 workspace A's jobs stop running (or now point at B's prompts).
 
 **What it means**: `cron/install-mac.sh` copies plists to
-`~/Library/LaunchAgents/` by their label (`org.oracle.X.plist`). Two
+`~/Library/LaunchAgents/` by their label (`org.mklee.X.plist`). Two
 workspaces shipping the same label → the second install overwrites
 the first.
 
 **Fix**: rename one workspace's plist labels to a unique prefix (e.g.
-`org.work.X` vs `org.oracle.X`). See `guides/multi-instance.md §
+`org.work.X` vs `org.mklee.X`). See `guides/multi-instance.md §
 Cron label collision` for the exact commands.
 
 ### 10. `compact-update.py` exits with "no compact:start block found"

@@ -3,23 +3,25 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>org.oracle.smart-wikilinks</string>
+    <string>org.mklee.memory-reflect</string>
     <key>ProgramArguments</key>
     <array>
         <string>__PROJECT_DIR__/cron/runner.sh</string>
-        <string>smart-wikilinks</string>
+        <string>memory-reflect</string>
     </array>
     <key>StartCalendarInterval</key>
     <dict>
+        <key>Weekday</key>
+        <integer>3</integer>
         <key>Hour</key>
         <integer>21</integer>
         <key>Minute</key>
-        <integer>7</integer>
+        <integer>3</integer>
     </dict>
     <key>StandardOutPath</key>
-    <string>__PROJECT_DIR__/cron/logs/smart-wikilinks-launchd.log</string>
+    <string>__PROJECT_DIR__/cron/logs/memory-reflect-launchd.log</string>
     <key>StandardErrorPath</key>
-    <string>__PROJECT_DIR__/cron/logs/smart-wikilinks-launchd.log</string>
+    <string>__PROJECT_DIR__/cron/logs/memory-reflect-launchd.log</string>
     <key>WorkingDirectory</key>
     <string>__PROJECT_DIR__</string>
     <key>EnvironmentVariables</key>

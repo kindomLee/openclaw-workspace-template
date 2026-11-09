@@ -3,32 +3,25 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>org.oracle.memory-retire-candidates</string>
-    <!--
-      Monthly retirement-candidate report for feedback memories (zero LLM,
-      never deletes anything). Writes retire-review.flag. Pure shell job.
-    -->
+    <string>org.mklee.monthly-review</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/bin/bash</string>
-        <string>-lc</string>
-        <string>cd __PROJECT_DIR__ &amp;&amp; bash cron/bin/memory-retire-candidates.sh &gt;&gt; __PROJECT_DIR__/cron/logs/memory-retire-candidates-launchd.log 2&gt;&amp;1</string>
+        <string>__PROJECT_DIR__/cron/runner.sh</string>
+        <string>monthly-review</string>
     </array>
     <key>StartCalendarInterval</key>
     <dict>
         <key>Day</key>
         <integer>1</integer>
         <key>Hour</key>
-        <integer>9</integer>
+        <integer>10</integer>
         <key>Minute</key>
-        <integer>20</integer>
+        <integer>0</integer>
     </dict>
-    <key>RunAtLoad</key>
-    <false/>
     <key>StandardOutPath</key>
-    <string>__PROJECT_DIR__/cron/logs/memory-retire-candidates-launchd.log</string>
+    <string>__PROJECT_DIR__/cron/logs/monthly-review-launchd.log</string>
     <key>StandardErrorPath</key>
-    <string>__PROJECT_DIR__/cron/logs/memory-retire-candidates-launchd.log</string>
+    <string>__PROJECT_DIR__/cron/logs/monthly-review-launchd.log</string>
     <key>WorkingDirectory</key>
     <string>__PROJECT_DIR__</string>
     <key>EnvironmentVariables</key>

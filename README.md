@@ -80,11 +80,12 @@ curl -fsSL https://openclaw.ai/install.sh | bash
 git clone https://github.com/kindomLee/openclaw-workspace-template.git
 cd openclaw-workspace-template
 ```
+Or run `claude` here and type `hi` — the agent asks where to put the workspace and runs step 3 for you.
 
 3. Run the bootstrap script into a separate directory (keep your workspace out of this clone, so `git pull` stays clean for upgrades):
 ```bash
 ./bootstrap.sh --path ~/my-workspace
-# no --path: it prompts, and defaults to the current directory
+# no --path: it prompts; run from inside this clone, the default is ~/my-workspace
 ```
 
 4. Run the health check:
@@ -93,16 +94,20 @@ cd <your-workspace>
 bash scripts/health-check.sh
 ```
 
-5. Personalize. Easiest path: run `claude` inside the workspace and type `hi` — a first-run flag makes the agent walk you through the files below one question at a time (each question is skippable). Or edit them by hand:
+5. Personalize. Easiest path: run `claude` inside the workspace and type `hi` — a first-run flag makes the agent walk you through the files below one question at a time, then offers to install the search dependencies and the cron jobs from step 6 (every question is skippable). Or edit them by hand:
    - `IDENTITY.md` — Name, emoji, personality
    - `USER.md` — Your info so the agent knows you
    - `SOUL.md` — Agent personality and decision priors
    - `TOOLS.md` — Your frequently-used tools and connections
    - `cron/config.env` — Copy from `cron/config.env.example` and fill `TG_BOT_TOKEN` / `TG_CHAT_ID` for Telegram alerts
 
-6. Set up cron jobs:
+6. Set up search dependencies and cron jobs (skip what you already did in step 5):
 
 ```bash
+# Memory search: BM25 + jieba (without them it falls back to keyword mode).
+# health-check prints the exact command for each python3 the hooks and cron use.
+python3 -m pip install --user jieba rank_bm25
+
 # Claude Code mode (default) — macOS
 bash cron/install-mac.sh
 

@@ -72,11 +72,11 @@ no access to the "personal" journal-writing skill).
 
 This is the gotcha to watch out for.
 
-`cron/install-mac.sh` copies every `cron/launchd/org.oracle.*.plist`
-into `~/Library/LaunchAgents/org.oracle.*.plist`. If you run it twice
+`cron/install-mac.sh` copies every `cron/launchd/org.mklee.*.plist`
+into `~/Library/LaunchAgents/org.mklee.*.plist`. If you run it twice
 — once for workspace A, once for workspace B — **the second run
 overwrites the first**, because both workspaces ship plists with the
-same label (`org.oracle.memory-janitor`, `org.oracle.curate-memory`,
+same label (`org.mklee.memory-janitor`, `org.mklee.curate-memory`,
 …). You end up with one set of cron jobs pointing at whichever
 workspace was installed last.
 
@@ -85,26 +85,26 @@ workspace was installed last.
 ```bash
 # In workspace A, rename every plist Label:
 cd workspace-a/cron/launchd
-for f in org.oracle.*.plist; do
-  mv "$f" "${f/org.oracle./org.work.}"
+for f in org.mklee.*.plist; do
+  mv "$f" "${f/org.mklee./org.work.}"
 done
-# And inside each file, update the <string>org.oracle.X</string> →
+# And inside each file, update the <string>org.mklee.X</string> →
 # <string>org.work.X</string>. A quick sed will do it:
-sed -i.bak 's|org\.oracle\.|org.work.|g' org.work.*.plist && rm *.bak
+sed -i.bak 's|org\.mklee\.|org.work.|g' org.work.*.plist && rm *.bak
 
 # Then re-install
 bash cron/install-mac.sh
 ```
 
 Now workspace A's jobs are `org.work.memory-janitor` etc. and
-workspace B's stay `org.oracle.memory-janitor`. Verify with
-`launchctl list | grep -E 'org\.(oracle|work)\.'`.
+workspace B's stay `org.mklee.memory-janitor`. Verify with
+`launchctl list | grep -E 'org\.(mklee|work)\.'`.
 
 The same applies to `org.personal.*`, `org.research.*`, etc. Pick a
 prefix that makes sense for the persona.
 
 On Linux the analogous issue is the crontab's marker block:
-`install-linux.sh` uses `# >>> Oracle Cron BEGIN >>>` as a delimiter,
+`install-linux.sh` uses `# >>> mklee cron BEGIN >>>` as a delimiter,
 so running it twice will **replace** the previous block, not append.
 Either install from a single workspace, or patch the marker
 (`MARKER_BEGIN`/`MARKER_END`) per workspace.
@@ -156,7 +156,7 @@ token) can stay in `~/.zshrc` / `~/.bash_profile` as exported env —
   stable parent dir makes `health-check.sh` and cross-workspace tools
   easier.
 - **Launchd prefix**: one prefix per workspace. Never reuse
-  `org.oracle.*` across workspaces.
+  `org.mklee.*` across workspaces.
 - **`IDENTITY.md` emoji**: one emoji per persona so you can tell which
   agent just messaged you on Telegram.
 - **Telegram**: one bot per persona if possible. Same bot with
@@ -206,11 +206,10 @@ watch:
   Prefer `cp -r` over `ln -s` if the instance runs as a non-root user.
 - **File ownership** — if the instance runs as a service user, make
   sure `chown -R` covers workspace + state dir + log dir.
-- **Cron entries** — `scripts/install-cron.sh` wraps everything in
-  `# >>> Oracle Cron BEGIN >>>` / `<<<` markers; running it from a
-  second workspace replaces the first workspace's block. Use a
-  per-instance prefix environment variable or install by hand for the
-  second workspace.
+- **Cron entries** — `scripts/install-cron.sh --install` appends to the
+  crontab without a marker block, so running it from a second workspace
+  adds a second set of entries. Check `crontab -l` afterwards and drop
+  anything you don't want doubled.
 - **Channel routing** — set `NOTIFY_CHANNEL` + `NOTIFY_TARGET` per
   instance; `--announce` alone falls through to the last active
   session and may deliver to the wrong channel entirely.

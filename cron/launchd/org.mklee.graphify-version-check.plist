@@ -3,16 +3,16 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>org.oracle.graphify-check-weekly</string>
+    <string>org.mklee.graphify-version-check</string>
     <!--
-      Weekly graphify change check. Flags when memory/ changed since the last
-      graph build; silent no-op until graphify is installed. Pure shell job.
+      Flags when a newer graphifyy is on PyPI; clears itself once up to date.
+      Silent no-op until graphifyy is installed. Pure shell job.
     -->
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
         <string>-lc</string>
-        <string>cd __PROJECT_DIR__ &amp;&amp; bash scripts/cron-graphify-check.sh weekly &gt;&gt; __PROJECT_DIR__/cron/logs/graphify-launchd.log 2&gt;&amp;1</string>
+        <string>cd __PROJECT_DIR__ &amp;&amp; bash scripts/cron-graphify-version-check.sh &gt;&gt; __PROJECT_DIR__/cron/logs/graphify-launchd.log 2&gt;&amp;1</string>
     </array>
     <key>StartCalendarInterval</key>
     <dict>
@@ -21,7 +21,7 @@
         <key>Hour</key>
         <integer>21</integer>
         <key>Minute</key>
-        <integer>30</integer>
+        <integer>32</integer>
     </dict>
     <key>RunAtLoad</key>
     <false/>
