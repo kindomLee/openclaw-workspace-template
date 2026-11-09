@@ -18,6 +18,7 @@
 #   - read-only: Read/Grep/Glob + read-only git; Edit/Write/NotebookEdit denied
 #   - --write adds Edit/Write with acceptEdits; reset --hard and rm -rf stay
 #     denied, git commit / push too unless you --allow them explicitly
+#     (committing also needs --allow 'Bash(git add:*)')
 #   - scoped writes without --write: --allow 'Edit(path/**)' 'Write(path/**)'
 #   - --setting-sources project: allow rules merge across scopes and a project
 #     can't narrow a broad user-level allow (e.g. Bash(python3:*)), so user

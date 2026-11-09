@@ -38,7 +38,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   machine never mix corpora. No server → unchanged BM25 behaviour.
 - **Changed** `memory-search-trigger.py` hook passes `--budget 5` (its
   subprocess timeout is 6 s) so a slow rerank degrades to the fused order
-  instead of a hook timeout.
+  instead of a hook timeout. **Upgrade the hook and `memory-search-hybrid.py`
+  together** — the old script rejects `--budget`, and the hook then silently
+  injects nothing.
 
 ### Added (2026-11-09 — upstream backport: review & graph jobs)
 

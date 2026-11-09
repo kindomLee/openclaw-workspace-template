@@ -47,6 +47,10 @@ is refused immediately (it doesn't hang) and recorded in the JSON's
 |---|---|---|
 | default (read-only) | Read, Grep, Glob, `git log/show/diff/status` | Edit, Write, NotebookEdit |
 | `--write` | the above + Edit, Write (`acceptEdits`) | `git commit`, `git push` (unless `--allow`ed), `git reset --hard`, `rm -rf` |
+
+To let the target commit, allow staging too — `git add` is not on the list,
+so `--allow 'Bash(git commit:*)'` alone still fails at `git add`:
+`--allow 'Bash(git add:*)' --allow 'Bash(git commit:*)'`.
 | scoped writes | `--allow 'Edit(dir/**)' --allow 'Write(dir/**)'` without `--write` | Edit/Write elsewhere aren't allowed |
 
 Things worth knowing:
@@ -55,8 +59,9 @@ Things worth knowing:
   default. Allow rules merge across scopes, and a project's settings can't
   narrow a broad user-level allow such as `Bash(python3:*)`, so leaving user
   settings out is what keeps the lists above the real boundary. It also
-  skips your user-level hooks and plugins. Use `--user-settings` when the
-  target needs them. Your user-level `CLAUDE.md` still loads either way
+  skips your user-level hooks and plugins, and the target's own
+  `.claude/settings.local.json`. Use `--user-settings` when the target needs
+  them. Your user-level `CLAUDE.md` still loads either way
   (observed: an English task answered in the language a user-level
   `CLAUDE.md` asks for).
 - **Folder trust.** Until a folder has been opened interactively once and
