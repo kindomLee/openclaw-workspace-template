@@ -18,14 +18,14 @@
 - 發現更好做法 → `best_practice`
 - 知識過時 → `knowledge_gap`
 
-如果發現新的 pattern 且 LEARNINGS.md 中沒有對應條目，新增一條。
-如果已有對應條目，`recurring_count += 1`。
+如果發現新的 pattern 且 LEARNINGS.md 中沒有對應條目，依該檔開頭的欄位格式新增一條（`claim`／`type`／`recurring_count`／`status`／`evidence`／`suggested_action`）。
+如果已有對應條目，`recurring_count += 1`，並在 `evidence` 加一行日期與出處。
 
 ### 3. 提升判斷
 
 檢查所有 active 條目：
 - `recurring_count >= 3` → 提升到 MEMORY.md 的 Agent Cases 段落
-  - 在 LEARNINGS.md 標記 `resolved` + `promoted`
+  - 在 LEARNINGS.md 把 `**status**` 改成 `resolved`，填 `**promoted_to**: <MEMORY.md 段落>`
   - 在 MEMORY.md 加入對應的 pattern 描述
 - `recurring_count < 3` → 保持 active，記錄觀察
 

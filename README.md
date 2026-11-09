@@ -144,9 +144,9 @@ workspace/
 │   ├── 02-Areas/      # Topics by domain
 │   ├── 03-Resources/  # Tools, services, references
 │   └── 04-Archive/    # Retired notes
-├── .learnings/        # Self-improvement tracking
+├── LEARNINGS.md       # Self-improvement tracking (parsed by scripts)
+├── .learnings/        # Errors and feature requests
 │   ├── ERRORS.md
-│   ├── LEARNINGS.md
 │   └── FEATURE_REQUESTS.md
 ├── cron/                  # Claude Code scheduled jobs (claude -p)
 │   ├── runner.sh          # Universal job wrapper

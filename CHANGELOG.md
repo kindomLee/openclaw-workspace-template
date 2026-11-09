@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (2026-11-09 — LEARNINGS.md location and format)
+
+- **Fixed** `LEARNINGS.md` shipped under `.learnings/` in a free-form layout,
+  while every consumer (`learnings-promotion-check.py`, `learnings-archive.py`,
+  `weekly-review-digest.py`, `skill_genesis_mine.py`, `memory-retire-candidates.sh`,
+  the self-improvement prompt, the recall hook) reads `LEARNINGS.md` at the
+  workspace root and parses `**claim**` / `**type**` / `**recurring_count**` /
+  `**status**` / `**evidence**` fields. Learnings the agent wrote were never
+  promoted, archived or reviewed. It now ships as `templates/LEARNINGS.md` with
+  that field format in its header (the example heading keeps
+  `TYPE-YYYYMMDD-NNN` so it isn't parsed as an entry; the old file's two
+  examples were). `AGENTS.md`, `CLAUDE.md`, `MEMORY.md`, the curate-memory
+  skill, `guides/self-improvement.md` and both READMEs point at the root file.
+  `.learnings/` keeps `ERRORS.md` and `FEATURE_REQUESTS.md`, which no script
+  parses. `health-check.sh` warns while `.learnings/LEARNINGS.md` still exists.
+  **Upgrading**: copy `templates/LEARNINGS.md` to the workspace root, rewrite
+  any real entries from `.learnings/LEARNINGS.md` into the new fields, then
+  delete the old file.
+
 ### Changed (2026-11-09 — launchd label prefix; guided setup covers search deps and cron)
 
 - **Changed** launchd labels `org.oracle.*` → `org.mklee.*` (plist filenames and

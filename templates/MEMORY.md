@@ -35,13 +35,13 @@
 
 ## Agent Patterns [P0]
 <!-- Behavioral patterns the agent has learned. Promote from
-     `.learnings/LEARNINGS.md` when `recurring_count ≥ 3` AND the
+     `LEARNINGS.md` when `recurring_count ≥ 3` AND the
      correction is about *how the agent acts*.
      See AGENTS.md § Correction Routing. -->
 - Pattern descriptions here
 
 ## Learnings [P0]
-<!-- Factual knowledge promoted from `.learnings/LEARNINGS.md` type=
+<!-- Factual knowledge promoted from `LEARNINGS.md` type=
      `correction` / `knowledge_gap` / `best_practice`. "This API is
      deprecated", "we use tool X not Y", "rate limit is N/hour". -->
 - Knowledge item descriptions here

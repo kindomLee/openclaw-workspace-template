@@ -84,6 +84,15 @@ for dir in tmp .learnings; do
         warn "$dir/ missing (optional template convention)"
     fi
 done
+# Every script reads LEARNINGS.md at the workspace root. Workspaces
+# bootstrapped before 2026-11 got it under .learnings/, where nothing reads it.
+if [ -f "$WORKSPACE/.learnings/LEARNINGS.md" ]; then
+    warn ".learnings/LEARNINGS.md is read by no script — move its entries into LEARNINGS.md at the workspace root (field format in that file's header), then delete it"
+elif [ -f "$WORKSPACE/LEARNINGS.md" ]; then
+    pass "LEARNINGS.md"
+else
+    warn "LEARNINGS.md missing (copy templates/LEARNINGS.md from the template)"
+fi
 # Skills can live at either the top-level (template layout) or under
 # .claude/skills/ (Claude Code native). Accept either.
 if [ -d "$WORKSPACE/skills" ] || [ -d "$WORKSPACE/.claude/skills" ]; then

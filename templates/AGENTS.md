@@ -54,7 +54,7 @@ Both subsystems use the **same "≥ 3 similar occurrences → promote"** rule bu
 | Correction is about... | Goes to | Promoted to (≥ 3) | Example |
 |---|---|---|---|
 | **Agent interaction style / decision bias / tone** | `memory/soul-proposals.md` | `SOUL.md` (Decision Priors) | "don't ask, just do it" / "too verbose" / "stop summarizing" |
-| **External facts / tools / APIs / infra knowledge** | `.learnings/LEARNINGS.md` type=`correction` | `MEMORY.md` (Patterns / Learnings) | "that API endpoint is deprecated" / "we use X not Y" |
+| **External facts / tools / APIs / infra knowledge** | `LEARNINGS.md` type=`correction` | `MEMORY.md` (Patterns / Learnings) | "that API endpoint is deprecated" / "we use X not Y" |
 | **Recurring bug / env regression** | `.learnings/ERRORS.md` type=`error`/`regression` | `MEMORY.md` (Agent Cases) | "cron job silently aborts on sleep wake" |
 | **Can't decide** | Both (dup-safe) | Whichever hits ≥ 3 first | — |
 
@@ -89,7 +89,7 @@ Is this "what happened" or "what was learned"?
 │   ├─ New topic + >500 words? → notes/02-Areas/ or 03-Resources/ (create new)
 │   └─ Fragment <500 words? → memory/YYYY-MM-DD.md, let cron sync organize
 ├─ Preference/infrastructure/core Pattern? → MEMORY.md (P0)
-├─ Error/learning? → .learnings/LEARNINGS.md
+├─ Error/learning? → LEARNINGS.md
 └─ Uncertain? → memory/YYYY-MM-DD.md (safe default)
 ```
 
@@ -136,7 +136,7 @@ Full architecture and how to add new flag types: `guides/flag-system.md`.
 4. **Fail → Alert** — Never fail silently
 
 ## Self-Improvement
-- Factual correction / knowledge gap / recurring error → `.learnings/LEARNINGS.md` or `.learnings/ERRORS.md`
+- Factual correction / knowledge gap / recurring error → `LEARNINGS.md` or `.learnings/ERRORS.md`
 - recurring_count ≥ 3 → promote to MEMORY.md (Patterns / Learnings / Agent Cases)
 - **Behavioral** corrections route to `memory/soul-proposals.md` instead — see **Correction Routing** table above
 - Detailed categories → `guides/self-improvement.md`

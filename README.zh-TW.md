@@ -142,9 +142,9 @@ workspace/
 │   ├── 02-Areas/      # 持續領域
 │   ├── 03-Resources/  # 參考資料
 │   └── 04-Archive/    # 冷藏
-├── .learnings/        # 自我改進追蹤
+├── LEARNINGS.md       # 自我改進追蹤（程式會解析）
+├── .learnings/        # 錯誤與功能需求
 │   ├── ERRORS.md
-│   ├── LEARNINGS.md
 │   └── FEATURE_REQUESTS.md
 ├── cron/                  # Claude Code 排程任務（claude -p）
 │   ├── runner.sh          # 通用 job wrapper

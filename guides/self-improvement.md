@@ -18,16 +18,16 @@ AI Agent 在長期運行過程中會遇到各種問題：
 | 觸發條件 | 記錄位置 | 類型 | 範例 |
 |----------|----------|------|------|
 | 指令/操作失敗 | `.learnings/ERRORS.md` | `error` | API 調用失敗、檔案讀取錯誤 |
-| 使用者糾正（「不對」「其實應該...」） | `.learnings/LEARNINGS.md` | `correction` | 理解錯誤、參數設定錯誤 |
+| 使用者糾正（「不對」「其實應該...」） | `LEARNINGS.md` | `correction` | 理解錯誤、參數設定錯誤 |
 | 之前修好的問題又壞了 | `.learnings/ERRORS.md` | `regression` | 程式碼回歸、設定重置 |
 
 ### 🟡 Optimize — 可以改進的地方
 
 | 觸發條件 | 記錄位置 | 類型 | 範例 |
 |----------|----------|------|------|
-| 知識過時或錯誤 | `.learnings/LEARNINGS.md` | `knowledge_gap` | API 版本更新、文檔變更 |
-| 發現更好的做法 | `.learnings/LEARNINGS.md` | `best_practice` | 更有效的指令、更好的流程 |
-| 手動重複操作 2+ 次 | `.learnings/LEARNINGS.md` | `manual_repeat` | 應該自動化的重複任務 |
+| 知識過時或錯誤 | `LEARNINGS.md` | `knowledge_gap` | API 版本更新、文檔變更 |
+| 發現更好的做法 | `LEARNINGS.md` | `best_practice` | 更有效的指令、更好的流程 |
+| 手動重複操作 2+ 次 | `LEARNINGS.md` | `manual_repeat` | 應該自動化的重複任務 |
 
 ### 🟢 Innovate — 新需求
 
@@ -38,14 +38,16 @@ AI Agent 在長期運行過程中會遇到各種問題：
 
 ## 格式規範
 
-每筆記錄使用以下格式：
+`LEARNINGS.md` 放在 workspace 根目錄，用 claim／evidence 欄位，格式寫在該檔開頭；`learnings-promotion-check`、`learnings-archive`、週檢查都會解析那些欄位名稱，不要改。
+
+`.learnings/ERRORS.md`、`.learnings/FEATURE_REQUESTS.md` 沒有程式解析，用以下格式：
 
 ```markdown
 ## [TYPE-YYYYMMDD-XXX] 標題
 
 **Summary:** 一句話概述問題/改進點
 
-**Details:** 
+**Details:**
 詳細描述情況，包含：
 - 觸發條件
 - 實際發生狀況
@@ -140,13 +142,13 @@ AI Agent 在長期運行過程中會遇到各種問題：
 
 ```markdown
 ## 自我改進（Self-Improvement）
-偵測到以下情況時，立即記錄到 `.learnings/`：
+偵測到以下情況時，立即記錄到 `LEARNINGS.md` 或 `.learnings/`：
 
 ### 信號分類（三級）
 [插入完整的觸發條件表格]
 
 ### 格式
-`## [TYPE-YYYYMMDD-XXX] 標題` + Summary + Details + Suggested Action
+`LEARNINGS.md`：依該檔開頭的 claim／evidence 欄位；`.learnings/*.md`：`## [TYPE-YYYYMMDD-XXX] 標題` + Summary + Details + Suggested Action
 - **必填欄位：** `recurring_count`（同一模組/問題出現幾次，首次為 1）
 - **提升規則：** recurring_count ≥ 3 → 提升到 MEMORY.md 的 Agent Cases/Patterns
 - **不要記的：** 一次性小錯、已知限制、使用者自己的操作失誤
@@ -157,7 +159,7 @@ AI Agent 在長期運行過程中會遇到各種問題：
 ## 維護週期
 
 ### 每週檢查
-- 檢視 `.learnings/` 檔案中 status = pending 的項目
+- 檢視 `LEARNINGS.md`（status: active）與 `.learnings/`（status: pending）的項目
 - 更新已解決項目的 status
 - 將 recurring_count ≥ 3 的項目提升到 MEMORY.md
 

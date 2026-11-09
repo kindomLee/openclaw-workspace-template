@@ -81,7 +81,7 @@ tag so hybrid search can boost correctly:
 | Correction is about... | Lives in | Promoted to |
 |---|---|---|
 | Agent **style / tone / bias** (e.g. "don't ask", "too verbose") | `memory/soul-proposals.md` | `SOUL.md` |
-| **Facts / tools / APIs / infra** (e.g. "that API is deprecated") | `.learnings/LEARNINGS.md` | `MEMORY.md` Learnings / Patterns |
+| **Facts / tools / APIs / infra** (e.g. "that API is deprecated") | `LEARNINGS.md` | `MEMORY.md` Learnings / Patterns |
 | **Recurring bug / env regression** | `.learnings/ERRORS.md` | `MEMORY.md` Cases |
 
 See `AGENTS.md § Correction Routing` for the full decision table.

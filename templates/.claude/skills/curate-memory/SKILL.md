@@ -4,7 +4,7 @@ description: >
   Full curator workflow for memory archival: scan the conversation, dedup against
   existing records, classify via the Context Tree, then decide whether each entry
   belongs in memory/ journal, MEMORY.md long-term index, notes/, reference/, or
-  .learnings/. Merges fragments into existing notes when possible.
+  LEARNINGS.md. Merges fragments into existing notes when possible.
   Triggers on "curate memory", "organize memory", "archive this", "where should
   this go", "/curate-memory", and proactively after non-trivial technical
   decisions, infrastructure changes, or problem solutions.
@@ -80,7 +80,8 @@ MEMORY.md                        ← Long-term index (P0 prefs/infra, P1 tech, P
 notes/02-Areas/{topic}/           ← Topic knowledge (merge-first, don't create fragments)
 notes/03-Resources/{topic}/       ← Tools/services references
 reference/                        ← Deep references
-.learnings/                       ← Errors and learnings
+LEARNINGS.md                      ← Learnings (claim/evidence fields, parsed by scripts)
+.learnings/                       ← ERRORS.md, FEATURE_REQUESTS.md
 ```
 
 ### Per-file Role Caps
@@ -129,7 +130,7 @@ Is this "what happened" or "what was learned"?
 │   ├─ Related notes/ already exist? → Merge into existing (don't create new)
 │   ├─ New topic + >500 words? → notes/02-Areas/ or 03-Resources/ (create new)
 │   └─ Fragment <500 words? → memory/YYYY-MM-DD.md, let cron sync organize
-├─ Error/learning? → .learnings/LEARNINGS.md
+├─ Error/learning? → LEARNINGS.md
 └─ Uncertain? → memory/YYYY-MM-DD.md (safe default)
 ```
 
