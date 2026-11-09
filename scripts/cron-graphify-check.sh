@@ -25,7 +25,13 @@ WS=$(openclaw_workspace)
 cd "$WS"
 FLAG_NAME="graphify"
 MODE="${1:-weekly}"
-PYTHON="${GRAPHIFY_PYTHON:-$(cat graphify-out/.graphify_python 2>/dev/null || echo python3)}"
+PYTHON="${GRAPHIFY_PYTHON:-$(cat graphify-out/.graphify_python 2>/dev/null || true)}"
+if [ -z "$PYTHON" ] && command -v graphify >/dev/null 2>&1; then
+    # `uv tool install graphifyy` keeps graphify in its own venv, and
+    # .graphify_python only appears after the first /graphify run.
+    PYTHON="$(sed -n '1s/^#![[:space:]]*//p' "$(command -v graphify)")"
+fi
+PYTHON="${PYTHON:-python3}"
 
 if ! "$PYTHON" -c "import graphify" 2>/dev/null; then
     echo "[graphify-check] graphify not installed for $PYTHON — skipping (optional feature)"

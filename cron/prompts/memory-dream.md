@@ -7,7 +7,7 @@
 
 **Journal 碎片**：從 memory/ 目錄隨機抽取最近 30 天的日誌（5-8 個檔案）：
 ```bash
-find memory/ -name "2026-*.md" -mtime -30 -not -path "*/archive*" -not -name "dreams.md" -not -name "reflections.md" | sort -R | head -8
+find memory/ -name "20??-??-??.md" -mtime -30 | sort -R | head -8   # journals older than 5 days live in memory/archive-YYYY-MM/
 ```
 
 **Notes 碎片**：從 notes/ 不同領域各抽 1-2 篇：

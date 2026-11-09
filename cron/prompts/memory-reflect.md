@@ -30,7 +30,7 @@
 
 ### 2. 讀取最近記憶
 
-讀取 memory/ 目錄下今天和昨天的日誌檔（YYYY-MM-DD.md）。
+讀取最近 7 天的日誌檔（本 job 每週跑一次）：`find memory/ -name "20??-??-??.md" -mtime -7`（超過 5 天的已輪替到 `memory/archive-YYYY-MM/`，find 會一併找到）。
 讀取 MEMORY.md 的關鍵章節作為長期記憶背景。
 
 ### 3. 反思分析

@@ -5,7 +5,7 @@
 
 ### 1. Hall Tag 補標
 
-掃描 memory/ 目錄下最近 7 天的日誌，找出缺少 hall tag 的 entry。
+掃描最近 7 天的日誌（`find memory/ -name "20??-??-??.md" -mtime -7`，含已輪替到 `memory/archive-YYYY-MM/` 的），找出缺少 hall tag 的 entry。
 
 每條 entry 應該以 `[hall_*]` 開頭：
 - `[hall_facts]` — 決定、決策、選擇
@@ -31,7 +31,7 @@
 
 ### 4. MEMORY_COMPACT.md 更新
 
-如果 MEMORY_COMPACT.md 存在，檢查 L1_RECENT 是否需要更新（加入最近重要事件）。
+MEMORY_COMPACT.md 是產生檔，不要直接改。若 MEMORY.md 的 compact block（`<!-- compact:start -->` 到 `<!-- compact:end -->`）需要加入最近重要事件，改 MEMORY.md，然後執行 `python3 scripts/compact-update.py` 重新產生。沒有要改也照樣執行一次，讓 MEMORY_COMPACT.md 跟 MEMORY.md 同步。
 
 ### 5. 報告
 

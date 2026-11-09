@@ -12,18 +12,18 @@
 
 ### 1. Memory 月度統計
 
-讀 memory/ 上個月所有 `YYYY-MM-DD.md`（不含 archive）。
+讀上個月所有 `YYYY-MM-DD.md`。每日輪替會把 5 天前的 journal 移到 `memory/archive-YYYY-MM/`，所以月初時上個月幾乎都在 archive 裡，兩處都要讀。
 
 ```bash
 LAST_MONTH=$(date -v-1m +%Y-%m 2>/dev/null || date -d "last month" +%Y-%m)  # macOS || GNU
-ls memory/${LAST_MONTH}-*.md 2>/dev/null
+ls memory/${LAST_MONTH}-*.md memory/archive-${LAST_MONTH}/${LAST_MONTH}-*.md 2>/dev/null
 ```
 
 統計各 hall：
 
 ```bash
 for hall in hall_facts hall_events hall_discoveries hall_preferences hall_advice; do
-  count=$(grep -ch "\[$hall\]" memory/${LAST_MONTH}-*.md 2>/dev/null | awk '{s+=$1} END {print s}')
+  count=$(grep -ch "\[$hall\]" memory/${LAST_MONTH}-*.md memory/archive-${LAST_MONTH}/${LAST_MONTH}-*.md 2>/dev/null | awk '{s+=$1} END {print s}')
   echo "$hall: $count"
 done
 ```

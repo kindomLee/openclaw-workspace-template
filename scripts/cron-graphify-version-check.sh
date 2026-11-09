@@ -19,7 +19,13 @@ source "$SELF_DIR/lib/flag.sh"
 WS=$(openclaw_workspace)
 cd "$WS"
 FLAG_NAME="graphify-upgrade"
-PYTHON="${GRAPHIFY_PYTHON:-$(cat graphify-out/.graphify_python 2>/dev/null || echo python3)}"
+PYTHON="${GRAPHIFY_PYTHON:-$(cat graphify-out/.graphify_python 2>/dev/null || true)}"
+if [ -z "$PYTHON" ] && command -v graphify >/dev/null 2>&1; then
+    # `uv tool install graphifyy` keeps graphify in its own venv, and
+    # .graphify_python only appears after the first /graphify run.
+    PYTHON="$(sed -n '1s/^#![[:space:]]*//p' "$(command -v graphify)")"
+fi
+PYTHON="${PYTHON:-python3}"
 
 # Read the installed version from package metadata (uv tool venvs have no pip).
 CURRENT=$("$PYTHON" -c "import importlib.metadata as m; print(m.version('graphifyy'))" 2>/dev/null || true)

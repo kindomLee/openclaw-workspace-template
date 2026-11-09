@@ -12,7 +12,7 @@
 
 ### 2. 掃描最近記憶找新 pattern
 
-讀取 `memory/` 下最近 7 天的日誌，找出：
+讀取最近 7 天的日誌（`find memory/ -name "20??-??-??.md" -mtime -7`，含已輪替到 `memory/archive-YYYY-MM/` 的），找出：
 - 使用者糾正（「不對」「其實應該」「別這樣」）→ `correction`
 - 重複出現的問題或手動操作 → `manual_repeat`
 - 發現更好做法 → `best_practice`
@@ -24,14 +24,14 @@
 ### 3. 提升判斷
 
 檢查所有 active 條目：
-- `recurring_count >= 3` → 提升到 MEMORY.md 的 Agent Cases 段落
+- `recurring_count >= 3` → 依 AGENTS.md「Correction Routing」提升到 MEMORY.md：correction／knowledge_gap 進 `## Learnings`，best_practice／manual_repeat 進 `## Agent Patterns`，error／regression 進 `## Cases`
   - 在 LEARNINGS.md 把 `**status**` 改成 `resolved`，填 `**promoted_to**: <MEMORY.md 段落>`
   - 在 MEMORY.md 加入對應的 pattern 描述
 - `recurring_count < 3` → 保持 active，記錄觀察
 
-### 4. 對比 MEMORY.md Agent Cases
+### 4. 對比 MEMORY.md
 
-讀取 MEMORY.md 的 Agent Cases/Patterns 段落，確認：
+讀取 MEMORY.md 的 `## Learnings`／`## Agent Patterns`／`## Cases` 段落，確認：
 - 已 promote 的項目確實存在於 MEMORY.md
 - 沒有重複條目
 - 沒有遺漏
@@ -53,7 +53,7 @@
 ### Pattern 觀察
 （不提升，僅記錄的觀察）
 
-### MEMORY.md Agent Cases 對比
+### MEMORY.md 對比
 （一致性檢查結果）
 ```
 
@@ -79,7 +79,7 @@ Pattern 觀察：
 ```
 
 每個條目要有 ID 或標題 + count + 一句話說明。
-如果有 promote 動作，明確寫出「已提升 X 到 MEMORY.md Agent Cases」。
+如果有 promote 動作，明確寫出「已提升 X 到 MEMORY.md <段落>」。
 
 ```bash
 curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \

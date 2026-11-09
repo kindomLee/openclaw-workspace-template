@@ -166,7 +166,7 @@ learn_size = learn_entries = 0
 if os.path.exists(learn_path):
     learn_size = os.path.getsize(learn_path)
     lt = open(learn_path, encoding="utf-8").read()
-    learn_entries = len(re.findall(r'\[(CORRECTION|BEST_PRACTICE|PATTERN|ANTIPATTERN|LEARNING)-', lt))
+    learn_entries = len(re.findall(r'^## \[[A-Z_]+-\d{8}-\d{3}\]', lt, re.M))
 
 def sev_label(r):
     return r["sev"] if r["sev"] else "unknown"

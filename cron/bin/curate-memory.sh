@@ -72,9 +72,11 @@ if [ -z "$LAST_CURATED" ]; then
 fi
 
 # Backlog: journal dates after last_curated_date and before today
-# (YYYY-MM-DD compares correctly as a string).
+# (YYYY-MM-DD compares correctly as a string). The daily rotation moves
+# journals older than 5 days into memory/archive-YYYY-MM/, so a backlog
+# that sat for a week must be looked up there too.
 PENDING=""
-for f in memory/20??-??-??.md; do
+for f in memory/20??-??-??.md memory/archive-*/20??-??-??.md; do
   [ -e "$f" ] || continue
   base="$(basename "$f" .md)"
   if [[ "$base" > "$LAST_CURATED" && "$base" < "$TODAY" ]]; then
@@ -94,7 +96,7 @@ if [ -z "$PENDING" ]; then
 fi
 
 COUNT="$(printf '%s\n' "$PENDING" | wc -l | tr -d ' ')"
-DATES="$(printf '%s\n' "$PENDING" | sed 's|memory/||;s|\.md||' | paste -sd, -)"
+DATES="$(printf '%s\n' "$PENDING" | sed 's|.*/||;s|\.md||' | sort | paste -sd, -)"
 IDENTITY="curate:$DATES"
 log "backlog: $COUNT file(s), identity=$IDENTITY"
 
