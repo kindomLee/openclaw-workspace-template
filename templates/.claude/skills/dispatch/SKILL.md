@@ -28,6 +28,7 @@ D="$CLAUDE_PROJECT_DIR/.claude/skills/dispatch/dispatch.sh"
 $D --repo <dir> "<task>"                                   # read-only (default)
 $D --repo <dir> --write "<task>"                           # may edit; no commit/push
 $D --repo <dir> --write --allow 'Bash(pytest:*)' "<task>"  # extra tools, one rule each
+$D --repo <dir> --write --auto "<task>"                    # classifier approves the rest; can write .claude/specs (guides/dispatch.md first)
 $D --repo <dir> --src <other dir> "<task>"                 # extra readable, not writable, dir
 $D --repo <dir> --resume <session_id> "<follow-up>"        # same session, keeps its context
 ```
@@ -38,7 +39,8 @@ back (a table, file paths, the commands it ran and their output). End with
 needs from this workspace's memory into the task — it can't see it.
 
 Long jobs: run with `run_in_background`, tell the user it's dispatched and
-the session_id.
+the session_id. To check progress, read the last lines of the `stream:` file
+the script prints (one JSON event per line: tool calls, results, denials).
 
 ## 3. Follow up in the same session
 

@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (2026-11-10 — dispatch no longer stalls on refused calls)
+
+- **Fixed** `dispatch.sh` ran read-only jobs in `default` mode and `--write`
+  jobs in `acceptEdits`. Under `-p`, each call outside the allow list then
+  waited about 115 seconds before being refused (observed on Claude Code
+  2.1.322: one refusal took 119 s; with `dontAsk`, 4 s). Both now run with
+  `--permission-mode dontAsk`; the allow and deny lists are unchanged.
+  `guides/dispatch.md` said such calls were refused at once; corrected.
+- **Added** the event stream: `dispatch.sh` runs with
+  `--output-format stream-json --verbose`, writes `<log>.stream` (tail it to
+  watch a long job) and builds the result JSON from the `result` event. If a
+  session ever emits several `result` events, denials are merged and turns
+  summed. Stdin is now `/dev/null`, which skips the 3-second stdin wait.
+- **Added** `dispatch.sh --auto`: runs `--permission-mode auto` so the
+  classifier can approve calls outside the allow list, which lets a job write
+  the target's `.claude/` (e.g. `.claude/specs/`). The deny lists still apply,
+  and `.claude/settings*.json` and `.claude/hooks/**` are denied on top. The
+  classifier approves what the task text spells out, so irreversible steps
+  belong on the deny list; see `guides/dispatch.md`.
+- **Added** four smoke-test checks with a fake `claude` that prints a stream.
+
 ### Fixed (2026-11-10 — Telegram notifications in prompt jobs)
 
 - **Fixed** the Telegram step in five prompt jobs (`memory-dream`,

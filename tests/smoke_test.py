@@ -192,6 +192,33 @@ def main():
     r = run(["bash", "scripts/health-check.sh"])
     check(r.returncode == 0, f"health-check reports no errors ({r.stdout.strip()[-300:] if r.returncode else ''})")
 
+    print("dispatch (fake claude printing a stream)")
+    fake = TMP / "fake-claude"
+    fake.mkdir()
+    (fake / "claude").write_text(
+        '#!/bin/bash\necho "$*" > "$FAKE_ARGS"\n'
+        """echo '{"type":"system","subtype":"init"}'\n"""
+        '[ "$FAKE" = none ] && exit 0\n'
+        """echo '{"type":"result","is_error":false,"session_id":"s1","num_turns":40,"result":"x","permission_denials":[{"tool_name":"Bash","tool_input":{"command":"sed -i x"}}]}'\n"""
+        """echo '{"type":"result","is_error":false,"session_id":"s1","num_turns":1,"result":"done","permission_denials":[]}'\n""")
+    (fake / "claude").chmod(0o755)
+    disp = ["bash", str(WS / ".claude/skills/dispatch/dispatch.sh"), "--repo", str(WS), "task"]
+    env = {"PATH": f"{fake}:{os.environ['PATH']}", "FAKE_ARGS": str(TMP / "fake-args"),
+           "DISPATCH_LOG_DIR": str(TMP / "dispatch-log")}
+    r = run(disp, env=env)
+    args = (TMP / "fake-args").read_text() if (TMP / "fake-args").exists() else ""
+    check(r.returncode == 0 and "turns: 41" in r.stdout and "sed -i x" in r.stdout,
+          "dispatch merges every result event: denials kept, turns summed"
+          + ("" if r.returncode == 0 else f" (rc={r.returncode} {r.stderr.strip()[-200:]})"))
+    check("--permission-mode dontAsk" in args and "stream-json" in args, "dispatch runs dontAsk and streams events")
+    r = run(disp, env={**env, "FAKE": "none"})
+    check(r.returncode == 1, "dispatch exits 1 when the stream has no result event")
+    r = run(disp[:-1] + ["--auto", "--write", "task"], env=env)
+    args = (TMP / "fake-args").read_text() if r.returncode == 0 else ""
+    check("--permission-mode auto" in args and "Edit(.claude/settings*.json)" in args
+          and "Write(.claude/hooks/**)" in args and "Bash(git push:*)" in args,
+          "dispatch --auto runs auto mode and still denies .claude settings/hooks and push")
+
     print("upgrade re-run")
     (flags / "welcome-profile-setup.flag").unlink()
     r = run(["bash", str(REPO / "bootstrap.sh"), "--path", str(WS), "--yes"], cwd=TMP)

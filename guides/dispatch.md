@@ -39,19 +39,39 @@ ask each repo for its open "to verify" items and unpushed commits.
 
 ## Permissions under `-p`
 
-Nobody can answer a permission prompt in `-p` mode, so anything not allowed
-is refused immediately (it doesn't hang) and recorded in the JSON's
-`permission_denials`. `dispatch.sh` builds the lists:
+Nobody can answer a permission prompt in `-p` mode. `dispatch.sh` runs with
+`--permission-mode dontAsk`, so anything not allowed is refused at once and
+recorded in the JSON's `permission_denials`. In our runs on 2.1.322,
+`default` and `acceptEdits` waited about 115 seconds per such call before
+refusing. `dispatch.sh` builds the lists:
 
 | Mode | Allowed | Denied |
 |---|---|---|
 | default (read-only) | Read, Grep, Glob, `git log/show/diff/status` | Edit, Write, NotebookEdit |
-| `--write` | the above + Edit, Write (`acceptEdits`) | `git commit`, `git push` (unless `--allow`ed), `git reset --hard`, `rm -rf` |
+| `--write` | the above + Edit, Write | `git commit`, `git push` (unless `--allow`ed), `git reset --hard`, `rm -rf` |
+| scoped writes | `--allow 'Edit(dir/**)' --allow 'Write(dir/**)'` without `--write` | Edit/Write elsewhere aren't allowed |
+| `--auto` (add to either) | the lists above, plus whatever the auto-mode classifier approves | the lists above, plus Edit/Write on the target's `.claude/settings*.json` and `.claude/hooks/**` |
 
 To let the target commit, allow staging too — `git add` is not on the list,
 so `--allow 'Bash(git commit:*)'` alone still fails at `git add`:
 `--allow 'Bash(git add:*)' --allow 'Bash(git commit:*)'`.
-| scoped writes | `--allow 'Edit(dir/**)' --allow 'Write(dir/**)'` without `--write` | Edit/Write elsewhere aren't allowed |
+
+`--auto` runs `--permission-mode auto`. Deny rules are checked before the
+classifier, so the lists above still hold. Two things to know before using
+it:
+
+- The classifier approves what the task text asks for. In testing, a task
+  that spelled out `git push --force`, `rm -rf` on a sibling directory and a
+  keychain read had all three approved. Keep irreversible steps on the deny
+  list (`--deny`).
+- Entering auto mode drops broad allow rules such as `Bash(*)`, wildcarded
+  interpreters and `Agent`, so those calls go to the classifier too.
+
+Use it for jobs that have to write the target's `.claude/` (specs, notes),
+which `dontAsk` always refuses. Tested with `--auto --write`: an edit under
+`.claude/specs/` went through, edits to `.claude/settings.json` and
+`.claude/hooks/` were refused, so was a shell redirect into
+`.claude/settings.local.json`, and `git commit` stayed denied.
 
 Things worth knowing:
 
@@ -69,8 +89,8 @@ Things worth knowing:
   `dispatch.sh` warns; fix with `cd <repo> && claude`, accept, exit.
 - **Absolute-path rules** need a leading `//`: `Edit(//abs/path/**)`.
   `--src` does this for you.
-- **The target's `.claude/` can't be written** under `-p` even when Edit is
-  allowed — those edits always need a human. Have the session write a patch
+- **The target's `.claude/` can't be written** without `--auto`, even when
+  Edit is allowed. Either add `--auto`, or have the session write a patch
   somewhere else and apply it from the coordinator.
 - **`~/.claude/` is a sensitive path** for the child session: writes there are
   refused even with `--add-dir`. Point output directories outside the repo
@@ -113,7 +133,8 @@ whatever it's given.
 
 The child's report is a claim. Check `git log`, `git status`, `git diff` in
 the target, re-run one of the checks it says passed, and read the denied
-commands. The JSON log for every run is kept under
+commands. Every run keeps its event stream (`<log>.stream`, one JSON event per
+line, so you can `tail -f` a long run) and the result JSON under
 `$DISPATCH_LOG_DIR` (default `~/.cache/dispatch`).
 
 `total_cost_usd` in the JSON is an API-price estimate. With a Claude

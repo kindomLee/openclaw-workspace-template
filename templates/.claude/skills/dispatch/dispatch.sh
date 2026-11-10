@@ -9,6 +9,8 @@
 #   --resume <id>     continue that session (follow-ups, answering a stop point,
 #                     running the repo's own /curate-memory on what it just did)
 #   --write           allow Edit/Write inside the target (default: read-only)
+#   --auto            let the auto-mode classifier approve calls outside the
+#                     allow list instead of refusing them (see below)
 #   --src <dir>       extra readable dir; Edit/Write on it stays denied (repeatable)
 #   --allow <rule>    extra allow rule, e.g. 'Bash(pytest:*)' (repeatable)
 #   --deny <rule>     extra deny rule (repeatable)
@@ -16,17 +18,27 @@
 #
 # Defaults are deliberately narrow:
 #   - read-only: Read/Grep/Glob + read-only git; Edit/Write/NotebookEdit denied
-#   - --write adds Edit/Write with acceptEdits; reset --hard and rm -rf stay
+#   - --write adds Edit/Write; reset --hard and rm -rf stay
 #     denied, git commit / push too unless you --allow them explicitly
 #     (committing also needs --allow 'Bash(git add:*)')
 #   - scoped writes without --write: --allow 'Edit(path/**)' 'Write(path/**)'
 #   - --setting-sources project: allow rules merge across scopes and a project
 #     can't narrow a broad user-level allow (e.g. Bash(python3:*)), so user
 #     settings are left out unless --user-settings
-#   - a tool not on the list is refused (nobody can answer a prompt under -p) and
-#     shows up in permission_denials
+#   - --permission-mode dontAsk: a call not on the list is refused at once and
+#     shows up in permission_denials. Under -p, default and acceptEdits make
+#     each such call wait ~115 s before refusing (observed on 2.1.322).
+#   - --auto: --permission-mode auto. Deny rules still apply before the
+#     classifier, and the target's .claude/settings*.json and .claude/hooks/
+#     are denied so the session can't widen its own next run. The classifier
+#     approves what the task text asks for (a force push or rm -rf written in
+#     the task went through in testing), so keep irreversible steps on the deny
+#     list. Auto mode drops broad allows such as Bash(*) and Agent. Use it for
+#     jobs that must write the target's .claude/ (specs, notes), which
+#     dontAsk always refuses.
 #
-# Every run writes its raw JSON to $DISPATCH_LOG_DIR (default ~/.cache/dispatch).
+# Every run writes its event stream and result JSON to $DISPATCH_LOG_DIR
+# (default ~/.cache/dispatch).
 # Exit 1 when claude fails, reports is_error, or returns no session_id.
 # Needs: claude, jq.
 set -uo pipefail
@@ -35,7 +47,7 @@ die() { echo "dispatch: $*" >&2; exit 2; }
 command -v jq >/dev/null || die "needs jq (macOS: brew install jq)"
 abs() { (cd "$1" 2>/dev/null && pwd) || die "no such dir: $1"; }
 
-repo=""; resume=(); write=0; sources=project
+repo=""; resume=(); write=0; sources=project; mode=dontAsk
 allow=(Read Grep Glob "Bash(git log:*)" "Bash(git show:*)" "Bash(git diff:*)" "Bash(git status:*)")
 deny=()
 while [ $# -gt 1 ]; do
@@ -43,6 +55,7 @@ while [ $# -gt 1 ]; do
     --repo) repo=$(abs "$2") || exit 2; shift 2 ;;
     --resume) resume=(--resume "$2"); shift 2 ;;
     --write) write=1; shift ;;
+    --auto) mode=auto; shift ;;
     --src) d=$(abs "$2") || exit 2
            # permission rules write absolute paths as //abs/path; $d already starts with /
            srcs+=(--add-dir "$d"); deny+=("Edit(/$d/**)" "Write(/$d/**)"); shift 2 ;;
@@ -53,7 +66,7 @@ while [ $# -gt 1 ]; do
   esac
 done
 task=${1:-}
-[ -n "$repo" ] && [ -n "$task" ] || die 'usage: dispatch.sh --repo <dir> [--resume id] [--write] [--src dir]... [--allow rule]... [--deny rule]... "<task>"'
+[ -n "$repo" ] && [ -n "$task" ] || die 'usage: dispatch.sh --repo <dir> [--resume id] [--write] [--auto] [--src dir]... [--allow rule]... [--deny rule]... "<task>"'
 
 given=" ${allow[*]} "   # defaults + every --allow, for the checks below
 if [ $write -eq 1 ]; then
@@ -62,14 +75,13 @@ if [ $write -eq 1 ]; then
   # commit / push stay denied unless explicitly --allow'ed
   case $given in *"Bash(git commit"*) ;; *) deny+=("Bash(git commit:*)") ;; esac
   case $given in *"Bash(git push"*) ;; *) deny+=("Bash(git push:*)") ;; esac
-  mode=acceptEdits
   n=$(git -C "$repo" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
   [ "$n" = 0 ] || echo "dispatch: warning — $repo has $n uncommitted change(s); the session's edits will mix with them" >&2
 else
   # read-only, unless you scoped writes yourself (e.g. --allow 'Edit(docs/**)')
   case $given in *" Edit("*|*" Write("*) ;; *) deny+=(Edit Write NotebookEdit) ;; esac
-  mode=default
 fi
+[ "$mode" = auto ] && deny+=("Edit(.claude/settings*.json)" "Write(.claude/settings*.json)" "Edit(.claude/hooks/**)" "Write(.claude/hooks/**)")
 # Untrusted folders silently drop the project's own permissions.allow under -p.
 jq -e --arg d "$repo" '.projects[$d].hasTrustDialogAccepted == true' "$HOME/.claude.json" >/dev/null 2>&1 \
   || echo "dispatch: warning — $repo not marked trusted; run 'cd $repo && claude' once and accept, or its project allow rules are ignored" >&2
@@ -77,12 +89,20 @@ jq -e --arg d "$repo" '.projects[$d].hasTrustDialogAccepted == true' "$HOME/.cla
 mkdir -p "$LOG"
 J="$LOG/$(date +%Y%m%d-%H%M%S)-$$.json"
 cd "$repo" || exit 2
+# Events stream to $J.stream (tail it to watch a long run); $J is built from the
+# result event(s) and has the same fields as --output-format json. If the
+# session emits several result events (not observed yet; a precaution),
+# denials are merged and turns summed.
+echo "stream: $J.stream"
 claude -p "$task" ${resume[@]+"${resume[@]}"} ${srcs[@]+"${srcs[@]}"} \
   --allowedTools "${allow[@]}" ${deny[@]+--disallowedTools "${deny[@]}"} \
-  --permission-mode "$mode" --setting-sources "$sources" --output-format json > "$J"
+  --permission-mode "$mode" --setting-sources "$sources" \
+  --output-format stream-json --verbose > "$J.stream" < /dev/null
 rc=$?
+jq -cR 'fromjson? | select(.type == "result")' "$J.stream" | jq -s 'if length == 0 then empty else
+  .[-1] + {permission_denials: (map(.permission_denials // []) | add), num_turns: (map(.num_turns // 0) | add), result_events: length} end' > "$J"
 echo "log: $J"
 if [ $rc -ne 0 ] || ! jq -e '.is_error == false and ((.session_id // "") | length > 0)' "$J" >/dev/null 2>&1; then
-  echo "dispatch FAILED (rc=$rc)"; head -c 2000 "$J"; echo; exit 1
+  echo "dispatch FAILED (rc=$rc)"; tail -c 2000 "$J.stream"; echo; exit 1
 fi
 jq -r '"session_id: \(.session_id)\nturns: \(.num_turns)  cost_usd (API-price estimate): \(.total_cost_usd)\npermission_denials: \(.permission_denials | map(.tool_input.command // .tool_name) | tostring)\n---\n\(.result)"' "$J"
