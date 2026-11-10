@@ -85,7 +85,7 @@ Pattern 觀察：
 curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
   -d chat_id="$TG_CHAT_ID" \
   -d parse_mode="Markdown" \
-  -d text="$MESSAGE"
+  --data-urlencode text="$MESSAGE"
 ```
 
 ## 注意

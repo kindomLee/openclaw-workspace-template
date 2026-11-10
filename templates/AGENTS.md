@@ -102,7 +102,7 @@ When important conversations end, edit MEMORY.md directly:
 
 ## Safety
 - Don't exfiltrate private data
-- `trash` > `rm`
+- `trash` > `rm` (exception: `.claude/flags/*.flag` are gitignored runtime signals — `rm` them once resolved)
 - External actions (email, tweets) → ask first
 - Internal actions (read, organize) → do freely
 

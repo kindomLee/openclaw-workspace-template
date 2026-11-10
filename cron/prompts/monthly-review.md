@@ -120,10 +120,20 @@ tags: [monthly-review]
 
 ### 6. Telegram 通知
 
+訊息內容（組成多行字串 `$MESSAGE`，用真的換行；`-d text="...\n..."` 裡的 `\n` 會原樣顯示成兩個字元）：
+
+```
+📊 YYYY-MM 月度回顧完成
+- Memory: N 條
+- Notes 活動: N
+- 過時候選: N
+詳見 notes/01-Projects/Archive/YYYY-MM-月度回顧.md
+```
+
 ```bash
 curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
   -d chat_id="$TG_CHAT_ID" \
-  -d text="📊 YYYY-MM 月度回顧完成\n- Memory: N 條\n- Notes 活動: N\n- 過時候選: N\n詳見 notes/01-Projects/Archive/YYYY-MM-月度回顧.md"
+  --data-urlencode text="$MESSAGE"
 ```
 
 ## 注意

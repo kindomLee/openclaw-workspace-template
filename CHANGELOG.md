@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (2026-11-10 — Telegram notifications in prompt jobs)
+
+- **Fixed** the Telegram step in five prompt jobs (`memory-dream`,
+  `memory-janitor`, `memory-reflect`, `self-improvement`, `monthly-review`)
+  posted `text` with plain `-d`, which sends it unencoded: the message was cut
+  at the first `&` and every `+` became a space. `monthly-review` also put
+  `\n` inside the double quotes, which arrives as a literal backslash-n. They
+  now build `$MESSAGE` with real newlines and send it with `--data-urlencode`.
+- **Clarified** `templates/AGENTS.md` said "`trash` > `rm`" while the flag
+  docs say to `rm` a resolved flag; the safety rule now names
+  `.claude/flags/*.flag` as the exception.
+
 ### Fixed (2026-11-10 — found by running every job end to end)
 
 - **Added** `tests/smoke_test.py` and a GitHub Actions workflow (Ubuntu + macOS)
