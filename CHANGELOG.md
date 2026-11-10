@@ -23,10 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Added** `dispatch.sh --auto`: runs `--permission-mode auto` so the
   classifier can approve calls outside the allow list, which lets a job write
   the target's `.claude/` (e.g. `.claude/specs/`). The deny lists still apply,
-  and `.claude/settings*.json` and `.claude/hooks/**` are denied on top. The
+  and `.claude/settings*.json` and `.claude/hooks/**` are denied on top, as
+  are `git commit`, `git push`, `git reset --hard` and `rm -rf` even without
+  `--write` (a read-only `--auto` job would otherwise leave them to the
+  classifier). The
   classifier approves what the task text spells out, so irreversible steps
   belong on the deny list; see `guides/dispatch.md`.
-- **Added** four smoke-test checks with a fake `claude` that prints a stream.
+- **Added** five smoke-test checks with a fake `claude` that prints a stream.
 
 ### Fixed (2026-11-10 — Telegram notifications in prompt jobs)
 

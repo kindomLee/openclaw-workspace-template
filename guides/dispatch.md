@@ -50,7 +50,7 @@ refusing. `dispatch.sh` builds the lists:
 | default (read-only) | Read, Grep, Glob, `git log/show/diff/status` | Edit, Write, NotebookEdit |
 | `--write` | the above + Edit, Write | `git commit`, `git push` (unless `--allow`ed), `git reset --hard`, `rm -rf` |
 | scoped writes | `--allow 'Edit(dir/**)' --allow 'Write(dir/**)'` without `--write` | Edit/Write elsewhere aren't allowed |
-| `--auto` (add to either) | the lists above, plus whatever the auto-mode classifier approves | the lists above, plus Edit/Write on the target's `.claude/settings*.json` and `.claude/hooks/**` |
+| `--auto` (add to either) | the lists above, plus whatever the auto-mode classifier approves | the lists above, plus `git commit`, `git push`, `git reset --hard`, `rm -rf` even without `--write`, and Edit/Write on the target's `.claude/settings*.json` and `.claude/hooks/**` |
 
 To let the target commit, allow staging too — `git add` is not on the list,
 so `--allow 'Bash(git commit:*)'` alone still fails at `git add`:
@@ -66,6 +66,9 @@ it:
   list (`--deny`).
 - Entering auto mode drops broad allow rules such as `Bash(*)`, wildcarded
   interpreters and `Agent`, so those calls go to the classifier too.
+- `--auto` without `--write` is not read-only. Edit and Write stay denied,
+  but a shell command that writes a file goes to the classifier. Tested:
+  `git commit` and `rm -rf` were refused, `python3 -c` ran.
 
 Use it for jobs that have to write the target's `.claude/` (specs, notes),
 which `dontAsk` always refuses. Tested with `--auto --write`: an edit under

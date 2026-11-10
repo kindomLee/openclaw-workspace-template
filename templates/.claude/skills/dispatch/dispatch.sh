@@ -30,7 +30,10 @@
 #     each such call wait ~115 s before refusing (observed on 2.1.322).
 #   - --auto: --permission-mode auto. Deny rules still apply before the
 #     classifier, and the target's .claude/settings*.json and .claude/hooks/
-#     are denied so the session can't widen its own next run. The classifier
+#     are denied so the session can't widen its own next run; reset --hard,
+#     rm -rf, commit and push are denied as with --write, even without it.
+#     --auto without --write is not read-only: Edit/Write stay denied, but a
+#     shell command that writes a file goes to the classifier. The classifier
 #     approves what the task text asks for (a force push or rm -rf written in
 #     the task went through in testing), so keep irreversible steps on the deny
 #     list. Auto mode drops broad allows such as Bash(*) and Agent. Use it for
@@ -69,12 +72,16 @@ task=${1:-}
 [ -n "$repo" ] && [ -n "$task" ] || die 'usage: dispatch.sh --repo <dir> [--resume id] [--write] [--auto] [--src dir]... [--allow rule]... [--deny rule]... "<task>"'
 
 given=" ${allow[*]} "   # defaults + every --allow, for the checks below
-if [ $write -eq 1 ]; then
-  allow+=(Edit Write)
+if [ $write -eq 1 ] || [ "$mode" = auto ]; then
+  # irreversible steps: under --auto the classifier would otherwise decide
+  # these even in a read-only job, so they're denied whenever either is set
   deny+=("Bash(git reset --hard:*)" "Bash(rm -rf:*)")
   # commit / push stay denied unless explicitly --allow'ed
   case $given in *"Bash(git commit"*) ;; *) deny+=("Bash(git commit:*)") ;; esac
   case $given in *"Bash(git push"*) ;; *) deny+=("Bash(git push:*)") ;; esac
+fi
+if [ $write -eq 1 ]; then
+  allow+=(Edit Write)
   n=$(git -C "$repo" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
   [ "$n" = 0 ] || echo "dispatch: warning — $repo has $n uncommitted change(s); the session's edits will mix with them" >&2
 else

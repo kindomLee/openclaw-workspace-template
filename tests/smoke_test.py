@@ -218,6 +218,10 @@ def main():
     check("--permission-mode auto" in args and "Edit(.claude/settings*.json)" in args
           and "Write(.claude/hooks/**)" in args and "Bash(git push:*)" in args,
           "dispatch --auto runs auto mode and still denies .claude settings/hooks and push")
+    r = run(disp[:-1] + ["--auto", "task"], env=env)
+    args = (TMP / "fake-args").read_text() if r.returncode == 0 else ""
+    check(all(d in args for d in ("Bash(git push:*)", "Bash(git commit:*)", "Bash(rm -rf:*)", "Bash(git reset --hard:*)")),
+          "dispatch --auto without --write still denies push, commit, rm -rf, reset --hard")
 
     print("upgrade re-run")
     (flags / "welcome-profile-setup.flag").unlink()
