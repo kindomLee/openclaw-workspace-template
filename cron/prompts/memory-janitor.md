@@ -5,7 +5,7 @@
 
 ### 1. Hall Tag 補標
 
-掃描最近 7 天的日誌（`find memory/ -name "20??-??-??.md" -mtime -7`，含已輪替到 `memory/archive-YYYY-MM/` 的），找出缺少 hall tag 的 entry。
+掃描檔名日期在最近 7 天內的日誌（含已輪替到 `memory/archive-YYYY-MM/` 的：`find memory/ -name "20??-??-??.md" | awk -F/ -v c="$(date -v-7d +%F 2>/dev/null || date -d '7 days ago' +%F)" '{n=$NF; sub(/\.md$/, "", n); if (n >= c) print}'`），找出缺少 hall tag 的 entry。
 
 每條 entry 應該以 `[hall_*]` 開頭：
 - `[hall_facts]` — 決定、決策、選擇

@@ -30,7 +30,11 @@
 
 ### 2. 讀取最近記憶
 
-讀取最近 7 天的日誌檔（本 job 每週跑一次）：`find memory/ -name "20??-??-??.md" -mtime -7`（超過 5 天的已輪替到 `memory/archive-YYYY-MM/`，find 會一併找到）。
+讀取檔名日期在最近 7 天內的日誌檔（本 job 每週跑一次；超過 5 天的已輪替到 `memory/archive-YYYY-MM/`；不要用 mtime，事後編輯會把舊 journal 帶進來）：
+
+```bash
+find memory/ -name "20??-??-??.md" | awk -F/ -v c="$(date -v-7d +%F 2>/dev/null || date -d '7 days ago' +%F)" '{n=$NF; sub(/\.md$/, "", n); if (n >= c) print}' | sort
+```
 讀取 MEMORY.md 的關鍵章節作為長期記憶背景。
 
 ### 3. 反思分析

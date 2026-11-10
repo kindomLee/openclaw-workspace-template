@@ -7,7 +7,8 @@
 
 **Journal 碎片**：從 memory/ 目錄隨機抽取最近 30 天的日誌（5-8 個檔案）：
 ```bash
-find memory/ -name "20??-??-??.md" -mtime -30 | sort -R | head -8   # journals older than 5 days live in memory/archive-YYYY-MM/
+# By file-name date (later edits refresh mtime); journals older than 5 days live in memory/archive-YYYY-MM/
+find memory/ -name "20??-??-??.md" | awk -F/ -v c="$(date -v-30d +%F 2>/dev/null || date -d '30 days ago' +%F)" '{n=$NF; sub(/\.md$/, "", n); if (n >= c) print}' | sort -R | head -8
 ```
 
 **Notes 碎片**：從 notes/ 不同領域各抽 1-2 篇：

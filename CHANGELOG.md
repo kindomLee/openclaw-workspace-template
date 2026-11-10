@@ -35,7 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the curate-memory backlog dropped days that had been rotated away (and the
   skill then marked them curated), the monthly review saw ~5 of 30 days, and
   the janitor / self-improvement "last 7 days" missed two. The weekly reflect
-  job read only today and yesterday. All now include the archive.
+  job read only today and yesterday. All now include the archive and pick
+  journals by file-name date rather than mtime, which later edits refresh.
 - **Fixed** the memory-dream prompt matched `2026-*.md` and would have found no
   journals from 2027-01-01.
 - **Fixed** `MEMORY_COMPACT.md` is read at every wake-up but nothing created it:

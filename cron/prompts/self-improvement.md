@@ -12,7 +12,7 @@
 
 ### 2. 掃描最近記憶找新 pattern
 
-讀取最近 7 天的日誌（`find memory/ -name "20??-??-??.md" -mtime -7`，含已輪替到 `memory/archive-YYYY-MM/` 的），找出：
+讀取檔名日期在最近 7 天內的日誌（含已輪替到 `memory/archive-YYYY-MM/` 的：`find memory/ -name "20??-??-??.md" | awk -F/ -v c="$(date -v-7d +%F 2>/dev/null || date -d '7 days ago' +%F)" '{n=$NF; sub(/\.md$/, "", n); if (n >= c) print}'`），找出：
 - 使用者糾正（「不對」「其實應該」「別這樣」）→ `correction`
 - 重複出現的問題或手動操作 → `manual_repeat`
 - 發現更好做法 → `best_practice`
